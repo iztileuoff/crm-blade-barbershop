@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\Barber;
+use App\Models\Specialization;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -11,18 +12,13 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 class BarberFactory extends Factory
 {
     /**
-     * Define the model's default state.
-     *
      * @return array<string, mixed>
      */
     public function definition(): array
     {
         return [
             'name' => fake()->name(),
-            'specialization' => fake()->randomElement([
-                'Барбер', 'Топ-мастер', 'Стилист', 'Бородовед',
-            ]),
-            'photo_path' => null,
+            'specialization_id' => Specialization::factory(),
             'schedule' => [
                 'mon' => ['10:00', '20:00'],
                 'tue' => ['10:00', '20:00'],

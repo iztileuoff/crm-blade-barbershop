@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Barber;
 use App\Models\Service;
+use App\Models\Specialization;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -31,6 +32,12 @@ class DatabaseSeeder extends Seeder
             Service::factory()->create($service);
         }
 
+        $specializations = collect([
+            'Топ-мастер', 'Барбер', 'Стилист', 'Бородовед',
+        ])->mapWithKeys(fn (string $name) => [
+            $name => Specialization::factory()->create(['name' => $name]),
+        ]);
+
         $barbers = [
             ['name' => 'Алексей Иванов', 'specialization' => 'Топ-мастер'],
             ['name' => 'Дмитрий Петров', 'specialization' => 'Барбер'],
@@ -38,7 +45,10 @@ class DatabaseSeeder extends Seeder
         ];
 
         foreach ($barbers as $barber) {
-            Barber::factory()->create($barber);
+            Barber::factory()->create([
+                'name' => $barber['name'],
+                'specialization_id' => $specializations[$barber['specialization']]->id,
+            ]);
         }
     }
 }
