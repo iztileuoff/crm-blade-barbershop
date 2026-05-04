@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__laravel-boost__search-docs",
+      "Bash(composer require *)",
+      "Bash(php artisan *)",
+      "Bash(vendor/bin/pint --dirty --format agent)",
+      "Bash(php -l resources/views/livewire/pages/booking.blade.php)",
+      "Bash(php -l resources/views/livewire/pages/admin/appointments.blade.php)",
+      "Bash(php -l app/Models/Service.php)",
+      "Bash(php -l app/Models/Client.php)",
+      "Bash(php -l app/Services/SmsService.php)",
+      "Bash(npm run *)"
+    ]
+  }
+}

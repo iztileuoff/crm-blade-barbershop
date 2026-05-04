@@ -21,9 +21,9 @@
 #### 1. Модель данных (Migrations & Models)
 Создай миграции со следующими связями:
 - **Barber**: `id, name, specialization, photo_path, schedule (json), is_active`.
-- **Service**: `id, name, price, duration_minutes`.
+- **Service**: `id, name, price`.
 - **Client**: `id, name, phone (format: 998XXXXXXXXX), last_visit_at`.
-- **Appointment**: `id, client_id, barber_id, service_id, scheduled_at, status (pending, confirmed, completed, cancelled), notified_30min (boolean)`.
+- **Appointment**: `id, client_id, barber_id, service_id, starts_at, ends_at, status (pending, confirmed, completed, cancelled), notified_30min (boolean)`.
 
 #### 2. Функционал записи (Booking Flow)
 - Реализуй публичную страницу записи на **Livewire (Volt API)**.

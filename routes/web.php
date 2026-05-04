@@ -1,7 +1,6 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
+use Livewire\Volt\Volt;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+Volt::route('/', 'pages.booking')->name('booking');
+Volt::route('/admin/appointments', 'pages.admin.appointments')->name('admin.appointments');

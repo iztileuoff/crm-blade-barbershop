@@ -10,6 +10,7 @@
     "sail": false,
     "skills": [
         "laravel-best-practices",
+        "volt-development",
         "pest-testing",
         "tailwindcss-development",
         "deploying-laravel-cloud"
