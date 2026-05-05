@@ -15,18 +15,10 @@ class DatabaseSeeder extends Seeder
 
     public function run(): void
     {
-        User::factory()->create([
-            'name' => 'Супер Админ',
-            'phone' => '998901234567',
-            'role' => \App\Enums\Role::SUPER_ADMIN,
-        ]);
+        $this->call(UserSeeder::class);
 
         $services = [
             ['name' => 'Мужская стрижка', 'duration_minutes' => 45],
-            ['name' => 'Стрижка бороды', 'duration_minutes' => 30],
-            ['name' => 'Стрижка + борода', 'duration_minutes' => 60],
-            ['name' => 'Королевское бритьё', 'duration_minutes' => 45],
-            ['name' => 'Детская стрижка', 'duration_minutes' => 30],
         ];
 
         foreach ($services as $service) {
@@ -34,7 +26,7 @@ class DatabaseSeeder extends Seeder
         }
 
         $specializations = collect([
-            'Топ-мастер', 'Барбер', 'Стилист', 'Бородовед',
+            'Топ-мастер', 'Барбер',
         ])->mapWithKeys(fn (string $name) => [
             $name => Specialization::factory()->create(['name' => $name]),
         ]);
@@ -42,7 +34,6 @@ class DatabaseSeeder extends Seeder
         $barbers = [
             ['name' => 'Алексей Иванов', 'specialization' => 'Топ-мастер', 'price' => 150000],
             ['name' => 'Дмитрий Петров', 'specialization' => 'Барбер', 'price' => 100000],
-            ['name' => 'Иван Смирнов', 'specialization' => 'Стилист', 'price' => 120000],
         ];
 
         foreach ($barbers as $barber) {
