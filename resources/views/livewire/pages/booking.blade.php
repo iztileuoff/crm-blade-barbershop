@@ -467,7 +467,7 @@ class extends Component
             <h2 class="mb-2 text-xl font-bold">Заявка принята!</h2>
             <p class="mx-auto max-w-xs text-sm text-white/40">
                 Мы свяжемся с вами для подтверждения записи на
-                {{ \Illuminate\Support\Carbon::parse($date)->translatedFormat('d MMMM') }}
+                {{ \Illuminate\Support\Carbon::parse($date)->translatedFormat('d M') }}
                 в {{ $time }} к мастеру {{ $this->selectedBarber?->name }}.
             </p>
             <p class="mt-1.5 text-xs text-white/25">После подтверждения за 30 минут до визита придёт SMS-напоминание</p>
