@@ -51,10 +51,32 @@ class extends Component
 
     public bool $showForm = false;
 
+    public string $clientSearch = '';
+
     public function mount(): void
     {
         $this->date = Carbon::now()->toDateString();
         $this->form_date = $this->date;
+    }
+
+    #[Computed]
+    public function filteredClients()
+    {
+        return Client::query()
+            ->when($this->clientSearch, function ($q) {
+                $q->where(function ($q) {
+                    $q->where('name', 'like', "%{$this->clientSearch}%")
+                    ->orWhere('phone', 'like', "%{$this->clientSearch}%");
+                });
+            })
+            ->limit(20)
+            ->get();
+    }
+
+    public function selectClient($id, $label)
+    {
+        $this->client_id = $id;
+        $this->clientSearch = $label;
     }
 
     #[Computed]
@@ -328,13 +350,14 @@ class extends Component
                 <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                     <div>
                         <label class="mb-1.5 block text-xs font-semibold text-white/50">Клиент</label>
-                        <select wire:model="client_id"
-                                class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20 [&>option]:bg-[#121212]">
-                            <option value="">Выберите клиента...</option>
-                            @foreach ($this->clients as $client)
-                                <option value="{{ $client->id }}">{{ $client->name }} ({{ $client->phone }})</option>
-                            @endforeach
-                        </select>
+                        <x-search-select
+                            :options="$this->filteredClients"
+                            searchModel="clientSearch"
+                            onSelect="selectClient"
+                            labelField="name"
+                            subLabelField="phone"
+                            placeholder="Поиск клиента..."
+                        />
                         @error('client_id') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
                     </div>
                     <div>
