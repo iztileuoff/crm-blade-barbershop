@@ -16,16 +16,17 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         User::factory()->create([
-            'name' => 'Администратор',
-            'email' => 'admin@barbershop.test',
+            'name' => 'Супер Админ',
+            'phone' => '998901234567',
+            'role' => \App\Enums\Role::SUPER_ADMIN,
         ]);
 
         $services = [
-            ['name' => 'Мужская стрижка', 'duration_minutes' => 45, 'price' => 120000],
-            ['name' => 'Стрижка бороды', 'duration_minutes' => 30, 'price' => 70000],
-            ['name' => 'Стрижка + борода', 'duration_minutes' => 60, 'price' => 170000],
-            ['name' => 'Королевское бритьё', 'duration_minutes' => 45, 'price' => 150000],
-            ['name' => 'Детская стрижка', 'duration_minutes' => 30, 'price' => 90000],
+            ['name' => 'Мужская стрижка', 'duration_minutes' => 45],
+            ['name' => 'Стрижка бороды', 'duration_minutes' => 30],
+            ['name' => 'Стрижка + борода', 'duration_minutes' => 60],
+            ['name' => 'Королевское бритьё', 'duration_minutes' => 45],
+            ['name' => 'Детская стрижка', 'duration_minutes' => 30],
         ];
 
         foreach ($services as $service) {
@@ -39,15 +40,16 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $barbers = [
-            ['name' => 'Алексей Иванов', 'specialization' => 'Топ-мастер'],
-            ['name' => 'Дмитрий Петров', 'specialization' => 'Барбер'],
-            ['name' => 'Иван Смирнов', 'specialization' => 'Стилист'],
+            ['name' => 'Алексей Иванов', 'specialization' => 'Топ-мастер', 'price' => 150000],
+            ['name' => 'Дмитрий Петров', 'specialization' => 'Барбер', 'price' => 100000],
+            ['name' => 'Иван Смирнов', 'specialization' => 'Стилист', 'price' => 120000],
         ];
 
         foreach ($barbers as $barber) {
             Barber::factory()->create([
                 'name' => $barber['name'],
                 'specialization_id' => $specializations[$barber['specialization']]->id,
+                'price' => $barber['price'],
             ]);
         }
     }

@@ -10,8 +10,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password'])]
-#[Hidden(['password', 'remember_token'])]
+#[Fillable(['name', 'phone', 'password', 'role'])]
+#[Hidden(['password'])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
@@ -25,8 +25,18 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
-            'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'role' => \App\Enums\Role::class,
         ];
+    }
+
+    public function isAdmin(): bool
+    {
+        return in_array($this->role, [\App\Enums\Role::ADMIN, \App\Enums\Role::SUPER_ADMIN], true);
+    }
+
+    public function isSuperAdmin(): bool
+    {
+        return $this->role === \App\Enums\Role::SUPER_ADMIN;
     }
 }

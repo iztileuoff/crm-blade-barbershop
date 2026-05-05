@@ -35,6 +35,9 @@
                             ['route' => 'admin.specializations', 'label' => 'Спец.'],
                             ['route' => 'admin.clients', 'label' => 'Клиенты'],
                         ])
+                        @if(auth()->user()?->isSuperAdmin())
+                            @php($links[] = ['route' => 'admin.users', 'label' => 'Пользователи'])
+                        @endif
                         @foreach($links as $link)
                             <a href="{{ route($link['route']) }}" 
                                @class([
@@ -54,6 +57,12 @@
                         На сайт
                     </a>
                     
+                    @auth
+                    <a href="{{ route('logout') }}" class="hidden items-center gap-1.5 rounded-lg border border-white/[0.06] px-3 py-1.5 text-xs font-medium text-rose-500/50 transition hover:border-rose-500/30 hover:text-rose-500 sm:flex">
+                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 9V5.25A2.25 2.25 0 0 1 10.5 3h6a2.25 2.25 0 0 1 2.25 2.25v13.5A2.25 2.25 0 0 1 16.5 21h-6a2.25 2.25 0 0 1-2.25-2.25V15M12 9l3 3m0 0-3 3m3-3H2.25" /></svg>
+                        Выход
+                    </a>
+                    @endauth
                     <button type="button" @click="open = !open" 
                             class="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.06] text-white/40 transition hover:border-white/10 hover:text-white md:hidden">
                         <svg x-show="!open" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" /></svg>
@@ -79,6 +88,11 @@
                             {{ $link['label'] }}
                         </a>
                     @endforeach
+                    @auth
+                        <a href="{{ route('logout') }}" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-rose-500/50 transition hover:bg-rose-500/10 hover:text-rose-500">
+                            Выход
+                        </a>
+                    @endauth
                 </nav>
             </div>
         </header>

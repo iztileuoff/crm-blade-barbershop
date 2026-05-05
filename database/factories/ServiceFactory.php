@@ -23,7 +23,6 @@ class ServiceFactory extends Factory
                 'Королевское бритьё', 'Детская стрижка',
             ]),
             'duration_minutes' => fake()->randomElement([30, 45, 60]),
-            'price' => fake()->numberBetween(50_000, 250_000),
             'is_active' => true,
         ];
     }

@@ -34,6 +34,12 @@ class extends Component
     #[Validate('required|exists:services,id')]
     public ?int $service_id = null;
 
+    #[Validate('nullable|integer|min:0')]
+    public ?int $price = null;
+
+    #[Validate('nullable|string|max:500')]
+    public string $note = '';
+
     #[Validate('required|date')]
     public string $form_date = '';
 
@@ -80,6 +86,21 @@ class extends Component
         return Service::active()->orderBy('name')->get();
     }
 
+    #[Computed]
+    public function timeSlots(): array
+    {
+        $slots = [];
+        $start = Carbon::createFromTime(7, 0);
+        $end = Carbon::createFromTime(23, 0);
+
+        while ($start <= $end) {
+            $slots[] = $start->format('H:i');
+            $start->addMinutes(15);
+        }
+
+        return $slots;
+    }
+
     public function setDate(string $date): void
     {
         $this->date = $date;
@@ -121,6 +142,8 @@ class extends Component
         $this->client_id = $appointment->client_id;
         $this->barber_id = $appointment->barber_id;
         $this->service_id = $appointment->service_id;
+        $this->price = $appointment->price;
+        $this->note = (string) $appointment->note;
         $this->form_date = $appointment->starts_at->toDateString();
         $this->form_start_time = $appointment->starts_at->format('H:i');
         $this->form_end_time = $appointment->ends_at->format('H:i');
@@ -129,15 +152,65 @@ class extends Component
 
     public function updatedServiceId($id): void
     {
-        if (! $this->form_start_time || ! $id) {
+        if (! $id) {
             return;
         }
 
         $service = Service::find($id);
         if ($service) {
-            $this->form_end_time = Carbon::parse($this->form_start_time)
+            if ($this->form_start_time) {
+                $this->form_end_time = Carbon::parse($this->form_start_time)
+                    ->addMinutes((int) $service->duration_minutes)
+                    ->format('H:i');
+            }
+        }
+    }
+
+    public function updatedBarberId($id): void
+    {
+        if (! $id) {
+            return;
+        }
+
+        $barber = Barber::find($id);
+        if ($barber && ! $this->price) {
+            $this->price = $barber->price;
+        }
+    }
+
+    public function updatedFormStartTime($value): void
+    {
+        if (! $value || ! $this->service_id) {
+            return;
+        }
+
+        $service = Service::find($this->service_id);
+        if ($service) {
+            $this->form_end_time = Carbon::parse($value)
                 ->addMinutes((int) $service->duration_minutes)
                 ->format('H:i');
+        }
+
+        $this->resetErrorBag('form_end_time');
+    }
+
+    public function updatedFormEndTime($value): void
+    {
+        if (! $value || ! $this->form_start_time) {
+            return;
+        }
+
+        try {
+            $startsAt = Carbon::parse($this->form_start_time);
+            $endsAt = Carbon::parse($value);
+
+            if ($endsAt->lte($startsAt)) {
+                $this->addError('form_end_time', 'Время окончания должно быть позже начала.');
+            } else {
+                $this->resetErrorBag('form_end_time');
+            }
+        } catch (\Exception $e) {
+            // Ignore parse errors, regex validation will handle it on save
         }
     }
 
@@ -158,9 +231,11 @@ class extends Component
             'client_id' => $this->client_id,
             'barber_id' => $this->barber_id,
             'service_id' => $this->service_id,
+            'price' => $this->price,
+            'note' => $this->note ?: null,
             'starts_at' => $startsAt,
             'ends_at' => $endsAt,
-            'status' => AppointmentStatus::Confirmed,
+            'status' => $this->editingId ? Appointment::find($this->editingId)->status : AppointmentStatus::Confirmed,
         ];
 
         if ($this->editingId) {
@@ -200,7 +275,7 @@ class extends Component
 
     private function resetForm(): void
     {
-        $this->reset(['editingId', 'client_id', 'barber_id', 'service_id', 'form_start_time', 'form_end_time']);
+        $this->reset(['editingId', 'client_id', 'barber_id', 'service_id', 'price', 'note', 'form_start_time', 'form_end_time']);
         $this->form_date = $this->date;
         $this->resetErrorBag();
     }
@@ -264,11 +339,11 @@ class extends Component
                     </div>
                     <div>
                         <label class="mb-1.5 block text-xs font-semibold text-white/50">Мастер</label>
-                        <select wire:model="barber_id"
+                        <select wire:model.live="barber_id"
                                 class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20 [&>option]:bg-[#121212]">
                             <option value="">Выберите мастера...</option>
                             @foreach ($this->barbers as $barber)
-                                <option value="{{ $barber->id }}">{{ $barber->name }}</option>
+                                <option value="{{ $barber->id }}">{{ $barber->name }} @if($barber->price)({{ $barber->formattedPrice }})@endif</option>
                             @endforeach
                         </select>
                         @error('barber_id') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
@@ -279,28 +354,49 @@ class extends Component
                                 class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20 [&>option]:bg-[#121212]">
                             <option value="">Выберите услугу...</option>
                             @foreach ($this->services as $service)
-                                <option value="{{ $service->id }}">{{ $service->name }} ({{ $service->formattedPrice }})</option>
+                                <option value="{{ $service->id }}">{{ $service->name }}</option>
                             @endforeach
                         </select>
                         @error('service_id') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
                     </div>
                     <div>
-                        <label class="mb-1.5 block text-xs font-semibold text-white/50">Дата</label>
-                        <input type="date" wire:model="form_date"
+                        <label class="mb-1.5 block text-xs font-semibold text-white/50">Цена (сум)</label>
+                        <input type="number" wire:model="price" placeholder="Стоимость..."
                                class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20">
-                        @error('form_date') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
+                        @error('price') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
                     </div>
-                    <div>
-                        <label class="mb-1.5 block text-xs font-semibold text-white/50">Начало</label>
-                        <input type="text" wire:model="form_start_time" placeholder="09:00"
-                               class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20">
-                        @error('form_start_time') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="mb-1.5 block text-xs font-semibold text-white/50">Дата</label>
+                            <input type="date" wire:model="form_date"
+                                   class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20">
+                            @error('form_date') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
+                        </div>
+                        <div>
+                            <label class="mb-1.5 block text-xs font-semibold text-white/50">Начало</label>
+                            <input type="text" wire:model.live="form_start_time" list="times-list" placeholder="09:00"
+                                   class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white placeholder-white/20 outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20">
+                            @error('form_start_time') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
+                        </div>
                     </div>
                     <div>
                         <label class="mb-1.5 block text-xs font-semibold text-white/50">Окончание</label>
-                        <input type="text" wire:model="form_end_time" placeholder="09:45"
-                               class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20">
+                        <input type="text" wire:model="form_end_time" list="times-list" placeholder="09:45"
+                               class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white placeholder-white/20 outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20">
                         @error('form_end_time') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
+                    </div>
+
+                    <datalist id="times-list">
+                        @foreach ($this->timeSlots as $slot)
+                            <option value="{{ $slot }}">
+                        @endforeach
+                    </datalist>
+
+                    <div class="sm:col-span-2 lg:col-span-3">
+                        <label class="mb-1.5 block text-xs font-semibold text-white/50">Заметка</label>
+                        <textarea wire:model="note" rows="2" placeholder="Дополнительная информация..."
+                                  class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white placeholder-white/20 outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20"></textarea>
+                        @error('note') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
                     </div>
                 </div>
                 <div class="mt-8 flex items-center justify-end gap-3 border-t border-white/[0.06] pt-6">
@@ -328,9 +424,9 @@ class extends Component
                                 <span class="ml-1">{{ $sortDirection === 'asc' ? '↑' : '↓' }}</span>
                             @endif
                         </th>
-                        <th class="px-6 py-4">Клиент</th>
+                        <th class="px-6 py-4">Клиент / Заметка</th>
                         <th class="hidden px-6 py-4 md:table-cell">Мастер</th>
-                        <th class="hidden px-6 py-4 md:table-cell">Услуга</th>
+                        <th class="hidden px-6 py-4 md:table-cell">Услуга / Цена</th>
                         <th class="cursor-pointer px-6 py-4 transition hover:text-white" wire:click="sortBy('status')">
                             Статус
                             @if ($sortField === 'status')
@@ -350,6 +446,12 @@ class extends Component
                             <td class="px-6 py-4">
                                 <div class="font-bold text-white">{{ $appointment->client?->name }}</div>
                                 <div class="text-xs text-amber-500/60">{{ $appointment->client?->formattedPhone }}</div>
+                                @if ($appointment->note)
+                                    <div class="mt-1 flex items-start gap-1.5 text-[11px] text-white/40">
+                                        <svg class="mt-0.5 h-3 w-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" /></svg>
+                                        <span class="italic">{{ $appointment->note }}</span>
+                                    </div>
+                                @endif
                                 <div class="mt-1 text-[10px] text-white/30 md:hidden">
                                     {{ $appointment->barber?->name }} · {{ $appointment->service?->name }}
                                 </div>
@@ -364,7 +466,13 @@ class extends Component
                             </td>
                             <td class="hidden px-6 py-4 md:table-cell">
                                 <div class="text-white/60">{{ $appointment->service?->name }}</div>
-                                <div class="text-[10px] text-white/30">{{ $appointment->service?->formattedPrice }}</div>
+                                <div @class([
+                                    'text-[10px] font-bold',
+                                    'text-amber-400' => $appointment->price !== null,
+                                    'text-white/30' => $appointment->price === null,
+                                ])>
+                                    {{ $appointment->formattedPrice }}
+                                </div>
                             </td>
                             <td class="px-6 py-4">
                                 @php($badge = $appointment->status->badgeClasses())

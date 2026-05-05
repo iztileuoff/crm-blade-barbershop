@@ -15,7 +15,6 @@ class Service extends Model
     protected $fillable = [
         'name',
         'duration_minutes',
-        'price',
         'is_active',
     ];
 
@@ -23,16 +22,8 @@ class Service extends Model
     {
         return [
             'duration_minutes' => 'integer',
-            'price' => 'integer',
             'is_active' => 'boolean',
         ];
-    }
-
-    /**
-     * Цена в формате "12 000 сум" (PHP 8.4 property hook).
-     */
-    public string $formattedPrice {
-        get => number_format((int) $this->price, 0, '.', ' ').' сум';
     }
 
     public function appointments(): HasMany

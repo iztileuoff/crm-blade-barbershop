@@ -18,6 +18,7 @@ class Barber extends Model implements HasMedia
     protected $fillable = [
         'name',
         'specialization_id',
+        'price',
         'schedule',
         'is_active',
     ];
@@ -25,6 +26,7 @@ class Barber extends Model implements HasMedia
     protected function casts(): array
     {
         return [
+            'price' => 'integer',
             'schedule' => 'array',
             'is_active' => 'boolean',
         ];
@@ -52,5 +54,12 @@ class Barber extends Model implements HasMedia
 
     public string $photoUrl {
         get => $this->getFirstMediaUrl('photo') ?: '';
+    }
+
+    /**
+     * Цена в формате "12 000 сум" (PHP 8.4 property hook).
+     */
+    public string $formattedPrice {
+        get => number_format((int) $this->price, 0, '.', ' ').' сум';
     }
 }

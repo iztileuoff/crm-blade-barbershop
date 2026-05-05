@@ -15,11 +15,8 @@ class extends Component
     #[Validate('required|string|max:255')]
     public string $name = '';
 
-    #[Validate('required|integer|min:5|max:480')]
+    #[Validate('required|integer|min:5')]
     public int $duration_minutes = 30;
-
-    #[Validate('required|integer|min:0')]
-    public int $price = 0;
 
     #[Validate('boolean')]
     public bool $is_active = true;
@@ -46,8 +43,7 @@ class extends Component
         $service = Service::findOrFail($id);
         $this->editingId = $service->id;
         $this->name = $service->name;
-        $this->duration_minutes = $service->duration_minutes;
-        $this->price = $service->price;
+        $this->duration_minutes = (int) $service->duration_minutes;
         $this->is_active = (bool) $service->is_active;
         $this->showForm = true;
     }
@@ -59,7 +55,6 @@ class extends Component
         $payload = [
             'name' => $data['name'],
             'duration_minutes' => $data['duration_minutes'],
-            'price' => $data['price'],
             'is_active' => $data['is_active'],
         ];
 
@@ -88,7 +83,7 @@ class extends Component
 
     private function resetForm(): void
     {
-        $this->reset(['editingId', 'name', 'duration_minutes', 'price', 'is_active']);
+        $this->reset(['editingId', 'name', 'duration_minutes', 'is_active']);
         $this->duration_minutes = 30;
         $this->is_active = true;
         $this->resetErrorBag();
@@ -99,7 +94,7 @@ class extends Component
     <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>
             <h1 class="text-3xl font-extrabold tracking-tight text-white">Услуги</h1>
-            <p class="mt-1 text-sm text-white/40">Управление перечнем услуг и ценами</p>
+            <p class="mt-1 text-sm text-white/40">Управление перечнем услуг</p>
         </div>
         <button type="button" wire:click="openCreate"
                 class="flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-400 to-amber-600 px-5 py-2.5 text-sm font-bold text-black shadow-lg shadow-amber-500/20 transition-all hover:scale-[1.02] hover:shadow-amber-500/30 active:scale-[0.98]">
@@ -127,13 +122,7 @@ class extends Component
                                class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20">
                         @error('duration_minutes') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
                     </div>
-                    <div>
-                        <label class="mb-1.5 block text-xs font-semibold text-white/50">Цена (сум)</label>
-                        <input type="number" wire:model="price" min="0" step="1000"
-                               class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20">
-                        @error('price') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
-                    </div>
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center pt-4">
                         <label class="relative inline-flex cursor-pointer items-center">
                             <input type="checkbox" wire:model="is_active" class="peer sr-only">
                             <div class="h-6 w-11 rounded-full bg-white/10 transition-colors peer-checked:bg-amber-500 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:after:translate-x-full"></div>
@@ -162,7 +151,6 @@ class extends Component
                     <tr class="border-b border-white/[0.06] bg-white/[0.03] text-xs font-bold uppercase tracking-wider text-white/30">
                         <th class="px-6 py-4">Услуга</th>
                         <th class="px-6 py-4">Длительность</th>
-                        <th class="px-6 py-4">Цена</th>
                         <th class="hidden px-6 py-4 sm:table-cell">Статус</th>
                         <th class="hidden px-6 py-4 sm:table-cell">Записи</th>
                         <th class="px-6 py-4 text-right">Действия</th>
@@ -178,7 +166,6 @@ class extends Component
                                 @endif
                             </td>
                             <td class="px-6 py-4 text-white/50">{{ $service->duration_minutes }} мин</td>
-                            <td class="px-6 py-4 font-bold text-amber-400">{{ $service->formattedPrice }}</td>
                             <td class="hidden px-6 py-4 sm:table-cell">
                                 @if ($service->is_active)
                                     <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-bold text-emerald-400">

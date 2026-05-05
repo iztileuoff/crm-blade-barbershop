@@ -213,6 +213,7 @@ class extends Component
             'client_id' => $client->id,
             'barber_id' => $barber->id,
             'service_id' => $service->id,
+            'price' => $barber->price,
             'starts_at' => $startsAt,
             'ends_at' => $endsAt,
             'status' => AppointmentStatus::Confirmed,
@@ -281,7 +282,6 @@ class extends Component
                             </div>
                         </div>
                         <div class="flex items-center gap-2">
-                            <span class="text-sm font-bold text-amber-400">{{ $service->formattedPrice }}</span>
                             <svg class="h-4 w-4 text-white/15 transition-all group-hover:translate-x-0.5 group-hover:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
                             </svg>
@@ -321,6 +321,9 @@ class extends Component
                         @endif
                         <div class="text-sm font-semibold">{{ $barber->name }}</div>
                         <div class="mt-0.5 text-[11px] text-white/35">{{ $barber->specialization?->name }}</div>
+                        @if ($barber->price)
+                            <div class="mt-1 text-xs font-bold text-amber-400">{{ $barber->formattedPrice }}</div>
+                        @endif
                     </button>
                 @empty
                     <div class="col-span-2 rounded-2xl border border-white/[0.06] bg-white/[0.03] p-8 text-center text-sm text-white/30">
@@ -405,7 +408,9 @@ class extends Component
                         <div class="text-sm font-semibold">{{ $this->selectedService?->name }}</div>
                         <div class="text-xs text-white/35">{{ $this->selectedService?->duration_minutes }} мин</div>
                     </div>
-                    <div class="text-sm font-bold text-amber-400">{{ $this->selectedService?->formattedPrice }}</div>
+                    @if ($this->selectedBarber?->price)
+                        <div class="text-sm font-bold text-amber-400">{{ $this->selectedBarber?->formattedPrice }}</div>
+                    @endif
                 </div>
                 <div class="flex items-center gap-3 pt-3">
                     @php($photo = $this->selectedBarber?->photoUrl)
@@ -473,7 +478,7 @@ class extends Component
                 </div>
                 <div class="mt-2 flex items-center justify-between">
                     <span class="text-white/40">Стоимость</span>
-                    <span class="font-semibold text-amber-400">{{ $this->selectedService?->formattedPrice }}</span>
+                    <span class="font-semibold text-amber-400">{{ $this->selectedBarber?->formattedPrice ?: '—' }}</span>
                 </div>
             </div>
 

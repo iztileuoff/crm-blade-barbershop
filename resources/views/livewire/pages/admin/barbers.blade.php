@@ -22,6 +22,9 @@ class extends Component
     #[Validate('required|exists:specializations,id')]
     public ?int $specialization_id = null;
 
+    #[Validate('nullable|integer|min:0')]
+    public ?int $price = null;
+
     #[Validate('boolean')]
     public bool $is_active = true;
 
@@ -68,6 +71,7 @@ class extends Component
         $this->editingId = $barber->id;
         $this->name = $barber->name;
         $this->specialization_id = $barber->specialization_id;
+        $this->price = $barber->price;
         $this->is_active = (bool) $barber->is_active;
         $this->schedule = $barber->schedule;
         $this->photo = null;
@@ -81,6 +85,7 @@ class extends Component
         $payload = [
             'name' => $this->name,
             'specialization_id' => $this->specialization_id,
+            'price' => $this->price,
             'is_active' => $this->is_active,
             'schedule' => $this->schedule,
         ];
@@ -117,7 +122,7 @@ class extends Component
 
     private function resetForm(): void
     {
-        $this->reset(['editingId', 'name', 'specialization_id', 'is_active', 'photo']);
+        $this->reset(['editingId', 'name', 'specialization_id', 'price', 'is_active', 'photo']);
         $this->is_active = true;
         $this->resetErrorBag();
     }
@@ -162,6 +167,12 @@ class extends Component
                                     @endforeach
                                 </select>
                                 @error('specialization_id') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
+                            </div>
+                            <div class="sm:col-span-2">
+                                <label class="mb-1.5 block text-xs font-semibold text-white/50">Цена (сум)</label>
+                                <input type="number" wire:model="price" placeholder="Стоимость..."
+                                       class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20">
+                                @error('price') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
                             </div>
                             <div class="flex items-center pt-4">
                                 <label class="relative inline-flex cursor-pointer items-center">
@@ -239,6 +250,7 @@ class extends Component
                     <tr class="border-b border-white/[0.06] bg-white/[0.03] text-xs font-bold uppercase tracking-wider text-white/30">
                         <th class="px-6 py-4">Мастер</th>
                         <th class="hidden px-6 py-4 sm:table-cell">Специализация</th>
+                        <th class="px-6 py-4">Цена</th>
                         <th class="hidden px-6 py-4 sm:table-cell">Статус</th>
                         <th class="px-6 py-4 text-right">Действия</th>
                     </tr>
@@ -263,6 +275,13 @@ class extends Component
                             </td>
                             <td class="hidden px-6 py-4 text-white/50 sm:table-cell">
                                 {{ $barber->specialization?->name ?: '—' }}
+                            </td>
+                            <td class="px-6 py-4">
+                                @if ($barber->price)
+                                    <div class="font-bold text-amber-400">{{ $barber->formattedPrice }}</div>
+                                @else
+                                    <span class="text-white/30">—</span>
+                                @endif
                             </td>
                             <td class="hidden px-6 py-4 sm:table-cell">
                                 @if ($barber->is_active)

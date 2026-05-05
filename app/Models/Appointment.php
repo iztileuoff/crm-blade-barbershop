@@ -22,6 +22,8 @@ class Appointment extends Model
         'starts_at',
         'ends_at',
         'status',
+        'price',
+        'note',
         'notified_30min',
     ];
 
@@ -31,8 +33,16 @@ class Appointment extends Model
             'starts_at' => 'datetime',
             'ends_at' => 'datetime',
             'status' => AppointmentStatus::class,
+            'price' => 'integer',
             'notified_30min' => 'boolean',
         ];
+    }
+
+    /**
+     * Цена в формате "12 000 сум" (PHP 8.4 property hook).
+     */
+    public string $formattedPrice {
+        get => number_format((int) ($this->price ?? $this->barber?->price ?? 0), 0, '.', ' ').' сум';
     }
 
     public function client(): BelongsTo
