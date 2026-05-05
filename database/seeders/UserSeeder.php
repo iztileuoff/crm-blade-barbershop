@@ -12,11 +12,20 @@ class UserSeeder extends Seeder
     public function run(): void
     {
         User::updateOrCreate(
-            ['phone' => '998901234567'],
+            ['phone' => '998999999999'],
             [
                 'name' => 'Супер Админ',
-                'password' => Hash::make('password'),
+                'password' => Hash::make('11223344'),
                 'role' => Role::SUPER_ADMIN,
+            ]
+        );
+
+        User::updateOrCreate(
+            ['phone' => '998888888888'],
+            [
+                'name' => 'Админ',
+                'password' => Hash::make('11223344'),
+                'role' => Role::ADMIN,
             ]
         );
     }
