@@ -29,6 +29,7 @@
 
                     <nav class="hidden items-center gap-1 text-sm font-medium md:flex">
                         @php($links = [
+                            ['route' => 'admin.dashboard', 'label' => 'Касса'],
                             ['route' => 'admin.appointments', 'label' => 'Записи'],
                             ['route' => 'admin.barbers', 'label' => 'Мастера'],
                             ['route' => 'admin.services', 'label' => 'Услуги'],

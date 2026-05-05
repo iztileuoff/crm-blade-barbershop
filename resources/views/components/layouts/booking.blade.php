@@ -26,10 +26,18 @@
                     <div class="text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-500/70">Barbershop</div>
                 </div>
             </a>
-            <a href="{{ route('admin.appointments') }}"
-               class="rounded-lg border border-white/[0.06] px-3 py-1.5 text-[11px] font-medium text-white/30 transition hover:border-white/10 hover:text-white/60">
-                Панель
-            </a>
+            <div class="flex items-center gap-2">
+                <a href="{{ route('admin.appointments') }}"
+                   class="rounded-lg border border-white/[0.06] px-3 py-1.5 text-[11px] font-medium text-white/30 transition hover:border-white/10 hover:text-white/60">
+                    Панель
+                </a>
+                @auth
+                <a href="{{ route('logout') }}"
+                   class="rounded-lg border border-white/[0.06] px-3 py-1.5 text-[11px] font-medium text-rose-500/50 transition hover:border-rose-500/30 hover:text-rose-500">
+                    Выход
+                </a>
+                @endauth
+            </div>
         </div>
     </header>
 

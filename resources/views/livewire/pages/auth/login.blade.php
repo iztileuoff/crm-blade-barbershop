@@ -7,9 +7,8 @@ use Livewire\Attributes\Validate;
 use Livewire\Volt\Component;
 
 new
-#[Layout('components.layouts.booking')]
-class extends Component
-{
+    #[Layout('components.layouts.booking')]
+    class extends Component {
     #[Validate('required|string')]
     public string $phone = '';
 
@@ -38,39 +37,39 @@ class extends Component
     }
 }; ?>
 
-<div class="flex min-h-screen items-center justify-center p-4">
-    <div class="w-full max-w-md animate-fade-in-up rounded-3xl border border-white/[0.06] bg-white/[0.02] p-8 shadow-2xl shadow-black/50 backdrop-blur-xl">
-        <div class="mb-8 text-center">
-            <h1 class="text-3xl font-extrabold tracking-tight text-white">Вход</h1>
-            <p class="mt-2 text-sm text-white/40">Войдите, чтобы управлять системой</p>
+<div class="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#0f172a] via-[#020617] to-black p-4">
+    <div class="w-full max-w-md rounded-2xl border border-white/10 bg-white/5 p-8 shadow-xl backdrop-blur-lg">
+        <div class="mb-6 text-center">
+            <h1 class="text-2xl font-bold text-white">Вход</h1>
+            <p class="mt-1 text-sm text-white/50">Управление системой</p>
         </div>
 
-        <form wire:submit="login" class="space-y-5">
+        <form wire:submit.prevent="login" class="flex flex-col gap-3">
             <div>
-                <label for="phone" class="mb-1.5 block text-xs font-semibold text-white/50">Телефон</label>
-                <input id="phone" type="tel" wire:model="phone" placeholder="998 90 123 45 67" required autofocus autocomplete="username"
-                       class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3.5 text-sm text-white placeholder-white/20 outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20">
-                @error('phone') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
+                <label class="mb-1 block text-xs text-white/60">Телефон</label>
+                <input type="tel" wire:model.defer="phone" placeholder="998 90 123 45 67"
+                    class="w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2.5 text-sm text-white placeholder-white/30 focus:border-amber-500 focus:ring-1 focus:ring-amber-500/30 outline-none">
+                @error('phone') <p class="mt-1 text-xs text-red-400">{{ $message }}</p> @enderror
             </div>
 
             <div>
-                <label for="password" class="mb-1.5 block text-xs font-semibold text-white/50">Пароль</label>
-                <input id="password" type="password" wire:model="password" placeholder="••••••••" required autocomplete="current-password"
-                       class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3.5 text-sm text-white placeholder-white/20 outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20">
-                @error('password') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
+                <label class="mb-1 block text-xs text-white/60">Пароль</label>
+                <input type="password" wire:model.defer="password" placeholder="••••••••"
+                    class="w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2.5 text-sm text-white placeholder-white/30 focus:border-amber-500 focus:ring-1 focus:ring-amber-500/30 outline-none">
+                @error('password') <p class="mt-1 text-xs text-red-400">{{ $message }}</p> @enderror
             </div>
 
-            <div class="flex items-center">
-                <label class="relative inline-flex cursor-pointer items-center">
-                    <input type="checkbox" wire:model="remember" class="peer sr-only">
-                    <div class="h-5 w-9 rounded-full bg-white/10 transition-colors peer-checked:bg-amber-500 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all peer-checked:after:translate-x-full"></div>
-                    <span class="ml-3 text-sm font-medium text-white/60">Запомнить меня</span>
+            <div class="flex items-center justify-between text-sm">
+                <label class="flex items-center gap-2 text-white/60">
+                    <input type="checkbox" wire:model="remember"
+                        class="rounded border-white/20 bg-black/30 text-amber-500 focus:ring-amber-500">
+                    Запомнить
                 </label>
             </div>
 
             <button type="submit"
-                    class="mt-4 w-full rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 px-4 py-3.5 text-sm font-bold text-black shadow-lg shadow-amber-500/20 transition-all hover:shadow-amber-500/30 active:scale-[0.98]">
-                Войти в систему
+                class="w-full rounded-lg bg-amber-500 py-2.5 text-sm font-semibold text-black hover:bg-amber-400 active:scale-[0.98] transition">
+                Войти
             </button>
         </form>
     </div>
