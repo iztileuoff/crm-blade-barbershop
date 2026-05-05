@@ -216,7 +216,7 @@ class extends Component
             'price' => $barber->price,
             'starts_at' => $startsAt,
             'ends_at' => $endsAt,
-            'status' => AppointmentStatus::Confirmed,
+            'status' => AppointmentStatus::Pending,
             'notified_30min' => false,
         ]);
 
@@ -464,12 +464,13 @@ class extends Component
                     <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                 </svg>
             </div>
-            <h2 class="mb-2 text-xl font-bold">Запись подтверждена!</h2>
+            <h2 class="mb-2 text-xl font-bold">Заявка принята!</h2>
             <p class="mx-auto max-w-xs text-sm text-white/40">
-                Ждём вас {{ \Illuminate\Support\Carbon::parse($date)->translatedFormat('d MMMM') }}
+                Мы свяжемся с вами для подтверждения записи на
+                {{ \Illuminate\Support\Carbon::parse($date)->translatedFormat('d MMMM') }}
                 в {{ $time }} к мастеру {{ $this->selectedBarber?->name }}.
             </p>
-            <p class="mt-1.5 text-xs text-white/25">За 30 минут до визита придёт SMS-напоминание</p>
+            <p class="mt-1.5 text-xs text-white/25">После подтверждения за 30 минут до визита придёт SMS-напоминание</p>
 
             <div class="mx-auto mt-6 max-w-xs rounded-2xl border border-white/[0.06] bg-white/[0.03] p-4 text-left text-sm">
                 <div class="flex items-center justify-between">

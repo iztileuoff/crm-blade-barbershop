@@ -13,11 +13,21 @@ new
 #[Layout('components.layouts.app')]
 class extends Component
 {
-    public string $today = '';
+    public string $date = '';
 
     public function mount(): void
     {
-        $this->today = Carbon::now('Asia/Tashkent')->translatedFormat('d F Y, l');
+        $this->date = Carbon::now('Asia/Tashkent')->toDateString();
+    }
+
+    #[Computed]
+    public function dateString(): string
+    {
+        try {
+            return Carbon::parse($this->date)->translatedFormat('d F Y, l');
+        } catch (\Exception $e) {
+            return Carbon::now('Asia/Tashkent')->translatedFormat('d F Y, l');
+        }
     }
 
     #[Computed]
@@ -25,7 +35,7 @@ class extends Component
     {
         return Appointment::query()
             ->with(['barber', 'service'])
-            ->whereDate('starts_at', today())
+            ->whereDate('starts_at', $this->date ?: today('Asia/Tashkent'))
             ->get();
     }
 
@@ -60,6 +70,14 @@ class extends Component
     }
 
     #[Computed]
+    public function cancelledCount(): int
+    {
+        return $this->appointments
+            ->where('status', AppointmentStatus::Cancelled)
+            ->count();
+    }
+
+    #[Computed]
     public function barberStats(): Collection
     {
         $byBarber = $this->appointments->groupBy('barber_id');
@@ -74,11 +92,14 @@ class extends Component
                     ->whereIn('status', [AppointmentStatus::Completed, AppointmentStatus::Confirmed])
                     ->sum(fn ($appointment) => (int) ($appointment->price ?? $barber->price ?? 0));
 
+                $cancelledCount = $items->where('status', AppointmentStatus::Cancelled)->count();
+
                 return (object) [
                     'id' => $barber->id,
                     'name' => $barber->name,
                     'photoUrl' => $barber->photoUrl,
                     'count' => $items->count(),
+                    'cancelled_count' => $cancelledCount,
                     'revenue' => $revenue,
                     'formattedRevenue' => number_format($revenue, 0, '.', ' ').' сум',
                 ];
@@ -95,23 +116,30 @@ class extends Component
     <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>
             <h1 class="text-3xl font-extrabold tracking-tight text-white">Касса</h1>
-            <p class="mt-1 text-sm text-white/40">Сводка за сегодня — {{ $today }}</p>
+            <p class="mt-1 text-sm text-white/40">Сводка за день — {{ $this->dateString }}</p>
         </div>
-        <div class="flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-xs font-bold text-emerald-400">
-            <span class="relative flex h-2 w-2">
-                <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
-                <span class="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
-            </span>
-            Обновление каждые 60 сек
+        <div class="flex flex-wrap items-center gap-4">
+            <input 
+                type="date" 
+                wire:model.live="date" 
+                class="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white shadow-sm transition-colors focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500 dark:[color-scheme:dark]"
+            >
+            <div class="flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-xs font-bold text-emerald-400">
+                <span class="relative flex h-2 w-2">
+                    <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
+                    <span class="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
+                </span>
+                Обновление каждые 60 сек
+            </div>
         </div>
     </div>
 
     {{-- Top Stats --}}
-    <div class="mb-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+    <div class="mb-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-5">
         {{-- Total appointments --}}
         <div class="overflow-hidden rounded-2xl border border-white/[0.06] bg-gradient-to-br from-white/[0.04] to-white/[0.01] p-6 shadow-xl backdrop-blur-md">
             <div class="flex items-center justify-between">
-                <span class="text-xs font-bold uppercase tracking-widest text-white/40">Записей сегодня</span>
+                <span class="text-xs font-bold uppercase tracking-widest text-white/40">Записей за день</span>
                 <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10 text-amber-400">
                     <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" /></svg>
                 </div>
@@ -155,6 +183,18 @@ class extends Component
             <div class="mt-4 text-4xl font-extrabold text-white">{{ $this->completedCount }}</div>
             <div class="mt-1 text-xs text-white/30">Закрытые визиты</div>
         </div>
+
+        {{-- Cancelled --}}
+        <div class="overflow-hidden rounded-2xl border border-rose-500/20 bg-gradient-to-br from-rose-500/10 to-rose-500/[0.02] p-6 shadow-xl backdrop-blur-md">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold uppercase tracking-widest text-rose-400/70">Отменено</span>
+                <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-500/15 text-rose-400">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+                </div>
+            </div>
+            <div class="mt-4 text-4xl font-extrabold text-white">{{ $this->cancelledCount }}</div>
+            <div class="mt-1 text-xs text-rose-400/60">Отмененные записи</div>
+        </div>
     </div>
 
     {{-- Barber Performance --}}
@@ -162,7 +202,7 @@ class extends Component
         <div class="flex items-center justify-between border-b border-white/[0.06] bg-white/[0.03] px-6 py-4">
             <div>
                 <h3 class="text-sm font-bold text-white">Производительность мастеров</h3>
-                <p class="mt-0.5 text-xs text-white/30">Записи и выручка за сегодня</p>
+                <p class="mt-0.5 text-xs text-white/30">Записи и выручка за день</p>
             </div>
         </div>
 
@@ -171,7 +211,8 @@ class extends Component
                 <thead>
                     <tr class="border-b border-white/[0.06] bg-white/[0.03] text-xs font-bold uppercase tracking-wider text-white/30">
                         <th class="px-6 py-4">Имя</th>
-                        <th class="px-6 py-4 text-center">Записей сегодня</th>
+                        <th class="px-6 py-4 text-center">Записей за день</th>
+                        <th class="px-6 py-4 text-center">Отменено</th>
                         <th class="px-6 py-4 text-right">Выручка</th>
                     </tr>
                 </thead>
@@ -199,6 +240,15 @@ class extends Component
                                     {{ $stat->count }}
                                 </span>
                             </td>
+                            <td class="px-6 py-4 text-center">
+                                <span @class([
+                                    'inline-flex min-w-[2.5rem] items-center justify-center rounded-full px-3 py-1 text-xs font-bold',
+                                    'bg-rose-500/10 text-rose-400' => $stat->cancelled_count > 0,
+                                    'bg-white/[0.04] text-white/30' => $stat->cancelled_count === 0,
+                                ])>
+                                    {{ $stat->cancelled_count }}
+                                </span>
+                            </td>
                             <td class="px-6 py-4 text-right">
                                 <span @class([
                                     'font-extrabold tabular-nums',
@@ -211,7 +261,7 @@ class extends Component
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="3" class="px-6 py-12 text-center text-white/20">Активные мастера не найдены</td>
+                            <td colspan="4" class="px-6 py-12 text-center text-white/20">Активные мастера не найдены</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -220,6 +270,7 @@ class extends Component
                         <tr class="border-t border-white/[0.06] bg-white/[0.03] text-xs font-bold uppercase tracking-wider text-white/40">
                             <td class="px-6 py-4">Итого</td>
                             <td class="px-6 py-4 text-center text-white">{{ $this->barberStats->sum('count') }}</td>
+                            <td class="px-6 py-4 text-center text-white">{{ $this->barberStats->sum('cancelled_count') }}</td>
                             <td class="px-6 py-4 text-right text-emerald-400">{{ $this->formatSum((int) $this->barberStats->sum('revenue')) }}</td>
                         </tr>
                     </tfoot>

@@ -37,7 +37,7 @@ new
     }
 }; ?>
 
-<div class="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#0f172a] via-[#020617] to-black p-4">
+<div class="flex min-h-screen items-center justify-center">
     <div class="w-full max-w-md rounded-2xl border border-white/10 bg-white/5 p-8 shadow-xl backdrop-blur-lg">
         <div class="mb-6 text-center">
             <h1 class="text-2xl font-bold text-white">Вход</h1>

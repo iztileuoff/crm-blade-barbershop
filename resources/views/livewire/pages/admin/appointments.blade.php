@@ -202,13 +202,19 @@ class extends Component
 
     public function updatedFormStartTime($value): void
     {
-        if (! $value || ! $this->service_id) {
+        // ⛔ невалидное время — выходим
+        if (!preg_match('/^\d{2}:\d{2}$/', $value)) {
+            return;
+        }
+
+        if (! $this->service_id) {
             return;
         }
 
         $service = Service::find($this->service_id);
+
         if ($service) {
-            $this->form_end_time = Carbon::parse($value)
+            $this->form_end_time = Carbon::createFromFormat('H:i', $value)
                 ->addMinutes((int) $service->duration_minutes)
                 ->format('H:i');
         }
@@ -218,21 +224,20 @@ class extends Component
 
     public function updatedFormEndTime($value): void
     {
-        if (! $value || ! $this->form_start_time) {
+        if (
+            !preg_match('/^\d{2}:\d{2}$/', $value) ||
+            !preg_match('/^\d{2}:\d{2}$/', $this->form_start_time)
+        ) {
             return;
         }
 
-        try {
-            $startsAt = Carbon::parse($this->form_start_time);
-            $endsAt = Carbon::parse($value);
+        $startsAt = Carbon::createFromFormat('H:i', $this->form_start_time);
+        $endsAt = Carbon::createFromFormat('H:i', $value);
 
-            if ($endsAt->lte($startsAt)) {
-                $this->addError('form_end_time', 'Время окончания должно быть позже начала.');
-            } else {
-                $this->resetErrorBag('form_end_time');
-            }
-        } catch (\Exception $e) {
-            // Ignore parse errors, regex validation will handle it on save
+        if ($endsAt->lte($startsAt)) {
+            $this->addError('form_end_time', 'Время окончания должно быть позже начала.');
+        } else {
+            $this->resetErrorBag('form_end_time');
         }
     }
 
@@ -269,6 +274,12 @@ class extends Component
         unset($this->appointments);
         $this->showForm = false;
         $this->resetForm();
+    }
+
+    public function markConfirmed(int $id): void
+    {
+        Appointment::findOrFail($id)->update(['status' => AppointmentStatus::Confirmed]);
+        unset($this->appointments);
     }
 
     public function markCompleted(int $id): void
@@ -397,14 +408,14 @@ class extends Component
                         </div>
                         <div>
                             <label class="mb-1.5 block text-xs font-semibold text-white/50">Начало</label>
-                            <input type="text" wire:model.live="form_start_time" list="times-list" placeholder="09:00"
+                            <input type="time" wire:model.live="form_start_time" list="times-list" placeholder="09:00"
                                    class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white placeholder-white/20 outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20">
                             @error('form_start_time') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
                         </div>
                     </div>
                     <div>
                         <label class="mb-1.5 block text-xs font-semibold text-white/50">Окончание</label>
-                        <input type="text" wire:model="form_end_time" list="times-list" placeholder="09:45"
+                        <input type="time" wire:model="form_end_time" list="times-list" placeholder="09:45"
                                class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white placeholder-white/20 outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20">
                         @error('form_end_time') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
                     </div>
@@ -504,6 +515,7 @@ class extends Component
                                     'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider',
                                     'bg-emerald-500/10 text-emerald-400' => str_contains($badge, 'emerald'),
                                     'bg-amber-500/10 text-amber-400' => str_contains($badge, 'amber'),
+                                    'bg-blue-500/10 text-blue-400' => str_contains($badge, 'blue'),
                                     'bg-rose-500/10 text-rose-400' => str_contains($badge, 'rose'),
                                     'bg-white/10 text-white/40' => str_contains($badge, 'zinc'),
                                 ])>
@@ -512,12 +524,25 @@ class extends Component
                             </td>
                             <td class="px-6 py-4">
                                 <div class="flex items-center justify-end gap-1.5">
-                                    @if (in_array($appointment->status, [AppointmentStatus::Pending, AppointmentStatus::Confirmed], true))
+                                    @if ($appointment->status === AppointmentStatus::Pending)
+                                        <button type="button" wire:click="markConfirmed({{ $appointment->id }})"
+                                                title="Подтвердить"
+                                                class="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/10 text-blue-400 transition hover:bg-blue-500 hover:text-black">
+                                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+                                        </button>
+                                        <button type="button" wire:click="markCancelled({{ $appointment->id }})"
+                                                title="Отменить"
+                                                class="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-500/10 text-rose-500 transition hover:bg-rose-500 hover:text-black">
+                                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+                                        </button>
+                                    @elseif ($appointment->status === AppointmentStatus::Confirmed)
                                         <button type="button" wire:click="markCompleted({{ $appointment->id }})"
+                                                title="Завершить"
                                                 class="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500 transition hover:bg-emerald-500 hover:text-black">
                                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
                                         </button>
                                         <button type="button" wire:click="markCancelled({{ $appointment->id }})"
+                                                title="Отменить"
                                                 class="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-500/10 text-rose-500 transition hover:bg-rose-500 hover:text-black">
                                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
                                         </button>
