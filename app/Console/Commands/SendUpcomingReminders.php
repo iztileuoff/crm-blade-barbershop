@@ -28,15 +28,13 @@ class SendUpcomingReminders extends Command
 
         foreach ($appointments as $appointment) {
             $client = $appointment->client;
-            $barber = $appointment->barber;
 
-            if (! $client || ! $barber) {
+            if (! $client) {
                 continue;
             }
 
             $message = sprintf(
-                'Напоминаем, вы записаны к %s на %s. Ждем вас!',
-                $barber->name,
+                'Напоминаем, вы записаны на %s. Ждем вас в Blade Barbershop!',
                 $appointment->starts_at->format('H:i'),
             );
 
