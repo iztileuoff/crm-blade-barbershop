@@ -53,8 +53,7 @@
                 </div>
 
                 <div class="flex items-center gap-3">
-                    <a href="{{ route('booking') }}" target="_blank" class="hidden items-center gap-1.5 rounded-lg border border-white/[0.06] px-3 py-1.5 text-xs font-medium text-white/40 transition hover:border-white/10 hover:text-white sm:flex">
-                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V12.75m-4.5-4.5H21m0 0v4.5m0-4.5L12 13.5" /></svg>
+                    <a href="{{ route('booking') }}" target="_blank" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-white/60 hover:bg-white/[0.03] hover:text-white">
                         На сайт
                     </a>
                     
