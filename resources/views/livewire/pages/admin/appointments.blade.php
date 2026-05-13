@@ -51,6 +51,8 @@ class extends Component
 
     public bool $showForm = false;
 
+    public int $timeStep = 60;
+
     public string $clientSearch = '';
 
     public function mount(): void
@@ -117,10 +119,35 @@ class extends Component
 
         while ($start <= $end) {
             $slots[] = $start->format('H:i');
-            $start->addMinutes(15);
+            $start->addMinutes($this->timeStep);
         }
 
         return $slots;
+    }
+
+    public function setTimeStep(int $step): void
+    {
+        $this->timeStep = in_array($step, [15, 30, 60]) ? $step : 60;
+        unset($this->timeSlots);
+    }
+
+    public function selectStartTime(string $time): void
+    {
+        $this->form_start_time = $time;
+        $this->resetErrorBag('form_start_time');
+
+        if (! $this->service_id) {
+            return;
+        }
+
+        $service = Service::find($this->service_id);
+
+        if ($service) {
+            $this->form_end_time = Carbon::createFromFormat('H:i', $time)
+                ->addMinutes((int) $service->duration_minutes)
+                ->format('H:i');
+            $this->resetErrorBag('form_end_time');
+        }
     }
 
     public function setDate(string $date): void
@@ -413,32 +440,64 @@ class extends Component
                                class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20">
                         @error('price') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
                     </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="mb-1.5 block text-xs font-semibold text-white/50">Дата</label>
-                            <input type="date" wire:model="form_date"
-                                   class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20">
-                            @error('form_date') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
-                        </div>
-                        <div>
-                            <label class="mb-1.5 block text-xs font-semibold text-white/50">Начало</label>
-                            <input type="time" wire:model.live="form_start_time" list="times-list" placeholder="09:00"
-                                   class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white placeholder-white/20 outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20">
-                            @error('form_start_time') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
-                        </div>
-                    </div>
                     <div>
-                        <label class="mb-1.5 block text-xs font-semibold text-white/50">Окончание</label>
-                        <input type="time" wire:model="form_end_time" list="times-list" placeholder="09:45"
-                               class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white placeholder-white/20 outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20">
-                        @error('form_end_time') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
+                        <label class="mb-1.5 block text-xs font-semibold text-white/50">Дата</label>
+                        <input type="date" wire:model="form_date"
+                               class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20">
+                        @error('form_date') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
                     </div>
 
-                    <datalist id="times-list">
-                        @foreach ($this->timeSlots as $slot)
-                            <option value="{{ $slot }}">
-                        @endforeach
-                    </datalist>
+                    {{-- Time slot picker --}}
+                    <div class="sm:col-span-2 lg:col-span-3">
+                        <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+                            <label class="text-xs font-semibold text-white/50">Время начала</label>
+                            <div class="flex items-center gap-1 rounded-xl border border-white/[0.06] bg-white/[0.03] p-1">
+                                @foreach ([15 => '15 мин', 30 => '30 мин', 60 => '1 ч'] as $step => $label)
+                                    <button type="button" wire:click="setTimeStep({{ $step }})"
+                                            @class([
+                                                'rounded-lg px-3 py-1 text-xs font-bold transition',
+                                                'bg-amber-500 text-black' => $timeStep === $step,
+                                                'text-white/40 hover:text-white' => $timeStep !== $step,
+                                            ])>
+                                        {{ $label }}
+                                    </button>
+                                @endforeach
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap gap-1.5">
+                            @foreach ($this->timeSlots as $slot)
+                                <button type="button" wire:click="selectStartTime('{{ $slot }}')"
+                                        @class([
+                                            'rounded-lg px-3 py-2 text-xs font-bold tabular-nums transition',
+                                            'bg-amber-500 text-black shadow-lg shadow-amber-500/20' => $form_start_time === $slot,
+                                            'border border-white/[0.06] bg-white/[0.02] text-white/50 hover:border-amber-500/30 hover:bg-amber-500/[0.06] hover:text-white' => $form_start_time !== $slot,
+                                        ])>
+                                    {{ $slot }}
+                                </button>
+                            @endforeach
+                        </div>
+
+                        @error('form_start_time') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
+
+                        @if ($form_start_time)
+                            <div class="mt-3 flex flex-wrap items-center gap-4">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs text-white/40">Начало:</span>
+                                    <span class="rounded-lg bg-amber-500/10 px-2.5 py-1 text-xs font-bold text-amber-400">{{ $form_start_time }}</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs text-white/40">Окончание:</span>
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="rounded-lg bg-white/[0.06] px-2.5 py-1 text-xs font-bold text-white/60">{{ $form_end_time ?: '—' }}</span>
+                                        <input type="time" wire:model.live="form_end_time"
+                                               class="rounded-lg border border-white/[0.08] bg-white/[0.04] px-2.5 py-1 text-xs text-white/60 outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20">
+                                    </div>
+                                </div>
+                            </div>
+                            @error('form_end_time') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
+                        @endif
+                    </div>
 
                     <div class="sm:col-span-2 lg:col-span-3">
                         <label class="mb-1.5 block text-xs font-semibold text-white/50">Заметка</label>
