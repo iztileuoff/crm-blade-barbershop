@@ -186,6 +186,8 @@ class extends Component
                     ->format('H:i');
             }
         }
+
+        $this->refreshPivotPrice();
     }
 
     public function updatedBarberId($id): void
@@ -194,10 +196,22 @@ class extends Component
             return;
         }
 
-        $barber = Barber::find($id);
-        if ($barber && ! $this->price) {
-            $this->price = $barber->price;
+        $this->refreshPivotPrice();
+    }
+
+    private function refreshPivotPrice(): void
+    {
+        if (! $this->barber_id) {
+            return;
         }
+
+        $barber = Barber::with('services')->find($this->barber_id);
+
+        if (! $barber) {
+            return;
+        }
+
+        $this->price = $barber->priceForService($this->service_id ? (int) $this->service_id : null);
     }
 
     public function updatedFormStartTime($value): void

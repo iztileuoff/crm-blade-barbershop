@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Barber;
+use App\Models\Service;
 use App\Models\Specialization;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
@@ -25,6 +26,9 @@ class extends Component
     #[Validate('nullable|integer|min:0')]
     public ?int $price = null;
 
+    #[Validate('required|integer|min:0|max:100')]
+    public int $salary_percent = 50;
+
     #[Validate('boolean')]
     public bool $is_active = true;
 
@@ -41,6 +45,9 @@ class extends Component
 
     #[Validate('nullable|image|max:2048')]
     public $photo;
+
+    /** @var array<int, int|null> service_id => price */
+    public array $servicePrices = [];
 
     public bool $showForm = false;
 
@@ -59,6 +66,12 @@ class extends Component
         return Specialization::orderBy('name')->get();
     }
 
+    #[Computed]
+    public function allServices()
+    {
+        return Service::active()->orderBy('name')->get();
+    }
+
     public function openCreate(): void
     {
         $this->resetForm();
@@ -67,14 +80,19 @@ class extends Component
 
     public function edit(int $id): void
     {
-        $barber = Barber::findOrFail($id);
+        $barber = Barber::with('services')->findOrFail($id);
         $this->editingId = $barber->id;
         $this->name = $barber->name;
         $this->specialization_id = $barber->specialization_id;
         $this->price = $barber->price;
+        $this->salary_percent = $barber->salary_percent;
         $this->is_active = (bool) $barber->is_active;
         $this->schedule = $barber->schedule;
         $this->photo = null;
+        $this->servicePrices = $barber->services
+            ->pluck('pivot.price', 'id')
+            ->map(fn ($p) => $p !== null ? (int) $p : null)
+            ->toArray();
         $this->showForm = true;
     }
 
@@ -86,6 +104,7 @@ class extends Component
             'name' => $this->name,
             'specialization_id' => $this->specialization_id,
             'price' => $this->price,
+            'salary_percent' => $this->salary_percent,
             'is_active' => $this->is_active,
             'schedule' => $this->schedule,
         ];
@@ -102,6 +121,12 @@ class extends Component
                 ->usingFileName($this->photo->getClientOriginalName())
                 ->toMediaCollection('photo');
         }
+
+        $syncData = [];
+        foreach ($this->servicePrices as $serviceId => $price) {
+            $syncData[$serviceId] = ['price' => $price !== '' && $price !== null ? (int) $price : null];
+        }
+        $barber->services()->sync($syncData);
 
         unset($this->barbers);
         $this->resetForm();
@@ -122,7 +147,8 @@ class extends Component
 
     private function resetForm(): void
     {
-        $this->reset(['editingId', 'name', 'specialization_id', 'price', 'is_active', 'photo']);
+        $this->reset(['editingId', 'name', 'specialization_id', 'price', 'salary_percent', 'is_active', 'photo', 'servicePrices']);
+        $this->salary_percent = 50;
         $this->is_active = true;
         $this->resetErrorBag();
     }
@@ -168,12 +194,41 @@ class extends Component
                                 </select>
                                 @error('specialization_id') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
                             </div>
-                            <div class="sm:col-span-2">
-                                <label class="mb-1.5 block text-xs font-semibold text-white/50">Цена (сум)</label>
-                                <input type="number" wire:model="price" placeholder="Стоимость..."
+                            <div>
+                                <label class="mb-1.5 block text-xs font-semibold text-white/50">Цена по умолчанию (сум)</label>
+                                <input type="number" wire:model="price" placeholder="Если не задана цена за услугу..."
                                        class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20">
                                 @error('price') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
                             </div>
+                            <div>
+                                <label class="mb-1.5 block text-xs font-semibold text-white/50">Процент ЗП (%)</label>
+                                <div class="relative">
+                                    <input type="number" wire:model="salary_percent" min="0" max="100" placeholder="50"
+                                           class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 pr-10 text-sm text-white outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20">
+                                    <span class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold text-white/30">%</span>
+                                </div>
+                                @error('salary_percent') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
+                            </div>
+
+                            @if ($this->allServices->isNotEmpty())
+                                <div class="sm:col-span-2">
+                                    <label class="mb-2 block text-xs font-semibold text-white/50">Цены по услугам (сум)</label>
+                                    <div class="grid gap-2 sm:grid-cols-2">
+                                        @foreach ($this->allServices as $service)
+                                            <div class="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-2.5">
+                                                <span class="min-w-0 flex-1 truncate text-sm text-white/60">{{ $service->name }}</span>
+                                                <input
+                                                    type="number"
+                                                    wire:model="servicePrices.{{ $service->id }}"
+                                                    placeholder="{{ $price ?? '—' }}"
+                                                    class="w-28 shrink-0 rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 py-1.5 text-right text-sm text-white outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20"
+                                                >
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                    <p class="mt-1.5 text-[11px] text-white/25">Пустое поле — используется цена по умолчанию</p>
+                                </div>
+                            @endif
                             <div class="flex items-center pt-4">
                                 <label class="relative inline-flex cursor-pointer items-center">
                                     <input type="checkbox" wire:model="is_active" class="peer sr-only">
@@ -251,6 +306,7 @@ class extends Component
                         <th class="px-6 py-4">Мастер</th>
                         <th class="hidden px-6 py-4 sm:table-cell">Специализация</th>
                         <th class="px-6 py-4">Цена</th>
+                        <th class="hidden px-6 py-4 sm:table-cell">ЗП %</th>
                         <th class="hidden px-6 py-4 sm:table-cell">Статус</th>
                         <th class="px-6 py-4 text-right">Действия</th>
                     </tr>
@@ -282,6 +338,11 @@ class extends Component
                                 @else
                                     <span class="text-white/30">—</span>
                                 @endif
+                            </td>
+                            <td class="hidden px-6 py-4 sm:table-cell">
+                                <span class="inline-flex items-center rounded-full bg-white/[0.06] px-2.5 py-1 text-xs font-bold text-white/60">
+                                    {{ $barber->salary_percent }}%
+                                </span>
                             </td>
                             <td class="hidden px-6 py-4 sm:table-cell">
                                 @if ($barber->is_active)

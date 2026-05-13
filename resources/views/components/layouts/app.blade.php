@@ -35,6 +35,8 @@
                             ['route' => 'admin.services', 'label' => 'Услуги'],
                             ['route' => 'admin.specializations', 'label' => 'Спец.'],
                             ['route' => 'admin.clients', 'label' => 'Клиенты'],
+                            ['route' => 'admin.products', 'label' => 'Товары'],
+                            ['route' => 'admin.orders', 'label' => 'Продажи'],
                         ])
                         @if(auth()->user()?->isSuperAdmin())
                             @php($links[] = ['route' => 'admin.users', 'label' => 'Пользователи'])
