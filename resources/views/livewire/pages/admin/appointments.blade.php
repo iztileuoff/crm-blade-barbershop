@@ -114,7 +114,7 @@ class extends Component
     public function timeSlots(): array
     {
         $slots = [];
-        $start = Carbon::createFromTime(7, 0);
+        $start = Carbon::createFromTime(0, 0);
         $end = Carbon::createFromTime(23, 0);
 
         while ($start <= $end) {

@@ -15,6 +15,7 @@ class Client extends Model
     protected $fillable = [
         'name',
         'phone',
+        'birth_date',
         'last_visit_at',
         'last_retention_sent_at',
     ];
@@ -22,6 +23,7 @@ class Client extends Model
     protected function casts(): array
     {
         return [
+            'birth_date' => 'date',
             'last_visit_at' => 'datetime',
             'last_retention_sent_at' => 'datetime',
         ];
