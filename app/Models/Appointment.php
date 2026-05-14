@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Carbon;
 
 class Appointment extends Model
@@ -18,7 +19,6 @@ class Appointment extends Model
     protected $fillable = [
         'client_id',
         'barber_id',
-        'service_id',
         'starts_at',
         'ends_at',
         'status',
@@ -38,11 +38,8 @@ class Appointment extends Model
         ];
     }
 
-    /**
-     * Цена в формате "12 000 сум" (PHP 8.4 property hook).
-     */
     public string $formattedPrice {
-        get => number_format((int) ($this->price ?? $this->barber?->price ?? 0), 0, '.', ' ').' сум';
+        get => number_format((int) ($this->price ?? 0), 0, '.', ' ').' сум';
     }
 
     public function client(): BelongsTo
@@ -55,9 +52,9 @@ class Appointment extends Model
         return $this->belongsTo(Barber::class);
     }
 
-    public function service(): BelongsTo
+    public function services(): BelongsToMany
     {
-        return $this->belongsTo(Service::class);
+        return $this->belongsToMany(Service::class)->withPivot('amount');
     }
 
     public function scopeActive(Builder $query): Builder

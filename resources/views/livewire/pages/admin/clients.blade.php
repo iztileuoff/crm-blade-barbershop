@@ -18,6 +18,9 @@ class extends Component
     #[Validate('required|string')]
     public string $phone = '';
 
+    #[Validate('nullable|date')]
+    public string $birth_date = '';
+
     public string $search = '';
 
     public bool $showForm = false;
@@ -50,6 +53,7 @@ class extends Component
         $this->editingId = $client->id;
         $this->name = $client->name;
         $this->phone = $client->formattedPhone ?: $client->phone;
+        $this->birth_date = $client->birth_date?->format('Y-m-d') ?? '';
         $this->showForm = true;
     }
 
@@ -75,7 +79,11 @@ class extends Component
             return;
         }
 
-        $payload = ['name' => $this->name, 'phone' => $normalized];
+        $payload = [
+            'name' => $this->name,
+            'phone' => $normalized,
+            'birth_date' => $this->birth_date ?: null,
+        ];
 
         if ($this->editingId) {
             Client::findOrFail($this->editingId)->update($payload);
@@ -102,7 +110,7 @@ class extends Component
 
     private function resetForm(): void
     {
-        $this->reset(['editingId', 'name', 'phone']);
+        $this->reset(['editingId', 'name', 'phone', 'birth_date']);
         $this->resetErrorBag();
     }
 }; ?>
@@ -133,7 +141,7 @@ class extends Component
                 <h3 class="text-sm font-bold text-white">{{ $editingId ? 'Изменение клиента' : 'Новый клиент' }}</h3>
             </div>
             <form wire:submit="save" class="p-6">
-                <div class="grid gap-6 sm:grid-cols-2">
+                <div class="grid gap-6 sm:grid-cols-3">
                     <div>
                         <label class="mb-1.5 block text-xs font-semibold text-white/50">Имя</label>
                         <input type="text" wire:model="name" placeholder="Имя клиента..."
@@ -145,6 +153,12 @@ class extends Component
                         <input type="text" wire:model="phone" placeholder="+998 90 123 45 67"
                                class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white placeholder-white/20 outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20">
                         @error('phone') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
+                    </div>
+                    <div>
+                        <label class="mb-1.5 block text-xs font-semibold text-white/50">Дата рождения</label>
+                        <input type="date" wire:model="birth_date"
+                               class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20 dark:[color-scheme:dark]">
+                        @error('birth_date') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
                     </div>
                 </div>
                 <div class="mt-8 flex items-center justify-end gap-3 border-t border-white/[0.06] pt-6">
@@ -168,6 +182,7 @@ class extends Component
                     <tr class="border-b border-white/[0.06] bg-white/[0.03] text-xs font-bold uppercase tracking-wider text-white/30">
                         <th class="px-6 py-4">Клиент</th>
                         <th class="px-6 py-4">Телефон</th>
+                        <th class="hidden px-6 py-4 sm:table-cell">Дата рождения</th>
                         <th class="hidden px-6 py-4 sm:table-cell">Последний визит</th>
                         <th class="px-6 py-4 text-right">Действия</th>
                     </tr>
@@ -179,6 +194,9 @@ class extends Component
                                 <div class="font-bold text-white">{{ $client->name }}</div>
                             </td>
                             <td class="whitespace-nowrap px-6 py-4 font-medium text-amber-500/60">{{ $client->formattedPhone }}</td>
+                            <td class="hidden px-6 py-4 text-white/40 sm:table-cell">
+                                {{ $client->birth_date?->translatedFormat('d MMMM Y') ?: '—' }}
+                            </td>
                             <td class="hidden px-6 py-4 text-white/40 sm:table-cell">
                                 {{ $client->last_visit_at?->translatedFormat('d MMMM Y') ?: '—' }}
                             </td>
@@ -198,7 +216,7 @@ class extends Component
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="4" class="px-6 py-12 text-center text-white/20">Клиентов пока не найдено</td>
+                            <td colspan="5" class="px-6 py-12 text-center text-white/20">Клиентов пока не найдено</td>
                         </tr>
                     @endforelse
                 </tbody>

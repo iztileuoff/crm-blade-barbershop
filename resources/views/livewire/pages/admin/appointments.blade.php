@@ -31,8 +31,8 @@ class extends Component
     #[Validate('required|exists:barbers,id')]
     public ?int $barber_id = null;
 
-    #[Validate('required|exists:services,id')]
-    public ?int $service_id = null;
+    /** @var array<int, array{service_id: int|null, amount: int|null}> */
+    public array $selectedServices = [];
 
     #[Validate('nullable|integer|min:0')]
     public ?int $price = null;
@@ -85,7 +85,7 @@ class extends Component
     public function appointments()
     {
         return Appointment::query()
-            ->with(['client', 'barber', 'service'])
+            ->with(['client', 'barber', 'services'])
             ->whereDate('starts_at', $this->date)
             ->when($this->barberFilter, fn ($q) => $q->where('barber_id', $this->barberFilter))
             ->orderBy($this->sortField, $this->sortDirection)
@@ -114,7 +114,7 @@ class extends Component
     public function timeSlots(): array
     {
         $slots = [];
-        $start = Carbon::createFromTime(7, 0);
+        $start = Carbon::createFromTime(0, 0);
         $end = Carbon::createFromTime(23, 0);
 
         while ($start <= $end) {
@@ -167,35 +167,66 @@ class extends Component
 
     public function edit(int $id): void
     {
-        $appointment = Appointment::findOrFail($id);
+        $appointment = Appointment::with('services')->findOrFail($id);
         $this->editingId = $appointment->id;
         $this->client_id = $appointment->client_id;
         $this->barber_id = $appointment->barber_id;
-        $this->service_id = $appointment->service_id;
-        $this->price = $appointment->price;
         $this->note = (string) $appointment->note;
         $this->form_date = $appointment->starts_at->toDateString();
         $this->form_start_time = $appointment->starts_at->format('H:i');
         $this->form_end_time = $appointment->ends_at->format('H:i');
+
+        $this->selectedServices = $appointment->services->map(fn ($s) => [
+            'service_id' => $s->id,
+            'amount' => $s->pivot->amount,
+        ])->values()->toArray();
+
+        $this->recalculateTotal();
         $this->showForm = true;
     }
 
-    public function updatedServiceId($id): void
+    public function addService(): void
     {
-        if (! $id) {
+        $this->selectedServices[] = ['service_id' => null, 'amount' => null];
+    }
+
+    public function removeService(int $index): void
+    {
+        array_splice($this->selectedServices, $index, 1);
+        $this->selectedServices = array_values($this->selectedServices);
+        $this->recalculateTotal();
+    }
+
+    public function updatedSelectedServices($value, $key): void
+    {
+        if (str_ends_with((string) $key, 'service_id')) {
+            $index = (int) explode('.', (string) $key)[0];
+            $this->fillServiceAmount($index);
+        }
+
+        $this->recalculateTotal();
+        $this->resetErrorBag('selectedServices');
+    }
+
+    private function fillServiceAmount(int $index): void
+    {
+        $row = $this->selectedServices[$index] ?? null;
+
+        if (! $row || empty($row['service_id'])) {
+            $this->selectedServices[$index]['amount'] = null;
+
             return;
         }
 
-        $service = Service::find($id);
-        if ($service) {
-            if ($this->form_start_time) {
-                $this->form_end_time = Carbon::parse($this->form_start_time)
-                    ->addMinutes((int) $service->duration_minutes)
-                    ->format('H:i');
-            }
+        if (! $this->barber_id) {
+            return;
         }
 
-        $this->refreshPivotPrice();
+        $barber = Barber::with('services')->find($this->barber_id);
+
+        if ($barber) {
+            $this->selectedServices[$index]['amount'] = $barber->priceForService((int) $row['service_id']) ?? 0;
+        }
     }
 
     public function updatedBarberId($id): void
@@ -204,36 +235,32 @@ class extends Component
             return;
         }
 
-        $this->refreshPivotPrice();
+        foreach (array_keys($this->selectedServices) as $i) {
+            $this->fillServiceAmount($i);
+        }
+
+        $this->recalculateTotal();
     }
 
-    private function refreshPivotPrice(): void
+    private function recalculateTotal(): void
     {
-        if (! $this->barber_id) {
-            return;
-        }
-
-        $barber = Barber::with('services')->find($this->barber_id);
-
-        if (! $barber) {
-            return;
-        }
-
-        $this->price = $barber->priceForService($this->service_id ? (int) $this->service_id : null);
+        $this->price = collect($this->selectedServices)
+            ->sum(fn ($row) => (int) ($row['amount'] ?? 0));
     }
 
     public function updatedFormStartTime($value): void
     {
-        // ⛔ невалидное время — выходим
-        if (!preg_match('/^\d{2}:\d{2}$/', $value)) {
+        if (! preg_match('/^\d{2}:\d{2}$/', $value)) {
             return;
         }
 
-        if (! $this->service_id) {
+        $firstServiceId = $this->selectedServices[0]['service_id'] ?? null;
+
+        if (! $firstServiceId) {
             return;
         }
 
-        $service = Service::find($this->service_id);
+        $service = Service::find($firstServiceId);
 
         if ($service) {
             $this->form_end_time = Carbon::createFromFormat('H:i', $value)
@@ -247,8 +274,8 @@ class extends Component
     public function updatedFormEndTime($value): void
     {
         if (
-            !preg_match('/^\d{2}:\d{2}$/', $value) ||
-            !preg_match('/^\d{2}:\d{2}$/', $this->form_start_time)
+            ! preg_match('/^\d{2}:\d{2}$/', $value) ||
+            ! preg_match('/^\d{2}:\d{2}$/', $this->form_start_time)
         ) {
             return;
         }
@@ -267,6 +294,24 @@ class extends Component
     {
         $this->validate();
 
+        $validServices = collect($this->selectedServices)
+            ->filter(fn ($row) => ! empty($row['service_id']))
+            ->values();
+
+        if ($validServices->isEmpty()) {
+            $this->addError('selectedServices', 'Добавьте хотя бы одну услугу.');
+
+            return;
+        }
+
+        $uniqueIds = $validServices->pluck('service_id')->map(fn ($id) => (int) $id)->unique();
+
+        if ($uniqueIds->count() !== $validServices->count()) {
+            $this->addError('selectedServices', 'Каждая услуга должна быть указана только один раз.');
+
+            return;
+        }
+
         $startsAt = Carbon::parse($this->form_date.' '.$this->form_start_time);
         $endsAt = Carbon::parse($this->form_date.' '.$this->form_end_time);
 
@@ -276,10 +321,11 @@ class extends Component
             return;
         }
 
+        $this->recalculateTotal();
+
         $payload = [
             'client_id' => $this->client_id,
             'barber_id' => $this->barber_id,
-            'service_id' => $this->service_id,
             'price' => $this->price,
             'note' => $this->note ?: null,
             'starts_at' => $startsAt,
@@ -288,10 +334,17 @@ class extends Component
         ];
 
         if ($this->editingId) {
-            Appointment::findOrFail($this->editingId)->update($payload);
+            $appointment = Appointment::findOrFail($this->editingId);
+            $appointment->update($payload);
         } else {
-            Appointment::create($payload);
+            $appointment = Appointment::create($payload);
         }
+
+        $syncData = $validServices->mapWithKeys(fn ($row) => [
+            (int) $row['service_id'] => ['amount' => (int) ($row['amount'] ?? 0)],
+        ])->toArray();
+
+        $appointment->services()->sync($syncData);
 
         unset($this->appointments);
         $this->showForm = false;
@@ -330,7 +383,7 @@ class extends Component
 
     private function resetForm(): void
     {
-        $this->reset(['editingId', 'client_id', 'barber_id', 'service_id', 'price', 'note', 'form_start_time', 'form_end_time']);
+        $this->reset(['editingId', 'client_id', 'barber_id', 'selectedServices', 'price', 'note', 'form_start_time', 'form_end_time']);
         $this->form_date = $this->date;
         $this->resetErrorBag();
     }
@@ -363,7 +416,7 @@ class extends Component
         <button wire:click="prevDay" class="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.06] text-white/40 transition hover:border-white/10 hover:text-white">
             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" /></svg>
         </button>
-        
+
         <div class="flex flex-col items-center">
             <span class="text-xs font-bold uppercase tracking-widest text-amber-500/60">{{ Carbon::parse($date)->translatedFormat('l') }}</span>
             <span class="text-lg font-extrabold text-white">{{ Carbon::parse($date)->translatedFormat('d F Y') }}</span>
@@ -405,27 +458,94 @@ class extends Component
                         @error('barber_id') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
                     </div>
                     <div>
-                        <label class="mb-1.5 block text-xs font-semibold text-white/50">Услуга</label>
-                        <select wire:model.live="service_id"
-                                class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20 [&>option]:bg-[#121212]">
-                            <option value="">Выберите услугу...</option>
-                            @foreach ($this->services as $service)
-                                <option value="{{ $service->id }}">{{ $service->name }}</option>
-                            @endforeach
-                        </select>
-                        @error('service_id') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
-                    </div>
-                    <div>
-                        <label class="mb-1.5 block text-xs font-semibold text-white/50">Цена (сум)</label>
-                        <input type="number" wire:model="price" placeholder="Стоимость..."
-                               class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20">
-                        @error('price') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
-                    </div>
-                    <div>
                         <label class="mb-1.5 block text-xs font-semibold text-white/50">Дата</label>
                         <input type="date" wire:model="form_date"
                                class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20">
                         @error('form_date') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
+                    </div>
+
+                    {{-- Services --}}
+                    <div class="sm:col-span-2 lg:col-span-3">
+                        <div class="mb-3 flex items-center justify-between gap-2">
+                            <label class="text-xs font-semibold text-white/50">Услуги</label>
+                            <button type="button" wire:click="addService"
+                                    class="flex items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.02] px-3 py-1.5 text-xs font-bold text-white/60 transition hover:border-amber-500/40 hover:bg-amber-500/5 hover:text-amber-400">
+                                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                                Добавить услугу
+                            </button>
+                        </div>
+
+                        @error('selectedServices') <p class="mb-3 text-xs text-rose-400">{{ $message }}</p> @enderror
+
+                        @php
+                            $usedServiceIds = collect($selectedServices)
+                                ->pluck('service_id')
+                                ->filter()
+                                ->map(fn ($id) => (int) $id)
+                                ->values()
+                                ->toArray();
+                        @endphp
+
+                        <div class="overflow-hidden rounded-xl border border-white/[0.06]">
+                            @forelse ($selectedServices as $i => $row)
+                                @php
+                                    $otherUsed = collect($usedServiceIds)
+                                        ->filter(fn ($id) => $id !== (int) ($row['service_id'] ?? 0))
+                                        ->values()
+                                        ->toArray();
+                                    $isDuplicate = isset($row['service_id']) && $row['service_id'] !== null &&
+                                        collect($usedServiceIds)->filter(fn ($id) => $id === (int) $row['service_id'])->count() > 1;
+                                @endphp
+                                <div @class([
+                                    'flex items-center gap-3 px-4 py-3',
+                                    'border-b border-white/[0.04]' => ! $loop->last,
+                                    'bg-rose-500/5' => $isDuplicate,
+                                    'bg-white/[0.02]' => ! $isDuplicate,
+                                ])>
+                                    <span class="w-5 shrink-0 text-center text-xs font-bold text-white/20">{{ $i + 1 }}</span>
+                                    <select wire:model.live="selectedServices.{{ $i }}.service_id"
+                                            @class([
+                                                'min-w-0 flex-1 rounded-lg border bg-transparent px-3 py-2 text-sm text-white outline-none transition [&>option]:bg-[#121212]',
+                                                'border-rose-500/40 focus:border-rose-500/60' => $isDuplicate,
+                                                'border-white/[0.08] focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20' => ! $isDuplicate,
+                                            ])>
+                                        <option value="">Выберите услугу...</option>
+                                        @foreach ($this->services as $service)
+                                            <option value="{{ $service->id }}"
+                                                    @disabled(in_array($service->id, $otherUsed))>
+                                                {{ $service->name }} ({{ $service->duration_minutes }} мин)
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    @if ($isDuplicate)
+                                        <span class="shrink-0 text-[10px] font-bold text-rose-400">дубль</span>
+                                    @endif
+                                    <div class="relative w-36 shrink-0">
+                                        <input type="number" wire:model.live="selectedServices.{{ $i }}.amount"
+                                               placeholder="0"
+                                               min="0"
+                                               class="block w-full rounded-lg border border-white/[0.08] bg-transparent py-2 pl-3 pr-10 text-sm text-white outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20">
+                                        <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-medium text-white/25">сум</span>
+                                    </div>
+                                    <button type="button" wire:click="removeService({{ $i }})"
+                                            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white/20 transition hover:bg-rose-500/10 hover:text-rose-400">
+                                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+                                    </button>
+                                </div>
+                            @empty
+                                <div class="flex flex-col items-center gap-2 py-8 text-center">
+                                    <svg class="h-8 w-8 text-white/10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 0 0 9.568 3Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6Z" /></svg>
+                                    <p class="text-xs text-white/25">Нет услуг — нажмите «Добавить услугу»</p>
+                                </div>
+                            @endforelse
+                        </div>
+
+                        @if (count($selectedServices) > 0)
+                            <div class="mt-2.5 flex items-center justify-end gap-2 rounded-xl border border-amber-500/10 bg-amber-500/5 px-4 py-2.5">
+                                <span class="text-xs text-white/40">Итого:</span>
+                                <span class="text-sm font-bold text-amber-400">{{ number_format((int) $price, 0, '.', ' ') }} сум</span>
+                            </div>
+                        @endif
                     </div>
 
                     {{-- Time selects --}}
@@ -505,7 +625,7 @@ class extends Component
                         </th>
                         <th class="px-6 py-4">Клиент / Заметка</th>
                         <th class="hidden px-6 py-4 md:table-cell">Мастер</th>
-                        <th class="hidden px-6 py-4 md:table-cell">Услуга / Цена</th>
+                        <th class="hidden px-6 py-4 md:table-cell">Услуги / Итого</th>
                         <th class="cursor-pointer px-6 py-4 transition hover:text-white" wire:click="sortBy('status')">
                             Статус
                             @if ($sortField === 'status')
@@ -532,7 +652,7 @@ class extends Component
                                     </div>
                                 @endif
                                 <div class="mt-1 text-[10px] text-white/30 md:hidden">
-                                    {{ $appointment->barber?->name }} · {{ $appointment->service?->name }}
+                                    {{ $appointment->barber?->name }} · {{ $appointment->services->pluck('name')->join(', ') }}
                                 </div>
                             </td>
                             <td class="hidden px-6 py-4 md:table-cell">
@@ -544,14 +664,25 @@ class extends Component
                                 </div>
                             </td>
                             <td class="hidden px-6 py-4 md:table-cell">
-                                <div class="text-white/60">{{ $appointment->service?->name }}</div>
-                                <div @class([
-                                    'text-[10px] font-bold',
-                                    'text-amber-400' => $appointment->price !== null,
-                                    'text-white/30' => $appointment->price === null,
-                                ])>
-                                    {{ $appointment->formattedPrice }}
+                                <div class="space-y-0.5">
+                                    @foreach ($appointment->services as $service)
+                                        <div class="flex items-center justify-between gap-3">
+                                            <span class="text-white/60">{{ $service->name }}</span>
+                                            <span class="text-[10px] font-bold text-white/40">{{ number_format($service->pivot->amount, 0, '.', ' ') }} сум</span>
+                                        </div>
+                                    @endforeach
                                 </div>
+                                @if ($appointment->services->isNotEmpty())
+                                    <div class="mt-1 border-t border-white/[0.04] pt-1">
+                                        <span @class([
+                                            'text-[10px] font-bold',
+                                            'text-amber-400' => $appointment->price !== null,
+                                            'text-white/30' => $appointment->price === null,
+                                        ])>
+                                            Итого: {{ $appointment->formattedPrice }}
+                                        </span>
+                                    </div>
+                                @endif
                             </td>
                             <td class="px-6 py-4">
                                 @php($badge = $appointment->status->badgeClasses())

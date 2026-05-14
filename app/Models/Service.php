@@ -6,7 +6,6 @@ use Database\Factories\ServiceFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Service extends Model
 {
@@ -32,9 +31,9 @@ class Service extends Model
         return $this->belongsToMany(Barber::class)->withPivot('price');
     }
 
-    public function appointments(): HasMany
+    public function appointments(): BelongsToMany
     {
-        return $this->hasMany(Appointment::class);
+        return $this->belongsToMany(Appointment::class)->withPivot('amount');
     }
 
     public function scopeActive($query)

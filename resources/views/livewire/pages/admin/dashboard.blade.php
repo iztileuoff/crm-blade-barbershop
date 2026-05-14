@@ -35,7 +35,7 @@ class extends Component
     public function appointments(): Collection
     {
         return Appointment::query()
-            ->with(['barber', 'service'])
+            ->with(['barber', 'services'])
             ->whereDate('starts_at', $this->date ?: today('Asia/Tashkent'))
             ->get();
     }

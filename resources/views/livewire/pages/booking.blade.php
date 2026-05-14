@@ -28,6 +28,8 @@ class extends Component
 
     public string $phone = '';
 
+    public string $birth_date = '';
+
     public ?int $confirmedAppointmentId = null;
 
     public function mount(): void
@@ -65,59 +67,10 @@ class extends Component
     #[Computed]
     public function availableSlots(): array
     {
-        if (! $this->serviceId || ! $this->barberId || ! $this->date) {
-            return [];
-        }
-
-        $service = $this->selectedService;
-        $barber = $this->selectedBarber;
-
-        if (! $service || ! $barber) {
-            return [];
-        }
-
-        $day = Carbon::parse($this->date);
-        $dayKey = strtolower($day->format('D'));
-        $window = $barber->schedule[$dayKey] ?? null;
-
-        if (! is_array($window)) {
-            return [];
-        }
-
-        [$open, $close] = $window;
-        $start = $day->copy()->setTimeFromTimeString($open);
-        $end = $day->copy()->setTimeFromTimeString($close);
-
-        $now = Carbon::now();
-        if ($day->isToday() && $start->lt($now)) {
-            $start = $now->copy()->ceilMinutes(30);
-        }
-
-        $busy = Appointment::query()
-            ->where('barber_id', $barber->id)
-            ->active()
-            ->forDay($day)
-            ->get(['starts_at', 'ends_at']);
-
         $slots = [];
-        $cursor = $start->copy();
-        $duration = (int) $service->duration_minutes;
-
-        while ($cursor->copy()->addMinutes($duration)->lte($end)) {
-            $slotEnd = $cursor->copy()->addMinutes($duration);
-
-            $clash = $busy->contains(function ($a) use ($cursor, $slotEnd) {
-                return $cursor->lt($a->ends_at) && $slotEnd->gt($a->starts_at);
-            });
-
-            if (! $clash) {
-                $slots[] = [
-                    'value' => $cursor->format('H:i'),
-                    'label' => $cursor->format('H:i'),
-                ];
-            }
-
-            $cursor->addMinutes(30);
+        for ($h = 0; $h <= 23; $h++) {
+            $time = sprintf('%02d:00', $h);
+            $slots[] = ['value' => $time, 'label' => $time];
         }
 
         return $slots;
@@ -153,6 +106,7 @@ class extends Component
         $this->validate([
             'name' => ['required', 'string', 'min:2', 'max:120'],
             'phone' => ['required', 'string'],
+            'birth_date' => ['nullable', 'date'],
             'serviceId' => ['required', 'exists:services,id'],
             'barberId' => ['required', 'exists:barbers,id'],
             'date' => ['required', 'date'],
@@ -160,6 +114,7 @@ class extends Component
         ], attributes: [
             'name' => 'имя',
             'phone' => 'телефон',
+            'birth_date' => 'дата рождения',
             'time' => 'время',
             'date' => 'дата',
         ]);
@@ -202,23 +157,33 @@ class extends Component
 
         $client = Client::firstOrCreate(
             ['phone' => $normalized],
-            ['name' => $this->name],
+            ['name' => $this->name, 'birth_date' => $this->birth_date ?: null],
         );
 
+        $updates = [];
         if ($client->name !== $this->name && $this->name !== '') {
-            $client->forceFill(['name' => $this->name])->save();
+            $updates['name'] = $this->name;
         }
+        if ($this->birth_date && $client->birth_date === null) {
+            $updates['birth_date'] = $this->birth_date;
+        }
+        if ($updates !== []) {
+            $client->forceFill($updates)->save();
+        }
+
+        $servicePrice = $barber->priceForService($service->id) ?? $barber->price ?? 0;
 
         $appointment = Appointment::create([
             'client_id' => $client->id,
             'barber_id' => $barber->id,
-            'service_id' => $service->id,
-            'price' => $barber->price,
+            'price' => $servicePrice,
             'starts_at' => $startsAt,
             'ends_at' => $endsAt,
             'status' => AppointmentStatus::Pending,
             'notified_30min' => false,
         ]);
+
+        $appointment->services()->sync([$service->id => ['amount' => $servicePrice]]);
 
         $this->confirmedAppointmentId = $appointment->id;
         $this->step = 5;
@@ -226,7 +191,7 @@ class extends Component
 
     public function reset_flow(): void
     {
-        $this->reset(['serviceId', 'barberId', 'time', 'name', 'phone', 'confirmedAppointmentId']);
+        $this->reset(['serviceId', 'barberId', 'time', 'name', 'phone', 'birth_date', 'confirmedAppointmentId']);
         $this->step = 1;
     }
 }; ?>
@@ -445,6 +410,12 @@ class extends Component
                     <input id="phone" type="tel" wire:model="phone" placeholder="998 90 123 45 67"
                            class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white placeholder-white/20 outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20">
                     @error('phone') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
+                </div>
+                <div>
+                    <label for="birth_date" class="mb-1.5 block text-xs font-semibold text-white/50">Дата рождения <span class="font-normal text-white/25">(необязательно)</span></label>
+                    <input id="birth_date" type="date" wire:model="birth_date"
+                           class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20 dark:[color-scheme:dark]">
+                    @error('birth_date') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
                 </div>
                 <button type="submit"
                         class="mt-1 w-full rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 px-4 py-3.5 text-sm font-bold text-black shadow-lg shadow-amber-500/20 transition-all hover:shadow-amber-500/30 active:scale-[0.98] disabled:opacity-50"

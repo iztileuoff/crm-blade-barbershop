@@ -12,7 +12,9 @@
       "Bash(php -l app/Services/SmsService.php)",
       "Bash(npm run *)",
       "mcp__laravel-boost__database-query",
-      "mcp__laravel-boost__get-absolute-url"
+      "mcp__laravel-boost__get-absolute-url",
+      "PowerShell(herd open 2>&1)",
+      "PowerShell(php artisan migrate --no-interaction 2>&1)"
     ]
   }
 }
