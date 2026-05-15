@@ -391,7 +391,7 @@ class extends Component
                         <div class="text-xs text-white/35">{{ $this->selectedBarber?->specialization?->name }}</div>
                     </div>
                     <div class="text-right">
-                        <div class="text-sm font-semibold">{{ \Illuminate\Support\Carbon::parse($date)->translatedFormat('d MMM') }}</div>
+                        <div class="text-sm font-semibold">{{ \Illuminate\Support\Carbon::parse($date)->translatedFormat('d M') }}</div>
                         <div class="text-xs text-amber-400">{{ $time }}</div>
                     </div>
                 </div>
