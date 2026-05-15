@@ -195,10 +195,10 @@ class extends Component
                             </td>
                             <td class="whitespace-nowrap px-6 py-4 font-medium text-amber-500/60">{{ $client->formattedPhone }}</td>
                             <td class="hidden px-6 py-4 text-white/40 sm:table-cell">
-                                {{ $client->birth_date?->translatedFormat('d MMMM Y') ?: '—' }}
+                                {{ $client->formattedBirthDate }}
                             </td>
                             <td class="hidden px-6 py-4 text-white/40 sm:table-cell">
-                                {{ $client->last_visit_at?->translatedFormat('d MMMM Y') ?: '—' }}
+                                {{ $client->formattedLastVisit }}
                             </td>
                             <td class="px-6 py-4">
                                 <div class="flex items-center justify-end gap-2">

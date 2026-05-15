@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Database\Factories\ClientFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -34,6 +35,25 @@ class Client extends Model
      */
     public string $formattedPhone {
         get => self::formatPhone((string) $this->phone);
+    }
+
+    public string $formattedBirthDate {
+        get => $this->birth_date ? self::formatRussianDate($this->birth_date) : '—';
+    }
+
+    public string $formattedLastVisit {
+        get => $this->last_visit_at ? self::formatRussianDate($this->last_visit_at) : '—';
+    }
+
+    public static function formatRussianDate(Carbon $date): string
+    {
+        static $months = [
+            1 => 'января', 2 => 'февраля', 3 => 'марта', 4 => 'апреля',
+            5 => 'мая', 6 => 'июня', 7 => 'июля', 8 => 'августа',
+            9 => 'сентября', 10 => 'октября', 11 => 'ноября', 12 => 'декабря',
+        ];
+
+        return "{$date->day} {$months[$date->month]} {$date->year}";
     }
 
     public static function formatPhone(string $phone): string

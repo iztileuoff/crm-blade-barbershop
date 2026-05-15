@@ -28,21 +28,37 @@ class extends Component
     #[Computed]
     public function dateString(): string
     {
+        $months = [
+            1 => 'января', 2 => 'февраля', 3 => 'марта', 4 => 'апреля',
+            5 => 'мая', 6 => 'июня', 7 => 'июля', 8 => 'августа',
+            9 => 'сентября', 10 => 'октября', 11 => 'ноября', 12 => 'декабря',
+        ];
+
         try {
-            return Carbon::parse($this->date)->translatedFormat('d F Y, l');
+            $d = Carbon::parse($this->date);
         } catch (\Exception $e) {
-            return Carbon::now('Asia/Tashkent')->translatedFormat('d F Y, l');
+            $d = Carbon::now('Asia/Tashkent');
         }
+
+        return "{$d->day} {$months[$d->month]} {$d->year}";
     }
 
     #[Computed]
     public function monthString(): string
     {
+        $months = [
+            1 => 'Январь', 2 => 'Февраль', 3 => 'Март', 4 => 'Апрель',
+            5 => 'Май', 6 => 'Июнь', 7 => 'Июль', 8 => 'Август',
+            9 => 'Сентябрь', 10 => 'Октябрь', 11 => 'Ноябрь', 12 => 'Декабрь',
+        ];
+
         try {
-            return Carbon::parse($this->month.'-01')->translatedFormat('F Y');
+            $d = Carbon::parse($this->month.'-01');
         } catch (\Exception $e) {
-            return Carbon::now('Asia/Tashkent')->translatedFormat('F Y');
+            $d = Carbon::now('Asia/Tashkent');
         }
+
+        return "{$months[$d->month]} {$d->year}";
     }
 
     // ─── Daily computed ───────────────────────────────────────────────────────
