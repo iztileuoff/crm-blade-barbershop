@@ -465,7 +465,7 @@ class extends Component
                     </button>
                 </div>
                 <form wire:submit="save" class="flex min-h-0 flex-1 flex-col">
-                    <div class="flex-1 overflow-y-auto px-6 py-6">
+                    <div class="flex-1 max-h-[60vh] overflow-y-auto px-6 py-6" style="max-height: 70vh;overflow-y: auto;">
                         <div class="grid gap-6 sm:grid-cols-2">
                             <div>
                                 <label class="mb-1.5 block text-xs font-semibold text-white/50">Клиент</label>
