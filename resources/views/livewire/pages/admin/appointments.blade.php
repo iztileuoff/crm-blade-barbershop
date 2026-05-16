@@ -177,9 +177,10 @@ class extends Component
 
     public function edit(int $id): void
     {
-        $appointment = Appointment::with('services')->findOrFail($id);
+        $appointment = Appointment::with(['services', 'client'])->findOrFail($id);
         $this->editingId = $appointment->id;
         $this->client_id = $appointment->client_id;
+        $this->clientSearch = $appointment->client?->name ?? '';
         $this->barber_id = $appointment->barber_id;
         $this->note = (string) $appointment->note;
         $this->payment_type = $appointment->payment_type->value;
