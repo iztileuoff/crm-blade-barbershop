@@ -413,13 +413,18 @@ class extends Component
             <p class="mt-1 text-sm text-white/40">Управление журналом посещений</p>
         </div>
         <div class="flex items-center gap-3">
-            <select wire:model.live="barberFilter"
-                    class="rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-2.5 text-sm text-white outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20 [&>option]:bg-[#121212]">
-                <option value="">Все мастера</option>
-                @foreach ($this->barbers as $barber)
-                    <option value="{{ $barber->id }}">{{ $barber->name }}</option>
-                @endforeach
-            </select>
+            <div class="relative">
+                <select wire:model.live="barberFilter"
+                        class="appearance-none rounded-xl border border-white/[0.08] bg-[#252525] py-2.5 pl-4 pr-10 text-sm text-white outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20">
+                    <option value="" style="color: #fff; background-color: #1a1a1a;">Все мастера</option>
+                    @foreach ($this->barbers as $barber)
+                        <option value="{{ $barber->id }}" style="color: #fff; background-color: #1a1a1a;">{{ $barber->name }}</option>
+                    @endforeach
+                </select>
+                <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-white/30">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
+                </div>
+            </div>
             <button type="button" wire:click="openCreate"
                     class="flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-400 to-amber-600 px-5 py-2.5 text-sm font-bold text-black shadow-lg shadow-amber-500/20 transition-all hover:scale-[1.02] hover:shadow-amber-500/30 active:scale-[0.98]">
                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
@@ -444,227 +449,251 @@ class extends Component
         </button>
     </div>
 
+    {{-- Modal --}}
     @if ($showForm)
-        <div class="mb-8 overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.03] shadow-xl backdrop-blur-md">
-            <div class="border-b border-white/[0.06] bg-white/[0.03] px-6 py-4">
-                <h3 class="text-sm font-bold text-white">{{ $editingId ? 'Редактирование записи' : 'Создание новой записи' }}</h3>
-            </div>
-            <form wire:submit="save" class="p-6">
-                <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                    <div>
-                        <label class="mb-1.5 block text-xs font-semibold text-white/50">Клиент</label>
-                        <x-search-select
-                            :options="$this->filteredClients"
-                            searchModel="clientSearch"
-                            onSelect="selectClient"
-                            labelField="name"
-                            subLabelField="phone"
-                            placeholder="Поиск клиента..."
-                        />
-                        @error('client_id') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
-                    </div>
-                    <div>
-                        <label class="mb-1.5 block text-xs font-semibold text-white/50">Мастер</label>
-                        <select wire:model.live="barber_id"
-                                class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20 [&>option]:bg-[#121212]">
-                            <option value="">Выберите мастера...</option>
-                            @foreach ($this->barbers as $barber)
-                                <option value="{{ $barber->id }}">{{ $barber->name }} @if($barber->price)({{ $barber->formattedPrice }})@endif</option>
-                            @endforeach
-                        </select>
-                        @error('barber_id') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
-                    </div>
-                    <div>
-                        <label class="mb-1.5 block text-xs font-semibold text-white/50">Дата</label>
-                        <input type="date" wire:model="form_date"
-                               class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20">
-                        @error('form_date') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
-                    </div>
-
-                    {{-- Services --}}
-                    <div class="sm:col-span-2 lg:col-span-3">
-                        <div class="mb-3 flex items-center justify-between gap-2">
-                            <label class="text-xs font-semibold text-white/50">Услуги</label>
-                            <button type="button" wire:click="addService"
-                                    class="flex items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.02] px-3 py-1.5 text-xs font-bold text-white/60 transition hover:border-amber-500/40 hover:bg-amber-500/5 hover:text-amber-400">
-                                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-                                Добавить услугу
-                            </button>
-                        </div>
-
-                        @error('selectedServices') <p class="mb-3 text-xs text-rose-400">{{ $message }}</p> @enderror
-
-                        @php
-                            $usedServiceIds = collect($selectedServices)
-                                ->pluck('service_id')
-                                ->filter()
-                                ->map(fn ($id) => (int) $id)
-                                ->values()
-                                ->toArray();
-                        @endphp
-
-                        <div class="overflow-hidden rounded-xl border border-white/[0.06]">
-                            @forelse ($selectedServices as $i => $row)
-                                @php
-                                    $otherUsed = collect($usedServiceIds)
-                                        ->filter(fn ($id) => $id !== (int) ($row['service_id'] ?? 0))
-                                        ->values()
-                                        ->toArray();
-                                    $isDuplicate = isset($row['service_id']) && $row['service_id'] !== null &&
-                                        collect($usedServiceIds)->filter(fn ($id) => $id === (int) $row['service_id'])->count() > 1;
-                                @endphp
-                                <div @class([
-                                    'flex items-center gap-3 px-4 py-3',
-                                    'border-b border-white/[0.04]' => ! $loop->last,
-                                    'bg-rose-500/5' => $isDuplicate,
-                                    'bg-white/[0.02]' => ! $isDuplicate,
-                                ])>
-                                    <span class="w-5 shrink-0 text-center text-xs font-bold text-white/20">{{ $i + 1 }}</span>
-                                    <select wire:model.live="selectedServices.{{ $i }}.service_id"
-                                            @class([
-                                                'min-w-0 flex-1 rounded-lg border bg-transparent px-3 py-2 text-sm text-white outline-none transition [&>option]:bg-[#121212]',
-                                                'border-rose-500/40 focus:border-rose-500/60' => $isDuplicate,
-                                                'border-white/[0.08] focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20' => ! $isDuplicate,
-                                            ])>
-                                        <option value="">Выберите услугу...</option>
-                                        @foreach ($this->services as $service)
-                                            <option value="{{ $service->id }}"
-                                                    @disabled(in_array($service->id, $otherUsed))>
-                                                {{ $service->name }} ({{ $service->duration_minutes }} мин)
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-4"
+             x-data
+             x-on:keydown.escape.window="$wire.cancel()">
+            <div class="absolute inset-0 bg-[#090909]" wire:click="cancel"></div>
+            <div class="relative z-10 flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-white/[0.12] bg-[#1a1a1a] shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_32px_64px_rgba(0,0,0,0.8)]">
+                <div class="flex items-center justify-between border-b border-white/[0.06] px-6 py-4">
+                    <h3 class="text-sm font-bold text-white">{{ $editingId ? 'Редактирование записи' : 'Создание новой записи' }}</h3>
+                    <button type="button" wire:click="cancel"
+                            class="flex h-8 w-8 items-center justify-center rounded-lg text-white/30 transition hover:bg-white/[0.06] hover:text-white">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+                <form wire:submit="save" class="flex min-h-0 flex-1 flex-col">
+                    <div class="flex-1 overflow-y-auto px-6 py-6">
+                        <div class="grid gap-6 sm:grid-cols-2">
+                            <div>
+                                <label class="mb-1.5 block text-xs font-semibold text-white/50">Клиент</label>
+                                <x-search-select
+                                    :options="$this->filteredClients"
+                                    searchModel="clientSearch"
+                                    onSelect="selectClient"
+                                    labelField="name"
+                                    subLabelField="phone"
+                                    placeholder="Поиск клиента..."
+                                />
+                                @error('client_id') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
+                            </div>
+                            <div>
+                                <label class="mb-1.5 block text-xs font-semibold text-white/50">Мастер</label>
+                                <div class="relative">
+                                    <select wire:model.live="barber_id"
+                                            class="block w-full appearance-none rounded-xl border border-white/[0.08] bg-[#252525] py-3 pl-4 pr-10 text-sm text-white outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20">
+                                        <option value="" style="color: #fff; background-color: #1a1a1a;">Выберите мастера...</option>
+                                        @foreach ($this->barbers as $barber)
+                                            <option value="{{ $barber->id }}" style="color: #fff; background-color: #1a1a1a;" @if($barber->price)
+                                                data-price="{{ $barber->price }}"
+                                            @endif>
+                                                {{ $barber->name }}
                                             </option>
                                         @endforeach
                                     </select>
-                                    @if ($isDuplicate)
-                                        <span class="shrink-0 text-[10px] font-bold text-rose-400">дубль</span>
-                                    @endif
-                                    <div class="relative w-36 shrink-0">
-                                        <input type="number" wire:model.live="selectedServices.{{ $i }}.amount"
-                                               placeholder="0"
-                                               min="0"
-                                               class="block w-full rounded-lg border border-white/[0.08] bg-transparent py-2 pl-3 pr-10 text-sm text-white outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20">
-                                        <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-medium text-white/25">сум</span>
+                                    <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-white/30">
+                                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
                                     </div>
-                                    <button type="button" wire:click="removeService({{ $i }})"
-                                            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white/20 transition hover:bg-rose-500/10 hover:text-rose-400">
-                                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
-                                    </button>
                                 </div>
-                            @empty
-                                <div class="flex flex-col items-center gap-2 py-8 text-center">
-                                    <svg class="h-8 w-8 text-white/10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 0 0 9.568 3Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6Z" /></svg>
-                                    <p class="text-xs text-white/25">Нет услуг — нажмите «Добавить услугу»</p>
-                                </div>
-                            @endforelse
-                        </div>
-
-                        @if (count($selectedServices) > 0)
-                            <div class="mt-2.5 flex items-center justify-end gap-2 rounded-xl border border-amber-500/10 bg-amber-500/5 px-4 py-2.5">
-                                <span class="text-xs text-white/40">Итого:</span>
-                                <span class="text-sm font-bold text-amber-400">{{ number_format((int) $price, 0, '.', ' ') }} сум</span>
-                            </div>
-                        @endif
-                    </div>
-
-                    {{-- Time selects --}}
-                    <div class="sm:col-span-2 lg:col-span-3">
-                        <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-                            <label class="text-xs font-semibold text-white/50">Время</label>
-                            <div class="flex items-center gap-1 rounded-xl border border-white/[0.06] bg-white/[0.03] p-1">
-                                @foreach ([15 => '15 мин', 30 => '30 мин', 60 => '1 ч'] as $step => $label)
-                                    <button type="button" wire:click="setTimeStep({{ $step }})"
-                                            @class([
-                                                'rounded-lg px-3 py-1 text-xs font-bold transition',
-                                                'bg-amber-500 text-black' => $timeStep === $step,
-                                                'text-white/40 hover:text-white' => $timeStep !== $step,
-                                            ])>
-                                        {{ $label }}
-                                    </button>
-                                @endforeach
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="mb-1.5 block text-xs font-semibold text-white/40">Начало</label>
-                                <select wire:model.live="form_start_time"
-                                        class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20 [&>option]:bg-[#121212]">
-                                    <option value="">— выберите —</option>
-                                    @foreach ($this->timeSlots as $slot)
-                                        <option value="{{ $slot }}">{{ $slot }}</option>
-                                    @endforeach
-                                </select>
-                                @error('form_start_time') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
+                                @error('barber_id') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
                             </div>
                             <div>
-                                <label class="mb-1.5 block text-xs font-semibold text-white/40">Окончание</label>
-                                <select wire:model.live="form_end_time"
-                                        class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20 [&>option]:bg-[#121212]">
-                                    <option value="">— выберите —</option>
-                                    @foreach ($this->timeSlots as $slot)
-                                        <option value="{{ $slot }}">{{ $slot }}</option>
-                                    @endforeach
-                                </select>
-                                @error('form_end_time') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
+                                <label class="mb-1.5 block text-xs font-semibold text-white/50">Дата</label>
+                                <input type="date" wire:model="form_date"
+                                       class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20">
+                                @error('form_date') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
+                            </div>
+                            <div>
+                                <label class="mb-1.5 block text-xs font-semibold text-white/50">Способ оплаты</label>
+                                <div class="relative">
+                                    <select wire:model.live="payment_type"
+                                            class="block w-full appearance-none rounded-xl border border-white/[0.08] bg-[#252525] py-3 pl-4 pr-10 text-sm text-white outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20">
+                                        <option value="cash" style="color: #fff; background-color: #1a1a1a;">Наличные</option>
+                                        <option value="card" style="color: #fff; background-color: #1a1a1a;">Карта</option>
+                                        <option value="both" style="color: #fff; background-color: #1a1a1a;">Нал + Карта</option>
+                                    </select>
+                                    <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-white/30">
+                                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
+                                    </div>
+                                </div>
+                                @error('payment_type') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
+                            </div>
+
+                            @if ($payment_type === 'both')
+                                <div class="sm:col-span-2">
+                                    <div class="grid grid-cols-2 gap-4 rounded-xl border border-violet-500/20 bg-violet-500/5 p-4">
+                                        <div>
+                                            <label class="mb-1.5 block text-xs font-semibold text-white/50">Наличные (сум)</label>
+                                            <div class="relative">
+                                                <input type="number" wire:model.live="cash_amount"
+                                                       placeholder="0" min="0"
+                                                       class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] py-3 pl-4 pr-12 text-sm text-white outline-none transition focus:border-emerald-500/40 focus:ring-1 focus:ring-emerald-500/20">
+                                                <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-medium text-white/25">сум</span>
+                                            </div>
+                                            @error('cash_amount') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
+                                        </div>
+                                        <div>
+                                            <label class="mb-1.5 block text-xs font-semibold text-white/50">Карта (сум)</label>
+                                            <div class="relative">
+                                                <input type="number" wire:model.live="card_amount"
+                                                       placeholder="0" min="0"
+                                                       class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] py-3 pl-4 pr-12 text-sm text-white outline-none transition focus:border-blue-500/40 focus:ring-1 focus:ring-blue-500/20">
+                                                <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-medium text-white/25">сум</span>
+                                            </div>
+                                            @error('card_amount') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
+                                        </div>
+                                    </div>
+                                </div>
+                            @endif
+
+                            {{-- Services --}}
+                            <div class="sm:col-span-2">
+                                <div class="mb-3 flex items-center justify-between gap-2">
+                                    <label class="text-xs font-semibold text-white/50">Услуги</label>
+                                    <button type="button" wire:click="addService"
+                                            class="flex items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.02] px-3 py-1.5 text-xs font-bold text-white/60 transition hover:border-amber-500/40 hover:bg-amber-500/5 hover:text-amber-400">
+                                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                                        Добавить услугу
+                                    </button>
+                                </div>
+
+                                @error('selectedServices') <p class="mb-3 text-xs text-rose-400">{{ $message }}</p> @enderror
+
+                                @php
+                                    $usedServiceIds = collect($selectedServices)
+                                        ->pluck('service_id')
+                                        ->filter()
+                                        ->map(fn ($id) => (int) $id)
+                                        ->values()
+                                        ->toArray();
+                                @endphp
+
+                                <div class="overflow-hidden rounded-xl border border-white/[0.06]">
+                                    @forelse ($selectedServices as $i => $row)
+                                        @php
+                                            $otherUsed = collect($usedServiceIds)
+                                                ->filter(fn ($id) => $id !== (int) ($row['service_id'] ?? 0))
+                                                ->values()
+                                                ->toArray();
+                                            $isDuplicate = isset($row['service_id']) && $row['service_id'] !== null &&
+                                                collect($usedServiceIds)->filter(fn ($id) => $id === (int) $row['service_id'])->count() > 1;
+                                        @endphp
+                                        <div @class([
+                                            'flex items-center gap-3 px-4 py-3',
+                                            'border-b border-white/[0.04]' => ! $loop->last,
+                                            'bg-rose-500/5' => $isDuplicate,
+                                            'bg-white/[0.02]' => ! $isDuplicate,
+                                        ])>
+                                            <span class="w-5 shrink-0 text-center text-xs font-bold text-white/20">{{ $i + 1 }}</span>
+                                            <select wire:model.live="selectedServices.{{ $i }}.service_id"
+                                                    @class([
+                                                        'min-w-0 flex-1 rounded-lg border bg-transparent px-3 py-2 text-sm text-white outline-none transition [&>option]:bg-[#0f0f0f]',
+                                                        'border-rose-500/40 focus:border-rose-500/60' => $isDuplicate,
+                                                        'border-white/[0.08] focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20' => ! $isDuplicate,
+                                                    ])>
+                                                <option value="" style="color: #fff; background-color: #1a1a1a;">Выберите услугу...</option>
+                                                @foreach ($this->services as $service)
+                                                    <option value="{{ $service->id }}"
+                                                            style="color: #fff; background-color: #1a1a1a;"
+                                                            @disabled(in_array($service->id, $otherUsed))>
+                                                        {{ $service->name }} ({{ $service->duration_minutes }} мин)
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                            @if ($isDuplicate)
+                                                <span class="shrink-0 text-[10px] font-bold text-rose-400">дубль</span>
+                                            @endif
+                                            <div class="relative w-36 shrink-0">
+                                                <input type="number" wire:model.live="selectedServices.{{ $i }}.amount"
+                                                       placeholder="0" min="0"
+                                                       class="block w-full rounded-lg border border-white/[0.08] bg-transparent py-2 pl-3 pr-10 text-sm text-white outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20">
+                                                <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-medium text-white/25">сум</span>
+                                            </div>
+                                            <button type="button" wire:click="removeService({{ $i }})"
+                                                    class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white/20 transition hover:bg-rose-500/10 hover:text-rose-400">
+                                                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+                                            </button>
+                                        </div>
+                                    @empty
+                                        <div class="flex flex-col items-center gap-2 py-8 text-center">
+                                            <svg class="h-8 w-8 text-white/10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 0 0 9.568 3Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6Z" /></svg>
+                                            <p class="text-xs text-white/25">Нет услуг — нажмите «Добавить услугу»</p>
+                                        </div>
+                                    @endforelse
+                                </div>
+
+                                @if (count($selectedServices) > 0)
+                                    <div class="mt-2.5 flex items-center justify-end gap-2 rounded-xl border border-amber-500/10 bg-amber-500/5 px-4 py-2.5">
+                                        <span class="text-xs text-white/40">Итого:</span>
+                                        <span class="text-sm font-bold text-amber-400">{{ number_format((int) $price, 0, '.', ' ') }} сум</span>
+                                    </div>
+                                @endif
+                            </div>
+
+                            {{-- Time selects --}}
+                            <div class="sm:col-span-2">
+                                <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+                                    <label class="text-xs font-semibold text-white/50">Время</label>
+                                    <div class="flex items-center gap-1 rounded-xl border border-white/[0.06] bg-white/[0.03] p-1">
+                                        @foreach ([15 => '15 мин', 30 => '30 мин', 60 => '1 ч'] as $step => $label)
+                                            <button type="button" wire:click="setTimeStep({{ $step }})"
+                                                    @class([
+                                                        'rounded-lg px-3 py-1 text-xs font-bold transition',
+                                                        'bg-amber-500 text-black' => $timeStep === $step,
+                                                        'text-white/40 hover:text-white' => $timeStep !== $step,
+                                                    ])>
+                                                {{ $label }}
+                                            </button>
+                                        @endforeach
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="mb-1.5 block text-xs font-semibold text-white/40">Начало</label>
+                                        <select wire:model.live="form_start_time"
+                                                class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20 [&>option]:bg-[#0f0f0f]">
+                                            <option value="" style="color: #fff; background-color: #1a1a1a;">— выберите —</option>
+                                            @foreach ($this->timeSlots as $slot)
+                                                <option value="{{ $slot }}" style="color: #fff; background-color: #1a1a1a;">{{ $slot }}</option>
+                                            @endforeach
+                                        </select>
+                                        @error('form_start_time') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
+                                    </div>
+                                    <div>
+                                        <label class="mb-1.5 block text-xs font-semibold text-white/40">Окончание</label>
+                                        <select wire:model.live="form_end_time"
+                                                class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20 [&>option]:bg-[#0f0f0f]">
+                                            <option value="" style="color: #fff; background-color: #1a1a1a;">— выберите —</option>
+                                            @foreach ($this->timeSlots as $slot)
+                                                <option value="{{ $slot }}" style="color: #fff; background-color: #1a1a1a;">{{ $slot }}</option>
+                                            @endforeach
+                                        </select>
+                                        @error('form_end_time') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="sm:col-span-2">
+                                <label class="mb-1.5 block text-xs font-semibold text-white/50">Заметка</label>
+                                <textarea wire:model="note" rows="2" placeholder="Дополнительная информация..."
+                                          class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white placeholder-white/20 outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20"></textarea>
+                                @error('note') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
                             </div>
                         </div>
                     </div>
-
-                    <div>
-                        <label class="mb-1.5 block text-xs font-semibold text-white/50">Способ оплаты</label>
-                        <select wire:model.live="payment_type"
-                                class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20 [&>option]:bg-[#121212]">
-                            <option value="cash">Наличные</option>
-                            <option value="card">Карта</option>
-                            <option value="both">Нал + Карта</option>
-                        </select>
-                        @error('payment_type') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
+                    <div class="flex items-center justify-end gap-3 border-t border-white/[0.06] px-6 py-4">
+                        <button type="button" wire:click="cancel"
+                                class="rounded-xl border border-white/[0.08] px-5 py-2.5 text-sm font-bold text-white/60 transition hover:bg-white/[0.06] hover:text-white">
+                            Отмена
+                        </button>
+                        <button type="submit"
+                                class="rounded-xl bg-amber-500 px-6 py-2.5 text-sm font-bold text-black transition-all hover:bg-amber-400 active:scale-[0.98]">
+                            {{ $editingId ? 'Сохранить изменения' : 'Создать запись' }}
+                        </button>
                     </div>
-
-                    @if ($payment_type === 'both')
-                        <div class="sm:col-span-2 lg:col-span-3">
-                            <div class="grid grid-cols-2 gap-4 rounded-xl border border-violet-500/20 bg-violet-500/5 p-4">
-                                <div>
-                                    <label class="mb-1.5 block text-xs font-semibold text-white/50">Наличные (сум)</label>
-                                    <div class="relative">
-                                        <input type="number" wire:model.live="cash_amount"
-                                               placeholder="0"
-                                               min="0"
-                                               class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] py-3 pl-4 pr-12 text-sm text-white outline-none transition focus:border-emerald-500/40 focus:ring-1 focus:ring-emerald-500/20">
-                                        <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-medium text-white/25">сум</span>
-                                    </div>
-                                    @error('cash_amount') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
-                                </div>
-                                <div>
-                                    <label class="mb-1.5 block text-xs font-semibold text-white/50">Карта (сум)</label>
-                                    <div class="relative">
-                                        <input type="number" wire:model.live="card_amount"
-                                               placeholder="0"
-                                               min="0"
-                                               class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] py-3 pl-4 pr-12 text-sm text-white outline-none transition focus:border-blue-500/40 focus:ring-1 focus:ring-blue-500/20">
-                                        <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-medium text-white/25">сум</span>
-                                    </div>
-                                    @error('card_amount') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
-                                </div>
-                            </div>
-                        </div>
-                    @endif
-                    <div class="sm:col-span-2">
-                        <label class="mb-1.5 block text-xs font-semibold text-white/50">Заметка</label>
-                        <textarea wire:model="note" rows="2" placeholder="Дополнительная информация..."
-                                  class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white placeholder-white/20 outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20"></textarea>
-                        @error('note') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
-                    </div>
-                </div>
-                <div class="mt-8 flex items-center justify-end gap-3 border-t border-white/[0.06] pt-6">
-                    <button type="button" wire:click="cancel"
-                            class="rounded-xl border border-white/[0.08] px-5 py-2.5 text-sm font-bold text-white/60 transition hover:bg-white/[0.06] hover:text-white">
-                        Отмена
-                    </button>
-                    <button type="submit"
-                            class="rounded-xl bg-amber-500 px-6 py-2.5 text-sm font-bold text-black transition-all hover:bg-amber-400 active:scale-[0.98]">
-                        {{ $editingId ? 'Сохранить изменения' : 'Создать запись' }}
-                    </button>
-                </div>
-            </form>
+                </form>
+            </div>
         </div>
     @endif
 
