@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\AppointmentStatus;
+use App\Enums\PaymentType;
 use App\Models\Appointment;
 use App\Models\Barber;
 use App\Models\Client;
@@ -39,6 +40,15 @@ class extends Component
 
     #[Validate('nullable|string|max:500')]
     public string $note = '';
+
+    #[Validate('required|in:cash,card,both')]
+    public string $payment_type = 'cash';
+
+    #[Validate('nullable|integer|min:0')]
+    public ?int $cash_amount = null;
+
+    #[Validate('nullable|integer|min:0')]
+    public ?int $card_amount = null;
 
     #[Validate('required|date')]
     public string $form_date = '';
@@ -172,6 +182,9 @@ class extends Component
         $this->client_id = $appointment->client_id;
         $this->barber_id = $appointment->barber_id;
         $this->note = (string) $appointment->note;
+        $this->payment_type = $appointment->payment_type->value;
+        $this->cash_amount = $appointment->cash_amount;
+        $this->card_amount = $appointment->card_amount;
         $this->form_date = $appointment->starts_at->toDateString();
         $this->form_start_time = $appointment->starts_at->format('H:i');
         $this->form_end_time = $appointment->ends_at->format('H:i');
@@ -328,6 +341,9 @@ class extends Component
             'barber_id' => $this->barber_id,
             'price' => $this->price,
             'note' => $this->note ?: null,
+            'payment_type' => $this->payment_type,
+            'cash_amount' => $this->payment_type === 'both' ? $this->cash_amount : null,
+            'card_amount' => $this->payment_type === 'both' ? $this->card_amount : null,
             'starts_at' => $startsAt,
             'ends_at' => $endsAt,
             'status' => $this->editingId ? Appointment::find($this->editingId)->status : AppointmentStatus::Confirmed,
@@ -383,7 +399,8 @@ class extends Component
 
     private function resetForm(): void
     {
-        $this->reset(['editingId', 'client_id', 'barber_id', 'selectedServices', 'price', 'note', 'form_start_time', 'form_end_time']);
+        $this->reset(['editingId', 'client_id', 'barber_id', 'selectedServices', 'price', 'note', 'form_start_time', 'form_end_time', 'cash_amount', 'card_amount']);
+        $this->payment_type = 'cash';
         $this->form_date = $this->date;
         $this->resetErrorBag();
     }
@@ -591,7 +608,46 @@ class extends Component
                         </div>
                     </div>
 
-                    <div class="sm:col-span-2 lg:col-span-3">
+                    <div>
+                        <label class="mb-1.5 block text-xs font-semibold text-white/50">Способ оплаты</label>
+                        <select wire:model.live="payment_type"
+                                class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20 [&>option]:bg-[#121212]">
+                            <option value="cash">Наличные</option>
+                            <option value="card">Карта</option>
+                            <option value="both">Нал + Карта</option>
+                        </select>
+                        @error('payment_type') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
+                    </div>
+
+                    @if ($payment_type === 'both')
+                        <div class="sm:col-span-2 lg:col-span-3">
+                            <div class="grid grid-cols-2 gap-4 rounded-xl border border-violet-500/20 bg-violet-500/5 p-4">
+                                <div>
+                                    <label class="mb-1.5 block text-xs font-semibold text-white/50">Наличные (сум)</label>
+                                    <div class="relative">
+                                        <input type="number" wire:model.live="cash_amount"
+                                               placeholder="0"
+                                               min="0"
+                                               class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] py-3 pl-4 pr-12 text-sm text-white outline-none transition focus:border-emerald-500/40 focus:ring-1 focus:ring-emerald-500/20">
+                                        <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-medium text-white/25">сум</span>
+                                    </div>
+                                    @error('cash_amount') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
+                                </div>
+                                <div>
+                                    <label class="mb-1.5 block text-xs font-semibold text-white/50">Карта (сум)</label>
+                                    <div class="relative">
+                                        <input type="number" wire:model.live="card_amount"
+                                               placeholder="0"
+                                               min="0"
+                                               class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] py-3 pl-4 pr-12 text-sm text-white outline-none transition focus:border-blue-500/40 focus:ring-1 focus:ring-blue-500/20">
+                                        <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-medium text-white/25">сум</span>
+                                    </div>
+                                    @error('card_amount') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+                    <div class="sm:col-span-2">
                         <label class="mb-1.5 block text-xs font-semibold text-white/50">Заметка</label>
                         <textarea wire:model="note" rows="2" placeholder="Дополнительная информация..."
                                   class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white placeholder-white/20 outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20"></textarea>
@@ -673,7 +729,7 @@ class extends Component
                                     @endforeach
                                 </div>
                                 @if ($appointment->services->isNotEmpty())
-                                    <div class="mt-1 border-t border-white/[0.04] pt-1">
+                                    <div class="mt-1 border-t border-white/[0.04] pt-1 flex items-center justify-between gap-2">
                                         <span @class([
                                             'text-[10px] font-bold',
                                             'text-amber-400' => $appointment->price !== null,
@@ -681,6 +737,22 @@ class extends Component
                                         ])>
                                             Итого: {{ $appointment->formattedPrice }}
                                         </span>
+                                        @if ($appointment->payment_type === PaymentType::Both && ($appointment->cash_amount || $appointment->card_amount))
+                                            <div class="flex flex-col items-end gap-0.5">
+                                                <span class="inline-flex items-center rounded-full bg-violet-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-violet-400">
+                                                    {{ $appointment->payment_type->label() }}
+                                                </span>
+                                                <span class="text-[9px] text-emerald-400/70">нал: {{ number_format((int) $appointment->cash_amount, 0, '.', ' ') }} сум</span>
+                                                <span class="text-[9px] text-blue-400/70">карта: {{ number_format((int) $appointment->card_amount, 0, '.', ' ') }} сум</span>
+                                            </div>
+                                        @else
+                                            <span @class([
+                                                'inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider',
+                                                $appointment->payment_type?->badgeClasses() ?? PaymentType::Cash->badgeClasses(),
+                                            ])>
+                                                {{ $appointment->payment_type?->label() ?? 'Наличные' }}
+                                            </span>
+                                        @endif
                                     </div>
                                 @endif
                             </td>

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\AppointmentStatus;
+use App\Enums\PaymentType;
 use Database\Factories\AppointmentFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -25,6 +26,9 @@ class Appointment extends Model
         'price',
         'note',
         'notified_30min',
+        'payment_type',
+        'cash_amount',
+        'card_amount',
     ];
 
     protected function casts(): array
@@ -35,6 +39,9 @@ class Appointment extends Model
             'status' => AppointmentStatus::class,
             'price' => 'integer',
             'notified_30min' => 'boolean',
+            'payment_type' => PaymentType::class,
+            'cash_amount' => 'integer',
+            'card_amount' => 'integer',
         ];
     }
 
