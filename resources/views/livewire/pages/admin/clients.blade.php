@@ -29,6 +29,7 @@ class extends Component
     public function clients()
     {
         return Client::query()
+            ->with(['latestAppointment.barber'])
             ->when($this->search !== '', function ($query) {
                 $term = '%'.$this->search.'%';
                 $query->where(function ($q) use ($term) {
@@ -39,6 +40,12 @@ class extends Component
             ->orderByDesc('id')
             ->limit(100)
             ->get();
+    }
+
+    #[Computed]
+    public function totalClients(): int
+    {
+        return Client::count();
     }
 
     public function openCreate(): void
@@ -119,7 +126,7 @@ class extends Component
     <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>
             <h1 class="text-3xl font-extrabold tracking-tight text-white">Клиенты</h1>
-            <p class="mt-1 text-sm text-white/40">База клиентов и история посещений</p>
+            <p class="mt-1 text-sm text-white/40">База клиентов и история посещений · Всего: <span class="font-bold text-white/70">{{ $this->totalClients }}</span></p>
         </div>
         <div class="flex items-center gap-3">
             <div class="relative">
@@ -183,7 +190,7 @@ class extends Component
                         <th class="px-6 py-4">Клиент</th>
                         <th class="px-6 py-4">Телефон</th>
                         <th class="hidden px-6 py-4 sm:table-cell">Дата рождения</th>
-                        <th class="hidden px-6 py-4 sm:table-cell">Последний визит</th>
+                        <th class="hidden px-6 py-4 sm:table-cell">Последняя запись</th>
                         <th class="px-6 py-4 text-right">Действия</th>
                     </tr>
                 </thead>
@@ -197,8 +204,13 @@ class extends Component
                             <td class="hidden px-6 py-4 text-white/40 sm:table-cell">
                                 {{ $client->formattedBirthDate }}
                             </td>
-                            <td class="hidden px-6 py-4 text-white/40 sm:table-cell">
-                                {{ $client->formattedLastVisit }}
+                            <td class="hidden px-6 py-4 sm:table-cell">
+                                @if ($client->latestAppointment)
+                                    <div class="text-white/60">{{ $client->latestAppointment->starts_at->format('d.m.Y H:i') }}</div>
+                                    <div class="text-[10px] text-white/30">{{ $client->latestAppointment->barber?->name ?? '—' }}</div>
+                                @else
+                                    <span class="text-white/40">—</span>
+                                @endif
                             </td>
                             <td class="px-6 py-4">
                                 <div class="flex items-center justify-end gap-2">

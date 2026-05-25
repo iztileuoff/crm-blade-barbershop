@@ -32,6 +32,12 @@ class extends Component
         return Product::orderBy('name')->get();
     }
 
+    #[Computed]
+    public function totalProducts(): int
+    {
+        return Product::count();
+    }
+
     public function openCreate(): void
     {
         $this->resetForm();
@@ -103,7 +109,7 @@ class extends Component
     <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>
             <h1 class="text-3xl font-extrabold tracking-tight text-white">Товары</h1>
-            <p class="mt-1 text-sm text-white/40">Складской учёт — шампуни, воски, масла</p>
+            <p class="mt-1 text-sm text-white/40">Складской учёт — шампуни, воски, масла · Всего: <span class="font-bold text-white/70">{{ $this->totalProducts }}</span></p>
         </div>
         <button type="button" wire:click="openCreate"
                 class="flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-400 to-amber-600 px-5 py-2.5 text-sm font-bold text-black shadow-lg shadow-amber-500/20 transition-all hover:scale-[1.02] hover:shadow-amber-500/30 active:scale-[0.98]">

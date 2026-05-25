@@ -83,7 +83,7 @@ class extends Component
     public function confirmedAmount(): int
     {
         return (int) $this->appointments
-            ->whereIn('status', [AppointmentStatus::Completed, AppointmentStatus::Confirmed])
+            ->where('status', AppointmentStatus::Completed)
             ->sum(fn ($appointment) => (int) ($appointment->price ?? $appointment->barber?->price ?? 0));
     }
 
@@ -138,7 +138,7 @@ class extends Component
                 $items = $byBarber->get($barber->id, collect());
 
                 $confirmedItems = $items->filter(
-                    fn ($a) => in_array($a->status, [AppointmentStatus::Completed, AppointmentStatus::Confirmed])
+                    fn ($a) => $a->status === AppointmentStatus::Completed
                 );
 
                 $revenue = (int) $confirmedItems->sum(fn ($a) => (int) ($a->price ?? $barber->price ?? 0));
@@ -187,7 +187,7 @@ class extends Component
 
         return Appointment::query()
             ->with(['barber'])
-            ->whereIn('status', [AppointmentStatus::Confirmed, AppointmentStatus::Completed])
+            ->where('status', AppointmentStatus::Completed)
             ->whereBetween('starts_at', [$start, $end])
             ->get();
     }
@@ -284,7 +284,7 @@ class extends Component
         $end = $start->copy()->endOfMonth();
 
         $appointments = Appointment::query()
-            ->whereIn('status', [AppointmentStatus::Confirmed, AppointmentStatus::Completed])
+            ->where('status', AppointmentStatus::Completed)
             ->whereBetween('starts_at', [$start, $end])
             ->get(['starts_at', 'price']);
 
@@ -429,7 +429,7 @@ class extends Component
                     </div>
                 </div>
                 <div class="mt-4 text-4xl font-extrabold text-white">{{ $this->formatSum($this->confirmedAmount) }}</div>
-                <div class="mt-1 text-xs text-emerald-400/60">Подтверждённые и завершённые</div>
+                <div class="mt-1 text-xs text-emerald-400/60">Только завершённые</div>
             </div>
         </div>
 
