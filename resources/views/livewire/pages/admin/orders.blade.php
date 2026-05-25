@@ -24,6 +24,10 @@ class extends Component
 
     public string $note = '';
 
+    public ?int $debt_amount = null;
+
+    public bool $debtEnabled = false;
+
     /** @var array<int, array{product_id: int, quantity: int, price: int, name: string}> */
     public array $cartItems = [];
 
@@ -74,10 +78,24 @@ class extends Component
         return (int) $this->orders->sum('total_price');
     }
 
+    #[Computed]
+    public function todayDebt(): int
+    {
+        return (int) $this->orders->sum('debt_amount');
+    }
+
     public function selectClient(int $id, string $label): void
     {
         $this->client_id = $id;
         $this->clientSearch = $label;
+    }
+
+    public function updatedDebtEnabled($value): void
+    {
+        if (! $value) {
+            $this->debt_amount = null;
+            $this->resetErrorBag('debt_amount');
+        }
     }
 
     public function openCreate(): void
@@ -141,12 +159,21 @@ class extends Component
             return;
         }
 
+        $debtAmount = ($this->debt_amount ?? 0) > 0 ? $this->debt_amount : null;
+
+        if ($debtAmount !== null && ! $this->client_id) {
+            $this->addError('client_id', 'Клиент обязателен при долге.');
+
+            return;
+        }
+
         $total = $this->cartTotal;
 
         $order = Order::create([
             'client_id' => $this->client_id,
             'total_price' => $total,
             'note' => $this->note ?: null,
+            'debt_amount' => $debtAmount,
         ]);
 
         foreach ($this->cartItems as $item) {
@@ -191,7 +218,7 @@ class extends Component
 
     private function resetForm(): void
     {
-        $this->reset(['client_id', 'clientSearch', 'note', 'cartItems']);
+        $this->reset(['client_id', 'clientSearch', 'note', 'cartItems', 'debt_amount', 'debtEnabled']);
         $this->resetErrorBag();
     }
 }; ?>
@@ -217,19 +244,39 @@ class extends Component
     </div>
 
     {{-- Day total --}}
-    <div class="mb-8 overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 to-emerald-500/[0.02] p-6 shadow-xl backdrop-blur-md">
-        <div class="flex items-center justify-between">
-            <div>
-                <span class="text-xs font-bold uppercase tracking-widest text-emerald-400/70">Выручка за день</span>
-                <div class="mt-2 text-4xl font-extrabold text-white tabular-nums">
-                    {{ number_format($this->todayTotal, 0, '.', ' ') }} сум
+    <div @class(['mb-8 grid gap-4', 'sm:grid-cols-2' => $this->todayDebt > 0])>
+        <div class="overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 to-emerald-500/[0.02] p-6 shadow-xl backdrop-blur-md">
+            <div class="flex items-center justify-between">
+                <div>
+                    <span class="text-xs font-bold uppercase tracking-widest text-emerald-400/70">Выручка за день</span>
+                    <div class="mt-2 text-4xl font-extrabold text-white tabular-nums">
+                        {{ number_format($this->todayTotal, 0, '.', ' ') }} сум
+                    </div>
+                    <div class="mt-1 text-xs text-emerald-400/60">{{ $this->orders->count() }} продаж{{ match(true) { $this->orders->count() % 10 === 1 && $this->orders->count() % 100 !== 11 => 'а', in_array($this->orders->count() % 10, [2,3,4]) && !in_array($this->orders->count() % 100, [12,13,14]) => 'и', default => '' } }}</div>
                 </div>
-                <div class="mt-1 text-xs text-emerald-400/60">{{ $this->orders->count() }} продаж{{ match(true) { $this->orders->count() % 10 === 1 && $this->orders->count() % 100 !== 11 => 'а', in_array($this->orders->count() % 10, [2,3,4]) && !in_array($this->orders->count() % 100, [12,13,14]) => 'и', default => '' } }}</div>
-            </div>
-            <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-400">
-                <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007Z" /></svg>
+                <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-400">
+                    <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007Z" /></svg>
+                </div>
             </div>
         </div>
+        @if ($this->todayDebt > 0)
+            <div class="overflow-hidden rounded-2xl border border-rose-500/20 bg-gradient-to-br from-rose-500/10 to-rose-500/[0.02] p-6 shadow-xl backdrop-blur-md">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <span class="text-xs font-bold uppercase tracking-widest text-rose-400/70">Долги за день</span>
+                        <div class="mt-2 text-4xl font-extrabold text-white tabular-nums">
+                            {{ number_format($this->todayDebt, 0, '.', ' ') }} сум
+                        </div>
+                        <a href="{{ route('admin.debts') }}" class="mt-1 inline-flex items-center gap-1 text-xs text-rose-400/60 hover:text-rose-400">
+                            Все долги →
+                        </a>
+                    </div>
+                    <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-500/15 text-rose-400">
+                        <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" /></svg>
+                    </div>
+                </div>
+            </div>
+        @endif
     </div>
 
     {{-- New order form --}}
@@ -312,7 +359,14 @@ class extends Component
 
                     {{-- Client --}}
                     <div class="mb-4">
-                        <label class="mb-1.5 block text-xs font-semibold text-white/50">Клиент (необязательно)</label>
+                        <label class="mb-1.5 block text-xs font-semibold text-white/50">
+                            Клиент
+                            @if ($debtEnabled)
+                                <span class="ml-1 text-rose-400">*</span>
+                            @else
+                                <span class="ml-1 text-white/25">(необязательно)</span>
+                            @endif
+                        </label>
                         <x-search-select
                             :options="$this->filteredClients"
                             searchModel="clientSearch"
@@ -321,6 +375,48 @@ class extends Component
                             subLabelField="phone"
                             placeholder="Поиск клиента..."
                         />
+                        @error('client_id') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
+                    </div>
+
+                    {{-- Debt --}}
+                    <div class="mb-4">
+                        <div @class([
+                            'rounded-xl border p-4 transition-colors',
+                            'border-rose-500/20 bg-rose-500/5' => $debtEnabled,
+                            'border-white/[0.06] bg-white/[0.02]' => ! $debtEnabled,
+                        ])>
+                            <div class="flex items-center justify-between gap-3">
+                                <div>
+                                    <label @class([
+                                        'text-xs font-semibold transition-colors',
+                                        'text-rose-400/80' => $debtEnabled,
+                                        'text-white/50' => ! $debtEnabled,
+                                    ])>В долг</label>
+                                    <p class="mt-0.5 text-[10px] text-white/30">Если клиент не платит сейчас</p>
+                                </div>
+                                <button type="button" wire:click="$toggle('debtEnabled')"
+                                        role="switch" aria-checked="{{ $debtEnabled ? 'true' : 'false' }}"
+                                        @class([
+                                            'relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors outline-none',
+                                            'bg-rose-500' => $debtEnabled,
+                                            'bg-white/[0.12]' => ! $debtEnabled,
+                                        ])>
+                                    <span @class([
+                                        'inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform',
+                                        'translate-x-6' => $debtEnabled,
+                                        'translate-x-1' => ! $debtEnabled,
+                                    ])></span>
+                                </button>
+                            </div>
+                            @if ($debtEnabled)
+                                <div class="relative mt-3">
+                                    <input type="number" wire:model.live="debt_amount"
+                                           placeholder="0" min="0"
+                                           class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] py-3 pl-4 pr-12 text-sm text-white outline-none transition focus:border-rose-500/40 focus:ring-1 focus:ring-rose-500/20">
+                                    <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-medium text-white/25">сум</span>
+                                </div>
+                            @endif
+                        </div>
                     </div>
 
                     {{-- Note --}}
@@ -388,6 +484,12 @@ class extends Component
                             </td>
                             <td class="whitespace-nowrap px-6 py-4 text-right">
                                 <span class="font-extrabold text-emerald-400 tabular-nums">{{ $order->formattedTotal }}</span>
+                                @if ($order->hasDebt)
+                                    <div class="mt-1 flex items-center justify-end gap-1 text-[10px] font-bold text-rose-400">
+                                        <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" /></svg>
+                                        Долг: {{ $order->formattedDebt }}
+                                    </div>
+                                @endif
                             </td>
                             <td class="px-6 py-4">
                                 <div class="flex items-center justify-end">

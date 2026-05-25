@@ -14,35 +14,26 @@
 </head>
 <body class="min-h-full bg-[#090909] font-sans text-white antialiased">
 
-    {{-- Sticky header --}}
-    <header class="sticky top-0 z-50 border-b border-white/[0.06] bg-[#090909]/80 backdrop-blur-xl">
-        <div class="mx-auto flex max-w-lg items-center justify-between px-4 py-3">
-            <a href="/" class="flex items-center gap-2.5">
-                <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 text-sm font-extrabold text-black">
-                    B
-                </div>
-                <div class="leading-none">
-                    <div class="text-sm font-bold tracking-tight">Blade</div>
-                    <div class="text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-500/70">Barbershop</div>
-                </div>
-            </a>
-            <div class="flex items-center gap-2">
-                @auth
-                <a href="{{ route('admin.appointments') }}"
-                   class="rounded-lg border border-white/[0.06] px-3 py-1.5 text-[11px] font-medium text-white/30 transition hover:border-white/10 hover:text-white/60">
-                    Панель
+    @auth
+        {{-- Logged-in admins keep the full admin header so navigation never disappears --}}
+        <x-admin-header />
+    @else
+        {{-- Public sticky header for guests --}}
+        <header class="sticky top-0 z-50 border-b border-white/[0.06] bg-[#090909]/80 backdrop-blur-xl">
+            <div class="mx-auto flex max-w-lg items-center justify-between px-4 py-3">
+                <a href="/" class="flex items-center gap-2.5">
+                    <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 text-sm font-extrabold text-black">
+                        B
+                    </div>
+                    <div class="leading-none">
+                        <div class="text-sm font-bold tracking-tight">Blade</div>
+                        <div class="text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-500/70">Barbershop</div>
+                    </div>
                 </a>
-                <a href="{{ route('logout') }}"
-                   class="rounded-lg border border-white/[0.06] px-3 py-1.5 text-[11px] font-medium text-rose-500/50 transition hover:border-rose-500/30 hover:text-rose-500">
-                    Выход
-                </a>
-                @endauth
-                @guest
                 <span class="text-[11px] text-white/20">Blade Barbershop © {{ date('Y') }}</span>
-                @endguest
             </div>
-        </div>
-    </header>
+        </header>
+    @endauth
 
     {{-- Main content --}}
     <main class="mx-auto max-w-lg px-4 pb-12 pt-6">

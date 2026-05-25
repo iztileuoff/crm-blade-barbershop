@@ -26,7 +26,6 @@ class extends Component
 
     public ?int $editingId = null;
 
-    #[Validate('required|exists:clients,id')]
     public ?int $client_id = null;
 
     #[Validate('required|exists:barbers,id')]
@@ -49,6 +48,11 @@ class extends Component
 
     #[Validate('nullable|integer|min:0')]
     public ?int $card_amount = null;
+
+    #[Validate('nullable|integer|min:0')]
+    public ?int $debt_amount = null;
+
+    public bool $debtEnabled = false;
 
     #[Validate('required|date')]
     public string $form_date = '';
@@ -186,6 +190,8 @@ class extends Component
         $this->payment_type = $appointment->payment_type->value;
         $this->cash_amount = $appointment->cash_amount;
         $this->card_amount = $appointment->card_amount;
+        $this->debt_amount = $appointment->debt_amount;
+        $this->debtEnabled = ($appointment->debt_amount ?? 0) > 0;
         $this->form_date = $appointment->starts_at->toDateString();
         $this->form_start_time = $appointment->starts_at->format('H:i');
         $this->form_end_time = $appointment->ends_at->format('H:i');
@@ -240,6 +246,14 @@ class extends Component
 
         if ($barber) {
             $this->selectedServices[$index]['amount'] = $barber->priceForService((int) $row['service_id']) ?? 0;
+        }
+    }
+
+    public function updatedDebtEnabled($value): void
+    {
+        if (! $value) {
+            $this->debt_amount = null;
+            $this->resetErrorBag('debt_amount');
         }
     }
 
@@ -306,7 +320,8 @@ class extends Component
 
     public function save(): void
     {
-        $this->validate();
+        $clientRule = ($this->debt_amount ?? 0) > 0 ? 'required|exists:clients,id' : 'nullable|exists:clients,id';
+        $this->validate(['client_id' => $clientRule]);
 
         $validServices = collect($this->selectedServices)
             ->filter(fn ($row) => ! empty($row['service_id']))
@@ -345,6 +360,7 @@ class extends Component
             'payment_type' => $this->payment_type,
             'cash_amount' => $this->payment_type === 'both' ? $this->cash_amount : null,
             'card_amount' => $this->payment_type === 'both' ? $this->card_amount : null,
+            'debt_amount' => ($this->debt_amount ?? 0) > 0 ? $this->debt_amount : null,
             'starts_at' => $startsAt,
             'ends_at' => $endsAt,
             'status' => $this->editingId ? Appointment::find($this->editingId)->status : AppointmentStatus::Confirmed,
@@ -400,7 +416,7 @@ class extends Component
 
     private function resetForm(): void
     {
-        $this->reset(['editingId', 'client_id', 'barber_id', 'selectedServices', 'price', 'note', 'form_start_time', 'form_end_time', 'cash_amount', 'card_amount']);
+        $this->reset(['editingId', 'client_id', 'barber_id', 'selectedServices', 'price', 'note', 'form_start_time', 'form_end_time', 'cash_amount', 'card_amount', 'debt_amount', 'debtEnabled']);
         $this->payment_type = 'cash';
         $this->form_date = $this->date;
         $this->resetErrorBag();
@@ -455,7 +471,7 @@ class extends Component
         <div class="fixed inset-0 z-50 flex items-center justify-center p-4"
              x-data
              x-on:keydown.escape.window="$wire.cancel()">
-            <div class="absolute inset-0 bg-[#090909]" wire:click="cancel"></div>
+            <div class="absolute inset-0 bg-[#090909]/80 backdrop-blur-sm" wire:click="cancel"></div>
             <div class="relative z-10 flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-white/[0.12] bg-[#1a1a1a] shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_32px_64px_rgba(0,0,0,0.8)]">
                 <div class="flex items-center justify-between border-b border-white/[0.06] px-6 py-4">
                     <h3 class="text-sm font-bold text-white">{{ $editingId ? 'Редактирование записи' : 'Создание новой записи' }}</h3>
@@ -547,6 +563,49 @@ class extends Component
                                     </div>
                                 </div>
                             @endif
+
+                            {{-- Debt --}}
+                            <div class="sm:col-span-2">
+                                <div @class([
+                                    'rounded-xl border p-4 transition-colors',
+                                    'border-rose-500/20 bg-rose-500/5' => $debtEnabled,
+                                    'border-white/[0.06] bg-white/[0.02]' => ! $debtEnabled,
+                                ])>
+                                    <div class="flex items-center justify-between gap-3">
+                                        <div>
+                                            <label @class([
+                                                'text-xs font-semibold transition-colors',
+                                                'text-rose-400/80' => $debtEnabled,
+                                                'text-white/50' => ! $debtEnabled,
+                                            ])>В долг</label>
+                                            <p class="mt-0.5 text-[10px] text-white/30">Если клиент не оплачивает сейчас</p>
+                                        </div>
+                                        <button type="button" wire:click="$toggle('debtEnabled')"
+                                                role="switch" aria-checked="{{ $debtEnabled ? 'true' : 'false' }}"
+                                                @class([
+                                                    'relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors outline-none',
+                                                    'bg-rose-500' => $debtEnabled,
+                                                    'bg-white/[0.12]' => ! $debtEnabled,
+                                                ])>
+                                            <span @class([
+                                                'inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform',
+                                                'translate-x-6' => $debtEnabled,
+                                                'translate-x-1' => ! $debtEnabled,
+                                            ])></span>
+                                        </button>
+                                    </div>
+                                    @if ($debtEnabled)
+                                        <div class="relative mt-3">
+                                            <input type="number" wire:model.live="debt_amount"
+                                                   placeholder="0" min="0"
+                                                   class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] py-3 pl-4 pr-12 text-sm text-white outline-none transition focus:border-rose-500/40 focus:ring-1 focus:ring-rose-500/20">
+                                            <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-medium text-white/25">сум</span>
+                                        </div>
+                                        @error('debt_amount') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
+                                        <p class="mt-2 text-[10px] text-rose-400/70">Клиент обязателен при долге</p>
+                                    @endif
+                                </div>
+                            </div>
 
                             {{-- Services --}}
                             <div class="sm:col-span-2">
@@ -784,6 +843,12 @@ class extends Component
                                             </span>
                                         @endif
                                     </div>
+                                    @if ($appointment->hasDebt)
+                                        <div class="mt-1 flex items-center gap-1.5 rounded-lg bg-rose-500/10 px-2 py-1">
+                                            <svg class="h-3 w-3 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" /></svg>
+                                            <span class="text-[10px] font-bold text-rose-400">Долг: {{ $appointment->formattedDebt }}</span>
+                                        </div>
+                                    @endif
                                 @endif
                             </td>
                             <td class="px-6 py-4">

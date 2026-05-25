@@ -76,6 +76,43 @@ class extends Component
         return $slots;
     }
 
+    /**
+     * Slot values ('HH:00') that clash with the selected barber's active
+     * appointments on the selected date, accounting for the service duration.
+     *
+     * @return array<int, string>
+     */
+    #[Computed]
+    public function takenSlots(): array
+    {
+        if (! $this->barberId || ! $this->date) {
+            return [];
+        }
+
+        $duration = (int) ($this->selectedService?->duration_minutes ?? 60);
+
+        $appointments = Appointment::query()
+            ->where('barber_id', $this->barberId)
+            ->active()
+            ->forDay(Carbon::parse($this->date))
+            ->get(['starts_at', 'ends_at']);
+
+        $taken = [];
+        foreach ($this->availableSlots as $slot) {
+            $slotStart = Carbon::parse($this->date.' '.$slot['value']);
+            $slotEnd = $slotStart->copy()->addMinutes($duration);
+
+            foreach ($appointments as $appointment) {
+                if ($appointment->starts_at < $slotEnd && $appointment->ends_at > $slotStart) {
+                    $taken[] = $slot['value'];
+                    break;
+                }
+            }
+        }
+
+        return $taken;
+    }
+
     public function selectService(int $id): void
     {
         $this->serviceId = $id;
@@ -343,11 +380,17 @@ class extends Component
                     В этот день нет свободных окон. Попробуйте другую дату.
                 </div>
             @else
+                @php($takenSlots = $this->takenSlots)
                 <div class="grid grid-cols-3 gap-2 sm:grid-cols-4">
                     @foreach ($this->availableSlots as $slot)
+                        @php($isTaken = in_array($slot['value'], $takenSlots, true))
                         <button type="button"
-                                wire:click="selectTime('{{ $slot['value'] }}')"
-                                class="rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-2.5 text-sm font-semibold transition-all duration-200 hover:border-amber-500/40 hover:bg-amber-500/10 hover:text-amber-400 active:scale-95">
+                                @if ($isTaken) disabled @else wire:click="selectTime('{{ $slot['value'] }}')" @endif
+                                @class([
+                                    'rounded-xl border px-3 py-2.5 text-sm font-semibold transition-all duration-200',
+                                    'cursor-not-allowed border-rose-500/30 bg-rose-500/10 text-rose-400/70 line-through' => $isTaken,
+                                    'border-white/[0.06] bg-white/[0.03] hover:border-amber-500/40 hover:bg-amber-500/10 hover:text-amber-400 active:scale-95' => ! $isTaken,
+                                ])>
                             {{ $slot['label'] }}
                         </button>
                     @endforeach

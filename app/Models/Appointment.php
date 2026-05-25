@@ -29,6 +29,7 @@ class Appointment extends Model
         'payment_type',
         'cash_amount',
         'card_amount',
+        'debt_amount',
     ];
 
     protected function casts(): array
@@ -42,11 +43,20 @@ class Appointment extends Model
             'payment_type' => PaymentType::class,
             'cash_amount' => 'integer',
             'card_amount' => 'integer',
+            'debt_amount' => 'integer',
         ];
     }
 
     public string $formattedPrice {
         get => number_format((int) ($this->price ?? 0), 0, '.', ' ').' сум';
+    }
+
+    public string $formattedDebt {
+        get => number_format((int) ($this->debt_amount ?? 0), 0, '.', ' ').' сум';
+    }
+
+    public bool $hasDebt {
+        get => ($this->debt_amount ?? 0) > 0;
     }
 
     public function client(): BelongsTo

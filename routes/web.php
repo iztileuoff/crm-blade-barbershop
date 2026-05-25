@@ -22,5 +22,7 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Volt::route('/clients', 'pages.admin.clients')->name('clients');
     Volt::route('/products', 'pages.admin.products')->name('products');
     Volt::route('/orders', 'pages.admin.orders')->name('orders');
+    Volt::route('/debts', 'pages.admin.debts')->name('debts');
+    Volt::route('/settings', 'pages.admin.settings')->name('settings');
     Volt::route('/users', 'pages.admin.users')->name('users');
 });
