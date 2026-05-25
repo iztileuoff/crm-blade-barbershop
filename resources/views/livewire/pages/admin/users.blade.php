@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\Role;
+use App\Models\Barber;
 use App\Models\Client;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
@@ -27,6 +28,8 @@ class extends Component
     #[Validate('required|string')]
     public string $role = 'admin';
 
+    public ?int $barberId = null;
+
     public bool $showForm = false;
 
     public function mount()
@@ -37,7 +40,22 @@ class extends Component
     #[Computed]
     public function users()
     {
-        return User::orderBy('name')->get();
+        return User::with('barber')->orderBy('name')->get();
+    }
+
+    /**
+     * Barbers that are unlinked, or already linked to the user being edited.
+     */
+    #[Computed]
+    public function availableBarbers()
+    {
+        return Barber::query()
+            ->where(function ($query) {
+                $query->whereNull('user_id')
+                    ->when($this->editingId, fn ($q) => $q->orWhere('user_id', $this->editingId));
+            })
+            ->orderBy('name')
+            ->get();
     }
 
     public function openCreate(): void
@@ -53,6 +71,7 @@ class extends Component
         $this->name = $user->name;
         $this->phone = $user->phone;
         $this->role = $user->role->value;
+        $this->barberId = $user->barber?->id;
         $this->password = '';
         $this->showForm = true;
     }
@@ -62,7 +81,17 @@ class extends Component
         $this->validate([
             'name' => 'required|string|max:255',
             'phone' => ['required', 'string', Rule::unique('users', 'phone')->ignore($this->editingId)],
-            'role' => 'required|in:admin,super_admin',
+            'role' => 'required|in:admin,super_admin,barber',
+            'barberId' => [
+                Rule::requiredIf($this->role === Role::BARBER->value),
+                'nullable',
+                Rule::exists('barbers', 'id')->where(function ($query) {
+                    $query->where(function ($q) {
+                        $q->whereNull('user_id')
+                            ->when($this->editingId, fn ($inner) => $inner->orWhere('user_id', $this->editingId));
+                    });
+                }),
+            ],
             'password' => $this->editingId ? 'nullable|min:6' : 'required|min:6',
         ]);
 
@@ -79,14 +108,30 @@ class extends Component
         }
 
         if ($this->editingId) {
-            User::findOrFail($this->editingId)->update($payload);
+            $user = User::findOrFail($this->editingId);
+            $user->update($payload);
         } else {
-            User::create($payload);
+            $user = User::create($payload);
         }
+
+        $this->syncBarberLink($user);
 
         unset($this->users);
         $this->resetForm();
         $this->showForm = false;
+    }
+
+    /**
+     * Link the chosen barber to this user when the barber role is selected,
+     * and clear any previous link otherwise.
+     */
+    private function syncBarberLink(User $user): void
+    {
+        Barber::where('user_id', $user->id)->update(['user_id' => null]);
+
+        if ($user->role === Role::BARBER && $this->barberId) {
+            Barber::whereKey($this->barberId)->update(['user_id' => $user->id]);
+        }
     }
 
     public function delete(int $id): void
@@ -107,7 +152,7 @@ class extends Component
 
     private function resetForm(): void
     {
-        $this->reset(['editingId', 'name', 'phone', 'role', 'password']);
+        $this->reset(['editingId', 'name', 'phone', 'role', 'password', 'barberId']);
         $this->role = 'admin';
         $this->resetErrorBag();
     }
@@ -147,13 +192,29 @@ class extends Component
                     </div>
                     <div>
                         <label class="mb-1.5 block text-xs font-semibold text-white/50">Роль</label>
-                        <select wire:model="role"
+                        <select wire:model.live="role"
                                 class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20 [&>option]:bg-[#121212]">
                             <option value="admin">Администратор</option>
                             <option value="super_admin">Супер Админ</option>
+                            <option value="barber">Мастер</option>
                         </select>
                         @error('role') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
                     </div>
+
+                    @if ($role === 'barber')
+                        <div>
+                            <label class="mb-1.5 block text-xs font-semibold text-white/50">Профиль мастера</label>
+                            <select wire:model="barberId"
+                                    class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20 [&>option]:bg-[#121212]">
+                                <option value="">— выберите мастера —</option>
+                                @foreach ($this->availableBarbers as $barber)
+                                    <option value="{{ $barber->id }}">{{ $barber->name }}</option>
+                                @endforeach
+                            </select>
+                            <p class="mt-1.5 text-[11px] text-white/30">Мастер будет видеть только свои записи</p>
+                            @error('barberId') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
+                        </div>
+                    @endif
                     <div>
                         <label class="mb-1.5 block text-xs font-semibold text-white/50">Пароль {{ $editingId ? '(оставьте пустым для сохранения старого)' : '' }}</label>
                         <input type="password" wire:model="password" placeholder="••••••••"

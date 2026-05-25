@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\RestrictBarberAccess;
 use Livewire\Volt\Volt;
 
 Volt::route('/', 'pages.booking')->name('booking')->middleware('auth');
@@ -13,7 +14,7 @@ Route::get('/logout', function () {
     return redirect()->route('login');
 })->name('logout');
 
-Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
+Route::prefix('admin')->name('admin.')->middleware(['auth', RestrictBarberAccess::class])->group(function () {
     Volt::route('/', 'pages.admin.dashboard')->name('dashboard');
     Volt::route('/appointments', 'pages.admin.appointments')->name('appointments');
     Volt::route('/specializations', 'pages.admin.specializations')->name('specializations');

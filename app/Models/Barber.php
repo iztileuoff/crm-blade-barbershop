@@ -17,6 +17,7 @@ class Barber extends Model implements HasMedia
     use HasFactory, InteractsWithMedia;
 
     protected $fillable = [
+        'user_id',
         'name',
         'specialization_id',
         'price',
@@ -38,6 +39,11 @@ class Barber extends Model implements HasMedia
     public function registerMediaCollections(): void
     {
         $this->addMediaCollection('photo')->singleFile();
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 
     public function specialization(): BelongsTo

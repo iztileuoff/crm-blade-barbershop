@@ -69,10 +69,27 @@ class extends Component
 
     public string $clientSearch = '';
 
+    public bool $isBarberView = false;
+
+    public ?int $ownBarberId = null;
+
     public function mount(): void
     {
         $this->date = Carbon::now()->toDateString();
         $this->form_date = $this->date;
+
+        $user = auth()->user();
+
+        if ($user?->isBarber()) {
+            $this->isBarberView = true;
+            $this->ownBarberId = $user->barber?->id;
+            $this->barberFilter = $this->ownBarberId;
+        }
+    }
+
+    private function abortIfBarber(): void
+    {
+        abort_if($this->isBarberView, 403);
     }
 
     #[Computed]
@@ -101,7 +118,8 @@ class extends Component
         return Appointment::query()
             ->with(['client', 'barber', 'services'])
             ->whereDate('starts_at', $this->date)
-            ->when($this->barberFilter, fn ($q) => $q->where('barber_id', $this->barberFilter))
+            ->when($this->isBarberView, fn ($q) => $q->where('barber_id', $this->ownBarberId))
+            ->when(! $this->isBarberView && $this->barberFilter, fn ($q) => $q->where('barber_id', $this->barberFilter))
             ->orderBy($this->sortField, $this->sortDirection)
             ->get();
     }
@@ -175,12 +193,14 @@ class extends Component
 
     public function openCreate(): void
     {
+        $this->abortIfBarber();
         $this->resetForm();
         $this->showForm = true;
     }
 
     public function edit(int $id): void
     {
+        $this->abortIfBarber();
         $appointment = Appointment::with(['services', 'client'])->findOrFail($id);
         $this->editingId = $appointment->id;
         $this->client_id = $appointment->client_id;
@@ -320,6 +340,7 @@ class extends Component
 
     public function save(): void
     {
+        $this->abortIfBarber();
         $clientRule = ($this->debt_amount ?? 0) > 0 ? 'required|exists:clients,id' : 'nullable|exists:clients,id';
         $this->validate(['client_id' => $clientRule]);
 
@@ -386,24 +407,28 @@ class extends Component
 
     public function markConfirmed(int $id): void
     {
+        $this->abortIfBarber();
         Appointment::findOrFail($id)->update(['status' => AppointmentStatus::Confirmed]);
         unset($this->appointments);
     }
 
     public function markCompleted(int $id): void
     {
+        $this->abortIfBarber();
         Appointment::findOrFail($id)->update(['status' => AppointmentStatus::Completed]);
         unset($this->appointments);
     }
 
     public function markCancelled(int $id): void
     {
+        $this->abortIfBarber();
         Appointment::findOrFail($id)->update(['status' => AppointmentStatus::Cancelled]);
         unset($this->appointments);
     }
 
     public function delete(int $id): void
     {
+        $this->abortIfBarber();
         Appointment::findOrFail($id)->delete();
         unset($this->appointments);
     }
@@ -429,25 +454,27 @@ class extends Component
             <h1 class="text-3xl font-extrabold tracking-tight text-white">Записи</h1>
             <p class="mt-1 text-sm text-white/40">Управление журналом посещений</p>
         </div>
-        <div class="flex items-center gap-3">
-            <div class="relative">
-                <select wire:model.live="barberFilter"
-                        class="appearance-none rounded-xl border border-white/[0.08] bg-[#252525] py-2.5 pl-4 pr-10 text-sm text-white outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20">
-                    <option value="" style="color: #fff; background-color: #1a1a1a;">Все мастера</option>
-                    @foreach ($this->barbers as $barber)
-                        <option value="{{ $barber->id }}" style="color: #fff; background-color: #1a1a1a;">{{ $barber->name }}</option>
-                    @endforeach
-                </select>
-                <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-white/30">
-                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
+        @unless ($isBarberView)
+            <div class="flex items-center gap-3">
+                <div class="relative">
+                    <select wire:model.live="barberFilter"
+                            class="appearance-none rounded-xl border border-white/[0.08] bg-[#252525] py-2.5 pl-4 pr-10 text-sm text-white outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20">
+                        <option value="" style="color: #fff; background-color: #1a1a1a;">Все мастера</option>
+                        @foreach ($this->barbers as $barber)
+                            <option value="{{ $barber->id }}" style="color: #fff; background-color: #1a1a1a;">{{ $barber->name }}</option>
+                        @endforeach
+                    </select>
+                    <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-white/30">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
+                    </div>
                 </div>
+                <button type="button" wire:click="openCreate"
+                        class="flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-400 to-amber-600 px-5 py-2.5 text-sm font-bold text-black shadow-lg shadow-amber-500/20 transition-all hover:scale-[1.02] hover:shadow-amber-500/30 active:scale-[0.98]">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                    Новая запись
+                </button>
             </div>
-            <button type="button" wire:click="openCreate"
-                    class="flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-400 to-amber-600 px-5 py-2.5 text-sm font-bold text-black shadow-lg shadow-amber-500/20 transition-all hover:scale-[1.02] hover:shadow-amber-500/30 active:scale-[0.98]">
-                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-                Новая запись
-            </button>
-        </div>
+        @endunless
     </div>
 
     {{-- Date Selector --}}
@@ -777,7 +804,9 @@ class extends Component
                                 <span class="ml-1">{{ $sortDirection === 'asc' ? '↑' : '↓' }}</span>
                             @endif
                         </th>
-                        <th class="px-6 py-4 text-right">Действия</th>
+                        @unless ($isBarberView)
+                            <th class="px-6 py-4 text-right">Действия</th>
+                        @endunless
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-white/[0.04]">
@@ -865,6 +894,7 @@ class extends Component
                                     {{ $label }}
                                 </span>
                             </td>
+                            @unless ($isBarberView)
                             <td class="px-6 py-4">
                                 <div class="flex items-center justify-end gap-1.5">
                                     @if ($appointment->status === AppointmentStatus::Pending)
@@ -901,10 +931,11 @@ class extends Component
                                     </button>
                                 </div>
                             </td>
+                            @endunless
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="px-6 py-12 text-center text-white/20">На этот день записей нет</td>
+                            <td colspan="{{ $isBarberView ? 5 : 6 }}" class="px-6 py-12 text-center text-white/20">На этот день записей нет</td>
                         </tr>
                     @endforelse
                 </tbody>
