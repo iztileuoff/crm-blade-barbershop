@@ -12,12 +12,25 @@
     @livewireStyles
     <style>[x-cloak]{display:none !important}</style>
 </head>
-<body class="min-h-full bg-[#090909] font-sans text-white antialiased">
 
-    @auth
+@auth
+    <body x-data="{ open: false, collapsed: localStorage.getItem('sidebarCollapsed') === '1' }"
+          x-init="$watch('collapsed', value => localStorage.setItem('sidebarCollapsed', value ? '1' : '0'))"
+          class="min-h-full bg-[#090909] font-sans text-white antialiased">
         {{-- Logged-in admins keep the full admin header so navigation never disappears --}}
         <x-admin-header />
-    @else
+
+        <div class="min-h-screen transition-[padding] duration-300 ease-in-out" :class="collapsed ? 'lg:pl-20' : 'lg:pl-64'">
+            {{-- Main content (wider for admins) --}}
+            <main class="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+                {{ $slot }}
+            </main>
+        </div>
+
+        @livewireScripts
+    </body>
+@else
+    <body class="min-h-full bg-[#090909] font-sans text-white antialiased">
         {{-- Public sticky header for guests --}}
         <header class="sticky top-0 z-50 border-b border-white/[0.06] bg-[#090909]/80 backdrop-blur-xl">
             <div class="mx-auto flex max-w-lg items-center justify-between px-4 py-3">
@@ -33,13 +46,13 @@
                 <span class="text-[11px] text-white/20">Blade Barbershop © {{ date('Y') }}</span>
             </div>
         </header>
-    @endauth
 
-    {{-- Main content --}}
-    <main class="mx-auto max-w-lg px-4 pb-12 pt-6">
-        {{ $slot }}
-    </main>
+        {{-- Main content (narrow mobile-first for booking) --}}
+        <main class="mx-auto max-w-lg px-4 pb-12 pt-6">
+            {{ $slot }}
+        </main>
 
-    @livewireScripts
-</body>
+        @livewireScripts
+    </body>
+@endauth
 </html>

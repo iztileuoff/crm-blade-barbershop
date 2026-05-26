@@ -44,7 +44,7 @@
          class="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"></div>
 
     {{-- Sidebar --}}
-    <aside :class="{ '!translate-x-0': open, 'lg:w-20': collapsed }"
+    <aside :class="{ 'translate-x-0!': open, 'lg:w-20': collapsed }"
            class="fixed inset-y-0 left-0 z-50 flex w-64 -translate-x-full flex-col border-r border-white/[0.06] bg-[#0c0c0c] transition-all duration-300 ease-in-out lg:translate-x-0">
         {{-- Logo --}}
         <div class="flex items-center justify-between px-5 py-5" :class="{ 'lg:justify-center lg:px-3': collapsed }">
