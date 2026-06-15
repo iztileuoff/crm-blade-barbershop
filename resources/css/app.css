@@ -8,6 +8,16 @@
 @theme {
     --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-display: 'Oswald', 'Inter', ui-sans-serif, system-ui, sans-serif;
+
+    /* ─── Steel & Brass — brand tokens ───────────────────────────────── */
+    --color-ink: #0b0c0e; /* graphite background, not pure black */
+    --color-steel: #15171b; /* panels & cards */
+    --color-steel-2: #1c1f24; /* raised surfaces, inputs */
+    --color-brass: #c8a24b; /* primary accent (replaces flat amber) */
+    --color-brass-bright: #e0be6a; /* hover / highlight */
+    --color-ember: #7a2e22; /* oxblood / leather — destructive */
+    --color-chrome: #d7dce2; /* primary light text */
 }
 
 /* Hide scrollbar for horizontal date picker */
@@ -44,4 +54,56 @@
 }
 .animate-pulse-glow {
     animation: pulseGlow 2s ease-in-out infinite;
+}
+
+/* ─── Steel & Brass — signature elements ─────────────────────────────── */
+
+/* Brushed-steel surface: faint honed grain + a single brass light source */
+.bg-brushed {
+    background-color: var(--color-steel);
+    background-image:
+        repeating-linear-gradient(
+            115deg,
+            rgba(255, 255, 255, 0.018) 0px,
+            rgba(255, 255, 255, 0.018) 1px,
+            transparent 1px,
+            transparent 3px
+        ),
+        radial-gradient(120% 90% at 85% -10%, rgba(200, 162, 75, 0.10), transparent 55%);
+}
+
+/* "Razor stroke" — the brand signature. A honed brass edge that cuts across,
+   skewed like a straight-razor pass and drawn on load from the left. */
+.razor-stroke {
+    height: 2px;
+    transform-origin: left center;
+    transform: skewX(-22deg);
+    background: linear-gradient(
+        90deg,
+        var(--color-brass) 0%,
+        var(--color-brass-bright) 45%,
+        transparent 100%
+    );
+    box-shadow: 0 0 12px rgba(200, 162, 75, 0.35);
+}
+
+@keyframes razorDraw {
+    from { transform: skewX(-22deg) scaleX(0); }
+    to { transform: skewX(-22deg) scaleX(1); }
+}
+.animate-razor {
+    animation: razorDraw 0.7s cubic-bezier(0.65, 0, 0.35, 1) 0.15s both;
+}
+
+/* Respect users who prefer less motion */
+@media (prefers-reduced-motion: reduce) {
+    .animate-fade-in-up,
+    .animate-scale-in,
+    .animate-pulse-glow,
+    .animate-razor {
+        animation: none !important;
+    }
+    .razor-stroke {
+        transform: skewX(-22deg) scaleX(1);
+    }
 }
