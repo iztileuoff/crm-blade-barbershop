@@ -6,14 +6,23 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $title ?? 'Админ-панель — Blade Barbershop' }}</title>
     <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700,800" rel="stylesheet" />
+    <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700,800|oswald:300,400,500,600,700" rel="stylesheet" />
+    <script>
+        (function () {
+            try {
+                var stored = localStorage.getItem('theme');
+                var dark = stored ? stored === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+                if (dark) { document.documentElement.classList.add('dark'); }
+            } catch (e) {}
+        })();
+    </script>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @livewireStyles
     <style>[x-cloak]{display:none !important}</style>
 </head>
 <body x-data="{ open: false, collapsed: localStorage.getItem('sidebarCollapsed') === '1' }"
       x-init="$watch('collapsed', value => localStorage.setItem('sidebarCollapsed', value ? '1' : '0'))"
-      class="min-h-full bg-[#090909] font-sans text-white antialiased">
+      class="min-h-full bg-surface font-sans text-content antialiased">
     <x-admin-header />
 
     <div class="min-h-screen transition-[padding] duration-300 ease-in-out" :class="collapsed ? 'lg:pl-20' : 'lg:pl-64'">

@@ -60,83 +60,83 @@ class extends Component
 <div class="animate-fade-in-up">
     <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>
-            <h1 class="text-3xl font-extrabold tracking-tight text-white">Настройки</h1>
-            <p class="mt-1 text-sm text-white/40">Информация о салоне и контакты</p>
+            <h1 class="text-3xl font-extrabold tracking-tight text-content">Настройки</h1>
+            <p class="mt-1 text-sm text-content/40">Информация о салоне и контакты</p>
         </div>
     </div>
 
     <div x-data="{ saved: false }"
          x-on:settings-saved.window="saved = true; clearTimeout($el._t); $el._t = setTimeout(() => saved = false, 2500)">
         <div x-show="saved" x-cloak x-transition
-             class="mb-6 flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm font-bold text-emerald-400">
+             class="mb-6 flex items-center gap-2 rounded-xl border border-success/20 bg-success/10 px-4 py-3 text-sm font-bold text-success">
             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
             Настройки сохранены
         </div>
 
         <form wire:submit="save" class="space-y-6">
             {{-- Main info --}}
-            <div class="overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.03] shadow-xl backdrop-blur-md">
-                <div class="border-b border-white/[0.06] bg-white/[0.03] px-6 py-4">
-                    <h3 class="text-sm font-bold text-white">Основная информация</h3>
+            <div class="overflow-hidden rounded-2xl border border-content/[0.06] bg-content/[0.03] shadow-xl backdrop-blur-md">
+                <div class="border-b border-content/[0.06] bg-content/[0.03] px-6 py-4">
+                    <h3 class="text-sm font-bold text-content">Основная информация</h3>
                 </div>
                 <div class="grid gap-6 p-6 sm:grid-cols-2">
                     <div class="sm:col-span-2">
-                        <label class="mb-1.5 block text-xs font-semibold text-white/50">Название салона</label>
+                        <label class="mb-1.5 block text-xs font-semibold text-content/50">Название салона</label>
                         <input type="text" wire:model="shop_name" placeholder="Blade Barbershop"
-                               class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white placeholder-white/20 outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20">
-                        @error('shop_name') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
+                               class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content placeholder-content/20 outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
+                        @error('shop_name') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                     </div>
                     <div>
-                        <label class="mb-1.5 block text-xs font-semibold text-white/50">Телефон</label>
+                        <label class="mb-1.5 block text-xs font-semibold text-content/50">Телефон</label>
                         <input type="tel" wire:model="phone" placeholder="998 90 123 45 67"
-                               class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white placeholder-white/20 outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20">
-                        @error('phone') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
+                               class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content placeholder-content/20 outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
+                        @error('phone') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                     </div>
                     <div>
-                        <label class="mb-1.5 block text-xs font-semibold text-white/50">Адрес</label>
+                        <label class="mb-1.5 block text-xs font-semibold text-content/50">Адрес</label>
                         <input type="text" wire:model="address" placeholder="г. Ташкент, ул. ..."
-                               class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white placeholder-white/20 outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20">
-                        @error('address') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
+                               class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content placeholder-content/20 outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
+                        @error('address') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                     </div>
                 </div>
             </div>
 
             {{-- Hours & socials --}}
-            <div class="overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.03] shadow-xl backdrop-blur-md">
-                <div class="border-b border-white/[0.06] bg-white/[0.03] px-6 py-4">
-                    <h3 class="text-sm font-bold text-white">Часы работы и соцсети</h3>
+            <div class="overflow-hidden rounded-2xl border border-content/[0.06] bg-content/[0.03] shadow-xl backdrop-blur-md">
+                <div class="border-b border-content/[0.06] bg-content/[0.03] px-6 py-4">
+                    <h3 class="text-sm font-bold text-content">Часы работы и соцсети</h3>
                 </div>
                 <div class="grid gap-6 p-6 sm:grid-cols-2">
                     <div>
-                        <label class="mb-1.5 block text-xs font-semibold text-white/50">Начало работы</label>
+                        <label class="mb-1.5 block text-xs font-semibold text-content/50">Начало работы</label>
                         <input type="time" wire:model="work_start"
-                               class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20 dark:[color-scheme:dark]">
-                        @error('work_start') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
+                               class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20 dark:[color-scheme:dark]">
+                        @error('work_start') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                     </div>
                     <div>
-                        <label class="mb-1.5 block text-xs font-semibold text-white/50">Конец работы</label>
+                        <label class="mb-1.5 block text-xs font-semibold text-content/50">Конец работы</label>
                         <input type="time" wire:model="work_end"
-                               class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20 dark:[color-scheme:dark]">
-                        @error('work_end') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
+                               class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20 dark:[color-scheme:dark]">
+                        @error('work_end') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                     </div>
                     <div>
-                        <label class="mb-1.5 block text-xs font-semibold text-white/50">Instagram</label>
+                        <label class="mb-1.5 block text-xs font-semibold text-content/50">Instagram</label>
                         <input type="text" wire:model="instagram" placeholder="@blade.barbershop"
-                               class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white placeholder-white/20 outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20">
-                        @error('instagram') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
+                               class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content placeholder-content/20 outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
+                        @error('instagram') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                     </div>
                     <div>
-                        <label class="mb-1.5 block text-xs font-semibold text-white/50">Telegram</label>
+                        <label class="mb-1.5 block text-xs font-semibold text-content/50">Telegram</label>
                         <input type="text" wire:model="telegram" placeholder="@blade_barbershop"
-                               class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white placeholder-white/20 outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20">
-                        @error('telegram') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
+                               class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content placeholder-content/20 outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
+                        @error('telegram') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                     </div>
                 </div>
             </div>
 
             <div class="flex items-center justify-end">
                 <button type="submit"
-                        class="rounded-xl bg-gradient-to-r from-amber-400 to-amber-600 px-6 py-2.5 text-sm font-bold text-black shadow-lg shadow-amber-500/20 transition-all hover:scale-[1.02] hover:shadow-amber-500/30 active:scale-[0.98]">
+                        class="rounded-xl bg-gradient-to-r from-brass to-brass px-6 py-2.5 text-sm font-bold text-black shadow-lg shadow-brass/20 transition-all hover:scale-[1.02] hover:shadow-brass/30 active:scale-[0.98]">
                     Сохранить настройки
                 </button>
             </div>

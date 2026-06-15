@@ -7,7 +7,16 @@
     <title>{{ $title ?? 'Онлайн-запись — Blade Barbershop' }}</title>
     <meta name="description" content="Онлайн-запись в барбершоп Blade. Выберите услугу, мастера и удобное время.">
     <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700,800" rel="stylesheet" />
+    <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700,800|oswald:300,400,500,600,700" rel="stylesheet" />
+    <script>
+        (function () {
+            try {
+                var stored = localStorage.getItem('theme');
+                var dark = stored ? stored === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+                if (dark) { document.documentElement.classList.add('dark'); }
+            } catch (e) {}
+        })();
+    </script>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @livewireStyles
     <style>[x-cloak]{display:none !important}</style>
@@ -16,7 +25,7 @@
 @auth
     <body x-data="{ open: false, collapsed: localStorage.getItem('sidebarCollapsed') === '1' }"
           x-init="$watch('collapsed', value => localStorage.setItem('sidebarCollapsed', value ? '1' : '0'))"
-          class="min-h-full bg-[#090909] font-sans text-white antialiased">
+          class="min-h-full bg-surface font-sans text-content antialiased">
         {{-- Logged-in admins keep the full admin header so navigation never disappears --}}
         <x-admin-header />
 
@@ -30,20 +39,20 @@
         @livewireScripts
     </body>
 @else
-    <body class="min-h-full bg-[#090909] font-sans text-white antialiased">
+    <body class="min-h-full bg-surface font-sans text-content antialiased">
         {{-- Public sticky header for guests --}}
-        <header class="sticky top-0 z-50 border-b border-white/[0.06] bg-[#090909]/80 backdrop-blur-xl">
+        <header class="sticky top-0 z-50 border-b border-content/[0.06] bg-surface/80 backdrop-blur-xl">
             <div class="mx-auto flex max-w-lg items-center justify-between px-4 py-3">
                 <a href="/" class="flex items-center gap-2.5">
-                    <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 text-sm font-extrabold text-black">
+                    <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-brass-bright to-brass text-sm font-extrabold text-on-brass">
                         B
                     </div>
                     <div class="leading-none">
-                        <div class="text-sm font-bold tracking-tight">Blade</div>
-                        <div class="text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-500/70">Barbershop</div>
+                        <div class="font-display text-base font-semibold uppercase tracking-[0.18em]">Blade</div>
+                        <div class="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-brass-ink/70">Barbershop</div>
                     </div>
                 </a>
-                <span class="text-[11px] text-white/20">Blade Barbershop © {{ date('Y') }}</span>
+                <x-theme-toggle class="flex h-9 w-9 items-center justify-center rounded-xl border border-content/[0.06] text-content/50 transition hover:border-brass/40 hover:text-brass-ink" />
             </div>
         </header>
 

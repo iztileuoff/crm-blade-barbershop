@@ -116,27 +116,27 @@ class extends Component
 <div class="animate-fade-in-up">
     <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>
-            <h1 class="text-3xl font-extrabold tracking-tight text-white">Долги</h1>
-            <p class="mt-1 text-sm text-white/40">Неоплаченные записи и продажи</p>
+            <h1 class="text-3xl font-extrabold tracking-tight text-content">Долги</h1>
+            <p class="mt-1 text-sm text-content/40">Неоплаченные записи и продажи</p>
         </div>
     </div>
 
     {{-- Summary cards --}}
     <div class="mb-8 grid gap-4 sm:grid-cols-3">
-        <div class="overflow-hidden rounded-2xl border border-rose-500/20 bg-gradient-to-br from-rose-500/10 to-rose-500/[0.02] p-5 backdrop-blur-md">
-            <div class="text-xs font-bold uppercase tracking-widest text-rose-400/70">Всего долгов</div>
-            <div class="mt-2 text-3xl font-extrabold text-white tabular-nums">{{ number_format($this->grandTotal, 0, '.', ' ') }} сум</div>
-            <div class="mt-1 text-xs text-rose-400/50">{{ $this->appointmentDebts->count() + $this->orderDebts->count() }} позиций</div>
+        <div class="overflow-hidden rounded-2xl border border-danger/20 bg-gradient-to-br from-danger/10 to-danger/[0.02] p-5 backdrop-blur-md">
+            <div class="text-xs font-bold uppercase tracking-widest text-danger/70">Всего долгов</div>
+            <div class="mt-2 text-3xl font-extrabold text-content tabular-nums">{{ number_format($this->grandTotal, 0, '.', ' ') }} сум</div>
+            <div class="mt-1 text-xs text-danger/50">{{ $this->appointmentDebts->count() + $this->orderDebts->count() }} позиций</div>
         </div>
-        <div class="overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-500/10 to-amber-500/[0.02] p-5 backdrop-blur-md">
-            <div class="text-xs font-bold uppercase tracking-widest text-amber-400/70">По записям</div>
-            <div class="mt-2 text-3xl font-extrabold text-white tabular-nums">{{ number_format($this->totalAppointmentDebt, 0, '.', ' ') }} сум</div>
-            <div class="mt-1 text-xs text-amber-400/50">{{ $this->appointmentDebts->count() }} записей</div>
+        <div class="overflow-hidden rounded-2xl border border-brass/20 bg-gradient-to-br from-brass/10 to-brass/[0.02] p-5 backdrop-blur-md">
+            <div class="text-xs font-bold uppercase tracking-widest text-brass-ink/70">По записям</div>
+            <div class="mt-2 text-3xl font-extrabold text-content tabular-nums">{{ number_format($this->totalAppointmentDebt, 0, '.', ' ') }} сум</div>
+            <div class="mt-1 text-xs text-brass-ink/50">{{ $this->appointmentDebts->count() }} записей</div>
         </div>
-        <div class="overflow-hidden rounded-2xl border border-blue-500/20 bg-gradient-to-br from-blue-500/10 to-blue-500/[0.02] p-5 backdrop-blur-md">
-            <div class="text-xs font-bold uppercase tracking-widest text-blue-400/70">По продажам</div>
-            <div class="mt-2 text-3xl font-extrabold text-white tabular-nums">{{ number_format($this->totalOrderDebt, 0, '.', ' ') }} сум</div>
-            <div class="mt-1 text-xs text-blue-400/50">{{ $this->orderDebts->count() }} продаж</div>
+        <div class="overflow-hidden rounded-2xl border border-info/20 bg-gradient-to-br from-info/10 to-info/[0.02] p-5 backdrop-blur-md">
+            <div class="text-xs font-bold uppercase tracking-widest text-info/70">По продажам</div>
+            <div class="mt-2 text-3xl font-extrabold text-content tabular-nums">{{ number_format($this->totalOrderDebt, 0, '.', ' ') }} сум</div>
+            <div class="mt-1 text-xs text-info/50">{{ $this->orderDebts->count() }} продаж</div>
         </div>
     </div>
 
@@ -151,45 +151,45 @@ class extends Component
         <div class="fixed inset-0 z-50 flex items-center justify-center p-4"
              x-data
              x-on:keydown.escape.window="$wire.cancelPay()">
-            <div class="absolute inset-0 bg-[#090909]/80" wire:click="cancelPay"></div>
-            <div class="relative z-10 w-full max-w-sm overflow-hidden rounded-2xl border border-white/[0.12] bg-[#1a1a1a] shadow-[0_32px_64px_rgba(0,0,0,0.8)]">
-                <div class="flex items-center justify-between border-b border-white/[0.06] px-6 py-4">
-                    <h3 class="text-sm font-bold text-white">Погасить долг</h3>
+            <div class="absolute inset-0 bg-surface/80" wire:click="cancelPay"></div>
+            <div class="relative z-10 w-full max-w-sm overflow-hidden rounded-2xl border border-content/[0.12] bg-surface-raised shadow-[0_32px_64px_rgba(0,0,0,0.8)]">
+                <div class="flex items-center justify-between border-b border-content/[0.06] px-6 py-4">
+                    <h3 class="text-sm font-bold text-content">Погасить долг</h3>
                     <button type="button" wire:click="cancelPay"
-                            class="flex h-8 w-8 items-center justify-center rounded-lg text-white/30 transition hover:bg-white/[0.06] hover:text-white">
+                            class="flex h-8 w-8 items-center justify-center rounded-lg text-content/30 transition hover:bg-content/[0.06] hover:text-content">
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
                     </button>
                 </div>
                 <div class="px-6 py-6">
-                    <div class="mb-4 rounded-xl border border-rose-500/20 bg-rose-500/5 px-4 py-3">
-                        <div class="text-xs text-white/50">Клиент</div>
-                        <div class="mt-0.5 font-bold text-white">{{ $debtRecord?->client?->name ?? '—' }}</div>
-                        <div class="mt-1 text-xs text-rose-400/70">Остаток долга: <span class="font-bold">{{ number_format($maxPay, 0, '.', ' ') }} сум</span></div>
+                    <div class="mb-4 rounded-xl border border-danger/20 bg-danger/5 px-4 py-3">
+                        <div class="text-xs text-content/50">Клиент</div>
+                        <div class="mt-0.5 font-bold text-content">{{ $debtRecord?->client?->name ?? '—' }}</div>
+                        <div class="mt-1 text-xs text-danger/70">Остаток долга: <span class="font-bold">{{ number_format($maxPay, 0, '.', ' ') }} сум</span></div>
                     </div>
                     <div class="mb-1.5">
-                        <label class="mb-1.5 block text-xs font-semibold text-white/50">Сумма оплаты</label>
+                        <label class="mb-1.5 block text-xs font-semibold text-content/50">Сумма оплаты</label>
                         <div class="relative">
                             <input type="number" wire:model="payAmount"
                                    placeholder="0" min="1" max="{{ $maxPay }}"
-                                   class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] py-3 pl-4 pr-12 text-sm text-white outline-none transition focus:border-emerald-500/40 focus:ring-1 focus:ring-emerald-500/20">
-                            <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-medium text-white/25">сум</span>
+                                   class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] py-3 pl-4 pr-12 text-sm text-content outline-none transition focus:border-success/40 focus:ring-1 focus:ring-success/20">
+                            <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-medium text-content/25">сум</span>
                         </div>
-                        @error('payAmount') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
+                        @error('payAmount') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                     </div>
                     <button type="button"
                             x-data
                             x-on:click="$wire.payAmount = {{ $maxPay }}"
-                            class="mb-4 text-xs text-amber-400/70 hover:text-amber-400">
+                            class="mb-4 text-xs text-brass-ink/70 hover:text-brass-ink">
                         Погасить полностью ({{ number_format($maxPay, 0, '.', ' ') }} сум)
                     </button>
                     <div class="flex gap-3">
                         <button type="button" wire:click="cancelPay"
-                                class="rounded-xl border border-white/[0.08] px-5 py-2.5 text-sm font-bold text-white/60 transition hover:bg-white/[0.06] hover:text-white">
+                                class="rounded-xl border border-content/[0.08] px-5 py-2.5 text-sm font-bold text-content/60 transition hover:bg-content/[0.06] hover:text-content">
                             Отмена
                         </button>
                         <button type="button"
                                 wire:click="{{ $payingAppointmentId ? 'payAppointmentDebt' : 'payOrderDebt' }}"
-                                class="flex-1 rounded-xl bg-emerald-500 px-6 py-2.5 text-sm font-bold text-black transition-all hover:bg-emerald-400 active:scale-[0.98]">
+                                class="flex-1 rounded-xl bg-success px-6 py-2.5 text-sm font-bold text-black transition-all hover:bg-success active:scale-[0.98]">
                             Принять оплату
                         </button>
                     </div>
@@ -201,12 +201,12 @@ class extends Component
     {{-- Appointment debts --}}
     @if ($this->appointmentDebts->isNotEmpty())
         <div class="mb-6">
-            <h2 class="mb-3 text-sm font-bold uppercase tracking-wider text-amber-400/70">Долги по записям</h2>
-            <div class="overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.03] shadow-xl backdrop-blur-md">
+            <h2 class="mb-3 text-sm font-bold uppercase tracking-wider text-brass-ink/70">Долги по записям</h2>
+            <div class="overflow-hidden rounded-2xl border border-content/[0.06] bg-content/[0.03] shadow-xl backdrop-blur-md">
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-sm">
                         <thead>
-                            <tr class="border-b border-white/[0.06] bg-white/[0.03] text-xs font-bold uppercase tracking-wider text-white/30">
+                            <tr class="border-b border-content/[0.06] bg-content/[0.03] text-xs font-bold uppercase tracking-wider text-content/30">
                                 <th class="px-6 py-4">Дата / Время</th>
                                 <th class="px-6 py-4">Клиент</th>
                                 <th class="px-6 py-4">Мастер / Услуги</th>
@@ -214,28 +214,28 @@ class extends Component
                                 <th class="px-6 py-4 text-right">Действие</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-white/[0.04]">
+                        <tbody class="divide-y divide-content/[0.04]">
                             @foreach ($this->appointmentDebts as $appointment)
-                                <tr class="transition-colors hover:bg-white/[0.02]">
+                                <tr class="transition-colors hover:bg-content/[0.02]">
                                     <td class="whitespace-nowrap px-6 py-4">
-                                        <div class="font-bold text-white">{{ $appointment->starts_at->format('d.m.Y') }}</div>
-                                        <div class="text-[10px] text-white/30">{{ $appointment->starts_at->format('H:i') }}</div>
+                                        <div class="font-bold text-content">{{ $appointment->starts_at->format('d.m.Y') }}</div>
+                                        <div class="text-[10px] text-content/30">{{ $appointment->starts_at->format('H:i') }}</div>
                                     </td>
                                     <td class="px-6 py-4">
-                                        <div class="font-bold text-white">{{ $appointment->client?->name ?? '—' }}</div>
-                                        <div class="text-xs text-amber-500/60">{{ $appointment->client?->formattedPhone }}</div>
+                                        <div class="font-bold text-content">{{ $appointment->client?->name ?? '—' }}</div>
+                                        <div class="text-xs text-brass-ink/60">{{ $appointment->client?->formattedPhone }}</div>
                                     </td>
                                     <td class="px-6 py-4">
-                                        <div class="text-white/60">{{ $appointment->barber?->name }}</div>
-                                        <div class="mt-0.5 text-[10px] text-white/30">{{ $appointment->services->pluck('name')->join(', ') }}</div>
+                                        <div class="text-content/60">{{ $appointment->barber?->name }}</div>
+                                        <div class="mt-0.5 text-[10px] text-content/30">{{ $appointment->services->pluck('name')->join(', ') }}</div>
                                     </td>
                                     <td class="whitespace-nowrap px-6 py-4 text-right">
-                                        <div class="text-xs text-white/40">{{ $appointment->formattedPrice }}</div>
-                                        <div class="mt-0.5 font-extrabold text-rose-400 tabular-nums">{{ $appointment->formattedDebt }}</div>
+                                        <div class="text-xs text-content/40">{{ $appointment->formattedPrice }}</div>
+                                        <div class="mt-0.5 font-extrabold text-danger tabular-nums">{{ $appointment->formattedDebt }}</div>
                                     </td>
                                     <td class="whitespace-nowrap px-6 py-4 text-right">
                                         <button type="button" wire:click="openPayAppointment({{ $appointment->id }})"
-                                                class="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500/10 px-3 py-2 text-xs font-bold text-emerald-400 transition hover:bg-emerald-500 hover:text-black">
+                                                class="inline-flex items-center gap-1.5 rounded-xl bg-success/10 px-3 py-2 text-xs font-bold text-success transition hover:bg-success hover:text-black">
                                             <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
                                             Оплатить
                                         </button>
@@ -252,12 +252,12 @@ class extends Component
     {{-- Order debts --}}
     @if ($this->orderDebts->isNotEmpty())
         <div class="mb-6">
-            <h2 class="mb-3 text-sm font-bold uppercase tracking-wider text-blue-400/70">Долги по продажам</h2>
-            <div class="overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.03] shadow-xl backdrop-blur-md">
+            <h2 class="mb-3 text-sm font-bold uppercase tracking-wider text-info/70">Долги по продажам</h2>
+            <div class="overflow-hidden rounded-2xl border border-content/[0.06] bg-content/[0.03] shadow-xl backdrop-blur-md">
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-sm">
                         <thead>
-                            <tr class="border-b border-white/[0.06] bg-white/[0.03] text-xs font-bold uppercase tracking-wider text-white/30">
+                            <tr class="border-b border-content/[0.06] bg-content/[0.03] text-xs font-bold uppercase tracking-wider text-content/30">
                                 <th class="px-6 py-4">Дата / Время</th>
                                 <th class="px-6 py-4">Клиент</th>
                                 <th class="px-6 py-4">Товары</th>
@@ -265,34 +265,34 @@ class extends Component
                                 <th class="px-6 py-4 text-right">Действие</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-white/[0.04]">
+                        <tbody class="divide-y divide-content/[0.04]">
                             @foreach ($this->orderDebts as $order)
-                                <tr class="transition-colors hover:bg-white/[0.02]">
+                                <tr class="transition-colors hover:bg-content/[0.02]">
                                     <td class="whitespace-nowrap px-6 py-4">
-                                        <div class="font-bold text-white">{{ $order->created_at->format('d.m.Y') }}</div>
-                                        <div class="text-[10px] text-white/30">{{ $order->created_at->format('H:i') }}</div>
+                                        <div class="font-bold text-content">{{ $order->created_at->format('d.m.Y') }}</div>
+                                        <div class="text-[10px] text-content/30">{{ $order->created_at->format('H:i') }}</div>
                                     </td>
                                     <td class="px-6 py-4">
-                                        <div class="font-bold text-white">{{ $order->client?->name ?? '—' }}</div>
-                                        <div class="text-xs text-amber-500/60">{{ $order->client?->formattedPhone }}</div>
+                                        <div class="font-bold text-content">{{ $order->client?->name ?? '—' }}</div>
+                                        <div class="text-xs text-brass-ink/60">{{ $order->client?->formattedPhone }}</div>
                                     </td>
                                     <td class="px-6 py-4">
                                         <div class="flex flex-wrap gap-1">
                                             @foreach ($order->items as $item)
-                                                <span class="inline-flex items-center rounded-full bg-white/[0.06] px-2 py-0.5 text-xs text-white/60">
+                                                <span class="inline-flex items-center rounded-full bg-content/[0.06] px-2 py-0.5 text-xs text-content/60">
                                                     {{ $item->product?->name ?? '—' }}
-                                                    <span class="ml-1 font-bold text-white/40">×{{ $item->quantity }}</span>
+                                                    <span class="ml-1 font-bold text-content/40">×{{ $item->quantity }}</span>
                                                 </span>
                                             @endforeach
                                         </div>
                                     </td>
                                     <td class="whitespace-nowrap px-6 py-4 text-right">
-                                        <div class="text-xs text-white/40">{{ $order->formattedTotal }}</div>
-                                        <div class="mt-0.5 font-extrabold text-rose-400 tabular-nums">{{ $order->formattedDebt }}</div>
+                                        <div class="text-xs text-content/40">{{ $order->formattedTotal }}</div>
+                                        <div class="mt-0.5 font-extrabold text-danger tabular-nums">{{ $order->formattedDebt }}</div>
                                     </td>
                                     <td class="whitespace-nowrap px-6 py-4 text-right">
                                         <button type="button" wire:click="openPayOrder({{ $order->id }})"
-                                                class="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500/10 px-3 py-2 text-xs font-bold text-emerald-400 transition hover:bg-emerald-500 hover:text-black">
+                                                class="inline-flex items-center gap-1.5 rounded-xl bg-success/10 px-3 py-2 text-xs font-bold text-success transition hover:bg-success hover:text-black">
                                             <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
                                             Оплатить
                                         </button>
@@ -307,13 +307,13 @@ class extends Component
     @endif
 
     @if ($this->appointmentDebts->isEmpty() && $this->orderDebts->isEmpty())
-        <div class="flex flex-col items-center gap-4 rounded-2xl border border-white/[0.06] bg-white/[0.03] py-20 text-center">
-            <div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-400">
+        <div class="flex flex-col items-center gap-4 rounded-2xl border border-content/[0.06] bg-content/[0.03] py-20 text-center">
+            <div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-success/10 text-success">
                 <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
             </div>
             <div>
-                <p class="text-lg font-bold text-white">Долгов нет</p>
-                <p class="mt-1 text-sm text-white/30">Все клиенты оплатили свои счета</p>
+                <p class="text-lg font-bold text-content">Долгов нет</p>
+                <p class="mt-1 text-sm text-content/30">Все клиенты оплатили свои счета</p>
             </div>
         </div>
     @endif

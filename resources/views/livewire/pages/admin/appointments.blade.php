@@ -451,25 +451,25 @@ class extends Component
 <div class="animate-fade-in-up">
     <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>
-            <h1 class="text-3xl font-extrabold tracking-tight text-white">Записи</h1>
-            <p class="mt-1 text-sm text-white/40">Управление журналом посещений</p>
+            <h1 class="text-3xl font-extrabold tracking-tight text-content">Записи</h1>
+            <p class="mt-1 text-sm text-content/40">Управление журналом посещений</p>
         </div>
         @unless ($isBarberView)
             <div class="flex items-center gap-3">
                 <div class="relative">
                     <select wire:model.live="barberFilter"
-                            class="appearance-none rounded-xl border border-white/[0.08] bg-[#252525] py-2.5 pl-4 pr-10 text-sm text-white outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20">
+                            class="appearance-none rounded-xl border border-content/[0.08] bg-surface-sunken py-2.5 pl-4 pr-10 text-sm text-content outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
                         <option value="" style="color: #fff; background-color: #1a1a1a;">Все мастера</option>
                         @foreach ($this->barbers as $barber)
                             <option value="{{ $barber->id }}" style="color: #fff; background-color: #1a1a1a;">{{ $barber->name }}</option>
                         @endforeach
                     </select>
-                    <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-white/30">
+                    <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-content/30">
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
                     </div>
                 </div>
                 <button type="button" wire:click="openCreate"
-                        class="flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-400 to-amber-600 px-5 py-2.5 text-sm font-bold text-black shadow-lg shadow-amber-500/20 transition-all hover:scale-[1.02] hover:shadow-amber-500/30 active:scale-[0.98]">
+                        class="flex items-center gap-2 rounded-xl bg-gradient-to-r from-brass to-brass px-5 py-2.5 text-sm font-bold text-black shadow-lg shadow-brass/20 transition-all hover:scale-[1.02] hover:shadow-brass/30 active:scale-[0.98]">
                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
                     Новая запись
                 </button>
@@ -478,17 +478,17 @@ class extends Component
     </div>
 
     {{-- Date Selector --}}
-    <div class="mb-8 flex items-center justify-between gap-4 rounded-2xl border border-white/[0.06] bg-white/[0.03] p-4 backdrop-blur-md">
-        <button wire:click="prevDay" class="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.06] text-white/40 transition hover:border-white/10 hover:text-white">
+    <div class="mb-8 flex items-center justify-between gap-4 rounded-2xl border border-content/[0.06] bg-content/[0.03] p-4 backdrop-blur-md">
+        <button wire:click="prevDay" class="flex h-10 w-10 items-center justify-center rounded-xl border border-content/[0.06] text-content/40 transition hover:border-content/10 hover:text-content">
             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" /></svg>
         </button>
 
         <div class="flex flex-col items-center">
-            <span class="text-xs font-bold uppercase tracking-widest text-amber-500/60">{{ Carbon::parse($date)->translatedFormat('l') }}</span>
-            <span class="text-lg font-extrabold text-white">{{ Carbon::parse($date)->translatedFormat('d F Y') }}</span>
+            <span class="text-xs font-bold uppercase tracking-widest text-brass-ink/60">{{ Carbon::parse($date)->translatedFormat('l') }}</span>
+            <span class="text-lg font-extrabold text-content">{{ Carbon::parse($date)->translatedFormat('d F Y') }}</span>
         </div>
 
-        <button wire:click="nextDay" class="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.06] text-white/40 transition hover:border-white/10 hover:text-white">
+        <button wire:click="nextDay" class="flex h-10 w-10 items-center justify-center rounded-xl border border-content/[0.06] text-content/40 transition hover:border-content/10 hover:text-content">
             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" /></svg>
         </button>
     </div>
@@ -498,12 +498,12 @@ class extends Component
         <div class="fixed inset-0 z-50 flex items-center justify-center p-4"
              x-data
              x-on:keydown.escape.window="$wire.cancel()">
-            <div class="absolute inset-0 bg-[#090909]/80 backdrop-blur-sm" wire:click="cancel"></div>
-            <div class="relative z-10 flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-white/[0.12] bg-[#1a1a1a] shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_32px_64px_rgba(0,0,0,0.8)]">
-                <div class="flex items-center justify-between border-b border-white/[0.06] px-6 py-4">
-                    <h3 class="text-sm font-bold text-white">{{ $editingId ? 'Редактирование записи' : 'Создание новой записи' }}</h3>
+            <div class="absolute inset-0 bg-surface/80 backdrop-blur-sm" wire:click="cancel"></div>
+            <div class="relative z-10 flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-content/[0.12] bg-surface-raised shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_32px_64px_rgba(0,0,0,0.8)]">
+                <div class="flex items-center justify-between border-b border-content/[0.06] px-6 py-4">
+                    <h3 class="text-sm font-bold text-content">{{ $editingId ? 'Редактирование записи' : 'Создание новой записи' }}</h3>
                     <button type="button" wire:click="cancel"
-                            class="flex h-8 w-8 items-center justify-center rounded-lg text-white/30 transition hover:bg-white/[0.06] hover:text-white">
+                            class="flex h-8 w-8 items-center justify-center rounded-lg text-content/30 transition hover:bg-content/[0.06] hover:text-content">
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
                     </button>
                 </div>
@@ -511,7 +511,7 @@ class extends Component
                     <div class="flex-1 max-h-[60vh] overflow-y-auto px-6 py-6" style="max-height: 70vh;overflow-y: auto;">
                         <div class="grid gap-6 sm:grid-cols-2">
                             <div>
-                                <label class="mb-1.5 block text-xs font-semibold text-white/50">Клиент</label>
+                                <label class="mb-1.5 block text-xs font-semibold text-content/50">Клиент</label>
                                 <x-search-select
                                     :options="$this->filteredClients"
                                     searchModel="clientSearch"
@@ -520,13 +520,13 @@ class extends Component
                                     subLabelField="phone"
                                     placeholder="Поиск клиента..."
                                 />
-                                @error('client_id') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
+                                @error('client_id') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                             </div>
                             <div>
-                                <label class="mb-1.5 block text-xs font-semibold text-white/50">Мастер</label>
+                                <label class="mb-1.5 block text-xs font-semibold text-content/50">Мастер</label>
                                 <div class="relative">
                                     <select wire:model.live="barber_id"
-                                            class="block w-full appearance-none rounded-xl border border-white/[0.08] bg-[#252525] py-3 pl-4 pr-10 text-sm text-white outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20">
+                                            class="block w-full appearance-none rounded-xl border border-content/[0.08] bg-surface-sunken py-3 pl-4 pr-10 text-sm text-content outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
                                         <option value="" style="color: #fff; background-color: #1a1a1a;">Выберите мастера...</option>
                                         @foreach ($this->barbers as $barber)
                                             <option value="{{ $barber->id }}" style="color: #fff; background-color: #1a1a1a;" @if($barber->price)
@@ -536,56 +536,56 @@ class extends Component
                                             </option>
                                         @endforeach
                                     </select>
-                                    <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-white/30">
+                                    <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-content/30">
                                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
                                     </div>
                                 </div>
-                                @error('barber_id') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
+                                @error('barber_id') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                             </div>
                             <div>
-                                <label class="mb-1.5 block text-xs font-semibold text-white/50">Дата</label>
+                                <label class="mb-1.5 block text-xs font-semibold text-content/50">Дата</label>
                                 <input type="date" wire:model="form_date"
-                                       class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20">
-                                @error('form_date') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
+                                       class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
+                                @error('form_date') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                             </div>
                             <div>
-                                <label class="mb-1.5 block text-xs font-semibold text-white/50">Способ оплаты</label>
+                                <label class="mb-1.5 block text-xs font-semibold text-content/50">Способ оплаты</label>
                                 <div class="relative">
                                     <select wire:model.live="payment_type"
-                                            class="block w-full appearance-none rounded-xl border border-white/[0.08] bg-[#252525] py-3 pl-4 pr-10 text-sm text-white outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20">
+                                            class="block w-full appearance-none rounded-xl border border-content/[0.08] bg-surface-sunken py-3 pl-4 pr-10 text-sm text-content outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
                                         <option value="cash" style="color: #fff; background-color: #1a1a1a;">Наличные</option>
                                         <option value="card" style="color: #fff; background-color: #1a1a1a;">Карта</option>
                                         <option value="both" style="color: #fff; background-color: #1a1a1a;">Нал + Карта</option>
                                     </select>
-                                    <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-white/30">
+                                    <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-content/30">
                                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
                                     </div>
                                 </div>
-                                @error('payment_type') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
+                                @error('payment_type') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                             </div>
 
                             @if ($payment_type === 'both')
                                 <div class="sm:col-span-2">
-                                    <div class="grid grid-cols-2 gap-4 rounded-xl border border-violet-500/20 bg-violet-500/5 p-4">
+                                    <div class="grid grid-cols-2 gap-4 rounded-xl border border-royal/20 bg-royal/5 p-4">
                                         <div>
-                                            <label class="mb-1.5 block text-xs font-semibold text-white/50">Наличные (сум)</label>
+                                            <label class="mb-1.5 block text-xs font-semibold text-content/50">Наличные (сум)</label>
                                             <div class="relative">
                                                 <input type="number" wire:model.live="cash_amount"
                                                        placeholder="0" min="0"
-                                                       class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] py-3 pl-4 pr-12 text-sm text-white outline-none transition focus:border-emerald-500/40 focus:ring-1 focus:ring-emerald-500/20">
-                                                <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-medium text-white/25">сум</span>
+                                                       class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] py-3 pl-4 pr-12 text-sm text-content outline-none transition focus:border-success/40 focus:ring-1 focus:ring-success/20">
+                                                <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-medium text-content/25">сум</span>
                                             </div>
-                                            @error('cash_amount') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
+                                            @error('cash_amount') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                                         </div>
                                         <div>
-                                            <label class="mb-1.5 block text-xs font-semibold text-white/50">Карта (сум)</label>
+                                            <label class="mb-1.5 block text-xs font-semibold text-content/50">Карта (сум)</label>
                                             <div class="relative">
                                                 <input type="number" wire:model.live="card_amount"
                                                        placeholder="0" min="0"
-                                                       class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] py-3 pl-4 pr-12 text-sm text-white outline-none transition focus:border-blue-500/40 focus:ring-1 focus:ring-blue-500/20">
-                                                <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-medium text-white/25">сум</span>
+                                                       class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] py-3 pl-4 pr-12 text-sm text-content outline-none transition focus:border-info/40 focus:ring-1 focus:ring-info/20">
+                                                <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-medium text-content/25">сум</span>
                                             </div>
-                                            @error('card_amount') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
+                                            @error('card_amount') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                                         </div>
                                     </div>
                                 </div>
@@ -595,27 +595,27 @@ class extends Component
                             <div class="sm:col-span-2">
                                 <div @class([
                                     'rounded-xl border p-4 transition-colors',
-                                    'border-rose-500/20 bg-rose-500/5' => $debtEnabled,
-                                    'border-white/[0.06] bg-white/[0.02]' => ! $debtEnabled,
+                                    'border-danger/20 bg-danger/5' => $debtEnabled,
+                                    'border-content/[0.06] bg-content/[0.02]' => ! $debtEnabled,
                                 ])>
                                     <div class="flex items-center justify-between gap-3">
                                         <div>
                                             <label @class([
                                                 'text-xs font-semibold transition-colors',
-                                                'text-rose-400/80' => $debtEnabled,
-                                                'text-white/50' => ! $debtEnabled,
+                                                'text-danger/80' => $debtEnabled,
+                                                'text-content/50' => ! $debtEnabled,
                                             ])>В долг</label>
-                                            <p class="mt-0.5 text-[10px] text-white/30">Если клиент не оплачивает сейчас</p>
+                                            <p class="mt-0.5 text-[10px] text-content/30">Если клиент не оплачивает сейчас</p>
                                         </div>
                                         <button type="button" wire:click="$toggle('debtEnabled')"
                                                 role="switch" aria-checked="{{ $debtEnabled ? 'true' : 'false' }}"
                                                 @class([
                                                     'relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors outline-none',
-                                                    'bg-rose-500' => $debtEnabled,
-                                                    'bg-white/[0.12]' => ! $debtEnabled,
+                                                    'bg-danger' => $debtEnabled,
+                                                    'bg-content/[0.12]' => ! $debtEnabled,
                                                 ])>
                                             <span @class([
-                                                'inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform',
+                                                'inline-block h-4 w-4 transform rounded-full bg-content shadow transition-transform',
                                                 'translate-x-6' => $debtEnabled,
                                                 'translate-x-1' => ! $debtEnabled,
                                             ])></span>
@@ -625,11 +625,11 @@ class extends Component
                                         <div class="relative mt-3">
                                             <input type="number" wire:model.live="debt_amount"
                                                    placeholder="0" min="0"
-                                                   class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] py-3 pl-4 pr-12 text-sm text-white outline-none transition focus:border-rose-500/40 focus:ring-1 focus:ring-rose-500/20">
-                                            <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-medium text-white/25">сум</span>
+                                                   class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] py-3 pl-4 pr-12 text-sm text-content outline-none transition focus:border-danger/40 focus:ring-1 focus:ring-danger/20">
+                                            <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-medium text-content/25">сум</span>
                                         </div>
-                                        @error('debt_amount') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
-                                        <p class="mt-2 text-[10px] text-rose-400/70">Клиент обязателен при долге</p>
+                                        @error('debt_amount') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
+                                        <p class="mt-2 text-[10px] text-danger/70">Клиент обязателен при долге</p>
                                     @endif
                                 </div>
                             </div>
@@ -637,15 +637,15 @@ class extends Component
                             {{-- Services --}}
                             <div class="sm:col-span-2">
                                 <div class="mb-3 flex items-center justify-between gap-2">
-                                    <label class="text-xs font-semibold text-white/50">Услуги</label>
+                                    <label class="text-xs font-semibold text-content/50">Услуги</label>
                                     <button type="button" wire:click="addService"
-                                            class="flex items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.02] px-3 py-1.5 text-xs font-bold text-white/60 transition hover:border-amber-500/40 hover:bg-amber-500/5 hover:text-amber-400">
+                                            class="flex items-center gap-1.5 rounded-lg border border-content/[0.08] bg-content/[0.02] px-3 py-1.5 text-xs font-bold text-content/60 transition hover:border-brass/40 hover:bg-brass/5 hover:text-brass-ink">
                                         <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
                                         Добавить услугу
                                     </button>
                                 </div>
 
-                                @error('selectedServices') <p class="mb-3 text-xs text-rose-400">{{ $message }}</p> @enderror
+                                @error('selectedServices') <p class="mb-3 text-xs text-danger">{{ $message }}</p> @enderror
 
                                 @php
                                     $usedServiceIds = collect($selectedServices)
@@ -656,7 +656,7 @@ class extends Component
                                         ->toArray();
                                 @endphp
 
-                                <div class="overflow-hidden rounded-xl border border-white/[0.06]">
+                                <div class="overflow-hidden rounded-xl border border-content/[0.06]">
                                     @forelse ($selectedServices as $i => $row)
                                         @php
                                             $otherUsed = collect($usedServiceIds)
@@ -668,16 +668,16 @@ class extends Component
                                         @endphp
                                         <div @class([
                                             'flex items-center gap-3 px-4 py-3',
-                                            'border-b border-white/[0.04]' => ! $loop->last,
-                                            'bg-rose-500/5' => $isDuplicate,
-                                            'bg-white/[0.02]' => ! $isDuplicate,
+                                            'border-b border-content/[0.04]' => ! $loop->last,
+                                            'bg-danger/5' => $isDuplicate,
+                                            'bg-content/[0.02]' => ! $isDuplicate,
                                         ])>
-                                            <span class="w-5 shrink-0 text-center text-xs font-bold text-white/20">{{ $i + 1 }}</span>
+                                            <span class="w-5 shrink-0 text-center text-xs font-bold text-content/20">{{ $i + 1 }}</span>
                                             <select wire:model.live="selectedServices.{{ $i }}.service_id"
                                                     @class([
-                                                        'min-w-0 flex-1 rounded-lg border bg-transparent px-3 py-2 text-sm text-white outline-none transition [&>option]:bg-[#0f0f0f]',
-                                                        'border-rose-500/40 focus:border-rose-500/60' => $isDuplicate,
-                                                        'border-white/[0.08] focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20' => ! $isDuplicate,
+                                                        'min-w-0 flex-1 rounded-lg border bg-transparent px-3 py-2 text-sm text-content outline-none transition [&>option]:bg-surface',
+                                                        'border-danger/40 focus:border-danger/60' => $isDuplicate,
+                                                        'border-content/[0.08] focus:border-brass/40 focus:ring-1 focus:ring-brass/20' => ! $isDuplicate,
                                                     ])>
                                                 <option value="" style="color: #fff; background-color: #1a1a1a;">Выберите услугу...</option>
                                                 @foreach ($this->services as $service)
@@ -689,31 +689,31 @@ class extends Component
                                                 @endforeach
                                             </select>
                                             @if ($isDuplicate)
-                                                <span class="shrink-0 text-[10px] font-bold text-rose-400">дубль</span>
+                                                <span class="shrink-0 text-[10px] font-bold text-danger">дубль</span>
                                             @endif
                                             <div class="relative w-36 shrink-0">
                                                 <input type="number" wire:model.live="selectedServices.{{ $i }}.amount"
                                                        placeholder="0" min="0"
-                                                       class="block w-full rounded-lg border border-white/[0.08] bg-transparent py-2 pl-3 pr-10 text-sm text-white outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20">
-                                                <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-medium text-white/25">сум</span>
+                                                       class="block w-full rounded-lg border border-content/[0.08] bg-transparent py-2 pl-3 pr-10 text-sm text-content outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
+                                                <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-medium text-content/25">сум</span>
                                             </div>
                                             <button type="button" wire:click="removeService({{ $i }})"
-                                                    class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white/20 transition hover:bg-rose-500/10 hover:text-rose-400">
+                                                    class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-content/20 transition hover:bg-danger/10 hover:text-danger">
                                                 <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
                                             </button>
                                         </div>
                                     @empty
                                         <div class="flex flex-col items-center gap-2 py-8 text-center">
-                                            <svg class="h-8 w-8 text-white/10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 0 0 9.568 3Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6Z" /></svg>
-                                            <p class="text-xs text-white/25">Нет услуг — нажмите «Добавить услугу»</p>
+                                            <svg class="h-8 w-8 text-content/10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 0 0 9.568 3Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6Z" /></svg>
+                                            <p class="text-xs text-content/25">Нет услуг — нажмите «Добавить услугу»</p>
                                         </div>
                                     @endforelse
                                 </div>
 
                                 @if (count($selectedServices) > 0)
-                                    <div class="mt-2.5 flex items-center justify-end gap-2 rounded-xl border border-amber-500/10 bg-amber-500/5 px-4 py-2.5">
-                                        <span class="text-xs text-white/40">Итого:</span>
-                                        <span class="text-sm font-bold text-amber-400">{{ number_format((int) $price, 0, '.', ' ') }} сум</span>
+                                    <div class="mt-2.5 flex items-center justify-end gap-2 rounded-xl border border-brass/10 bg-brass/5 px-4 py-2.5">
+                                        <span class="text-xs text-content/40">Итого:</span>
+                                        <span class="text-sm font-bold text-brass-ink">{{ number_format((int) $price, 0, '.', ' ') }} сум</span>
                                     </div>
                                 @endif
                             </div>
@@ -721,14 +721,14 @@ class extends Component
                             {{-- Time selects --}}
                             <div class="sm:col-span-2">
                                 <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-                                    <label class="text-xs font-semibold text-white/50">Время</label>
-                                    <div class="flex items-center gap-1 rounded-xl border border-white/[0.06] bg-white/[0.03] p-1">
+                                    <label class="text-xs font-semibold text-content/50">Время</label>
+                                    <div class="flex items-center gap-1 rounded-xl border border-content/[0.06] bg-content/[0.03] p-1">
                                         @foreach ([15 => '15 мин', 30 => '30 мин', 60 => '1 ч'] as $step => $label)
                                             <button type="button" wire:click="setTimeStep({{ $step }})"
                                                     @class([
                                                         'rounded-lg px-3 py-1 text-xs font-bold transition',
-                                                        'bg-amber-500 text-black' => $timeStep === $step,
-                                                        'text-white/40 hover:text-white' => $timeStep !== $step,
+                                                        'bg-brass text-black' => $timeStep === $step,
+                                                        'text-content/40 hover:text-content' => $timeStep !== $step,
                                                     ])>
                                                 {{ $label }}
                                             </button>
@@ -737,45 +737,45 @@ class extends Component
                                 </div>
                                 <div class="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label class="mb-1.5 block text-xs font-semibold text-white/40">Начало</label>
+                                        <label class="mb-1.5 block text-xs font-semibold text-content/40">Начало</label>
                                         <select wire:model.live="form_start_time"
-                                                class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20 [&>option]:bg-[#0f0f0f]">
+                                                class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20 [&>option]:bg-surface">
                                             <option value="" style="color: #fff; background-color: #1a1a1a;">— выберите —</option>
                                             @foreach ($this->timeSlots as $slot)
                                                 <option value="{{ $slot }}" style="color: #fff; background-color: #1a1a1a;">{{ $slot }}</option>
                                             @endforeach
                                         </select>
-                                        @error('form_start_time') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
+                                        @error('form_start_time') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                                     </div>
                                     <div>
-                                        <label class="mb-1.5 block text-xs font-semibold text-white/40">Окончание</label>
+                                        <label class="mb-1.5 block text-xs font-semibold text-content/40">Окончание</label>
                                         <select wire:model.live="form_end_time"
-                                                class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20 [&>option]:bg-[#0f0f0f]">
+                                                class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20 [&>option]:bg-surface">
                                             <option value="" style="color: #fff; background-color: #1a1a1a;">— выберите —</option>
                                             @foreach ($this->timeSlots as $slot)
                                                 <option value="{{ $slot }}" style="color: #fff; background-color: #1a1a1a;">{{ $slot }}</option>
                                             @endforeach
                                         </select>
-                                        @error('form_end_time') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
+                                        @error('form_end_time') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                                     </div>
                                 </div>
                             </div>
 
                             <div class="sm:col-span-2">
-                                <label class="mb-1.5 block text-xs font-semibold text-white/50">Заметка</label>
+                                <label class="mb-1.5 block text-xs font-semibold text-content/50">Заметка</label>
                                 <textarea wire:model="note" rows="2" placeholder="Дополнительная информация..."
-                                          class="block w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white placeholder-white/20 outline-none transition focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20"></textarea>
-                                @error('note') <p class="mt-1.5 text-xs text-rose-400">{{ $message }}</p> @enderror
+                                          class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content placeholder-content/20 outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20"></textarea>
+                                @error('note') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                             </div>
                         </div>
                     </div>
-                    <div class="flex items-center justify-end gap-3 border-t border-white/[0.06] px-6 py-4">
+                    <div class="flex items-center justify-end gap-3 border-t border-content/[0.06] px-6 py-4">
                         <button type="button" wire:click="cancel"
-                                class="rounded-xl border border-white/[0.08] px-5 py-2.5 text-sm font-bold text-white/60 transition hover:bg-white/[0.06] hover:text-white">
+                                class="rounded-xl border border-content/[0.08] px-5 py-2.5 text-sm font-bold text-content/60 transition hover:bg-content/[0.06] hover:text-content">
                             Отмена
                         </button>
                         <button type="submit"
-                                class="rounded-xl bg-amber-500 px-6 py-2.5 text-sm font-bold text-black transition-all hover:bg-amber-400 active:scale-[0.98]">
+                                class="rounded-xl bg-brass px-6 py-2.5 text-sm font-bold text-black transition-all hover:bg-brass-bright active:scale-[0.98]">
                             {{ $editingId ? 'Сохранить изменения' : 'Создать запись' }}
                         </button>
                     </div>
@@ -784,12 +784,12 @@ class extends Component
         </div>
     @endif
 
-    <div class="overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.03] shadow-xl backdrop-blur-md">
+    <div class="overflow-hidden rounded-2xl border border-content/[0.06] bg-content/[0.03] shadow-xl backdrop-blur-md">
         <div class="overflow-x-auto">
             <table class="w-full text-left text-sm">
                 <thead>
-                    <tr class="border-b border-white/[0.06] bg-white/[0.03] text-xs font-bold uppercase tracking-wider text-white/30">
-                        <th class="cursor-pointer px-6 py-4 transition hover:text-white" wire:click="sortBy('starts_at')">
+                    <tr class="border-b border-content/[0.06] bg-content/[0.03] text-xs font-bold uppercase tracking-wider text-content/30">
+                        <th class="cursor-pointer px-6 py-4 transition hover:text-content" wire:click="sortBy('starts_at')">
                             Время
                             @if ($sortField === 'starts_at')
                                 <span class="ml-1">{{ $sortDirection === 'asc' ? '↑' : '↓' }}</span>
@@ -798,7 +798,7 @@ class extends Component
                         <th class="px-6 py-4">Клиент / Заметка</th>
                         <th class="hidden px-6 py-4 md:table-cell">Мастер</th>
                         <th class="hidden px-6 py-4 md:table-cell">Услуги / Итого</th>
-                        <th class="cursor-pointer px-6 py-4 transition hover:text-white" wire:click="sortBy('status')">
+                        <th class="cursor-pointer px-6 py-4 transition hover:text-content" wire:click="sortBy('status')">
                             Статус
                             @if ($sortField === 'status')
                                 <span class="ml-1">{{ $sortDirection === 'asc' ? '↑' : '↓' }}</span>
@@ -809,23 +809,23 @@ class extends Component
                         @endunless
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-white/[0.04]">
+                <tbody class="divide-y divide-content/[0.04]">
                     @forelse ($this->appointments as $appointment)
-                        <tr class="transition-colors hover:bg-white/[0.02]">
+                        <tr class="transition-colors hover:bg-content/[0.02]">
                             <td class="whitespace-nowrap px-6 py-4">
-                                <div class="font-bold text-white">{{ $appointment->starts_at->format('H:i') }}</div>
-                                <div class="text-[10px] text-white/30">{{ $appointment->ends_at->format('H:i') }}</div>
+                                <div class="font-bold text-content">{{ $appointment->starts_at->format('H:i') }}</div>
+                                <div class="text-[10px] text-content/30">{{ $appointment->ends_at->format('H:i') }}</div>
                             </td>
                             <td class="px-6 py-4">
-                                <div class="font-bold text-white">{{ $appointment->client?->name }}</div>
-                                <div class="text-xs text-amber-500/60">{{ $appointment->client?->formattedPhone }}</div>
+                                <div class="font-bold text-content">{{ $appointment->client?->name }}</div>
+                                <div class="text-xs text-brass-ink/60">{{ $appointment->client?->formattedPhone }}</div>
                                 @if ($appointment->note)
-                                    <div class="mt-1 flex items-start gap-1.5 text-[11px] text-white/40">
+                                    <div class="mt-1 flex items-start gap-1.5 text-[11px] text-content/40">
                                         <svg class="mt-0.5 h-3 w-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" /></svg>
                                         <span class="italic">{{ $appointment->note }}</span>
                                     </div>
                                 @endif
-                                <div class="mt-1 text-[10px] text-white/30 md:hidden">
+                                <div class="mt-1 text-[10px] text-content/30 md:hidden">
                                     {{ $appointment->barber?->name }} · {{ $appointment->services->pluck('name')->join(', ') }}
                                 </div>
                             </td>
@@ -834,34 +834,34 @@ class extends Component
                                     @if ($appointment->barber?->photoUrl)
                                         <img src="{{ $appointment->barber->photoUrl }}" class="h-6 w-6 rounded-full object-cover">
                                     @endif
-                                    <span class="font-medium text-white/60">{{ $appointment->barber?->name }}</span>
+                                    <span class="font-medium text-content/60">{{ $appointment->barber?->name }}</span>
                                 </div>
                             </td>
                             <td class="hidden px-6 py-4 md:table-cell">
                                 <div class="space-y-0.5">
                                     @foreach ($appointment->services as $service)
                                         <div class="flex items-center justify-between gap-3">
-                                            <span class="text-white/60">{{ $service->name }}</span>
-                                            <span class="text-[10px] font-bold text-white/40">{{ number_format($service->pivot->amount, 0, '.', ' ') }} сум</span>
+                                            <span class="text-content/60">{{ $service->name }}</span>
+                                            <span class="text-[10px] font-bold text-content/40">{{ number_format($service->pivot->amount, 0, '.', ' ') }} сум</span>
                                         </div>
                                     @endforeach
                                 </div>
                                 @if ($appointment->services->isNotEmpty())
-                                    <div class="mt-1 border-t border-white/[0.04] pt-1 flex items-center justify-between gap-2">
+                                    <div class="mt-1 border-t border-content/[0.04] pt-1 flex items-center justify-between gap-2">
                                         <span @class([
                                             'text-[10px] font-bold',
-                                            'text-amber-400' => $appointment->price !== null,
-                                            'text-white/30' => $appointment->price === null,
+                                            'text-brass-ink' => $appointment->price !== null,
+                                            'text-content/30' => $appointment->price === null,
                                         ])>
                                             Итого: {{ $appointment->formattedPrice }}
                                         </span>
                                         @if ($appointment->payment_type === PaymentType::Both && ($appointment->cash_amount || $appointment->card_amount))
                                             <div class="flex flex-col items-end gap-0.5">
-                                                <span class="inline-flex items-center rounded-full bg-violet-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-violet-400">
+                                                <span class="inline-flex items-center rounded-full bg-royal/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-royal">
                                                     {{ $appointment->payment_type->label() }}
                                                 </span>
-                                                <span class="text-[9px] text-emerald-400/70">нал: {{ number_format((int) $appointment->cash_amount, 0, '.', ' ') }} сум</span>
-                                                <span class="text-[9px] text-blue-400/70">карта: {{ number_format((int) $appointment->card_amount, 0, '.', ' ') }} сум</span>
+                                                <span class="text-[9px] text-success/70">нал: {{ number_format((int) $appointment->cash_amount, 0, '.', ' ') }} сум</span>
+                                                <span class="text-[9px] text-info/70">карта: {{ number_format((int) $appointment->card_amount, 0, '.', ' ') }} сум</span>
                                             </div>
                                         @else
                                             <span @class([
@@ -873,9 +873,9 @@ class extends Component
                                         @endif
                                     </div>
                                     @if ($appointment->hasDebt)
-                                        <div class="mt-1 flex items-center gap-1.5 rounded-lg bg-rose-500/10 px-2 py-1">
-                                            <svg class="h-3 w-3 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" /></svg>
-                                            <span class="text-[10px] font-bold text-rose-400">Долг: {{ $appointment->formattedDebt }}</span>
+                                        <div class="mt-1 flex items-center gap-1.5 rounded-lg bg-danger/10 px-2 py-1">
+                                            <svg class="h-3 w-3 text-danger" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" /></svg>
+                                            <span class="text-[10px] font-bold text-danger">Долг: {{ $appointment->formattedDebt }}</span>
                                         </div>
                                     @endif
                                 @endif
@@ -885,11 +885,11 @@ class extends Component
                                 @php($label = $appointment->status->label())
                                 <span @class([
                                     'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider',
-                                    'bg-emerald-500/10 text-emerald-400' => str_contains($badge, 'emerald'),
-                                    'bg-amber-500/10 text-amber-400' => str_contains($badge, 'amber'),
-                                    'bg-blue-500/10 text-blue-400' => str_contains($badge, 'blue'),
-                                    'bg-rose-500/10 text-rose-400' => str_contains($badge, 'rose'),
-                                    'bg-white/10 text-white/40' => str_contains($badge, 'zinc'),
+                                    'bg-success/10 text-success' => str_contains($badge, 'emerald'),
+                                    'bg-brass/10 text-brass-ink' => str_contains($badge, 'amber'),
+                                    'bg-info/10 text-info' => str_contains($badge, 'blue'),
+                                    'bg-danger/10 text-danger' => str_contains($badge, 'rose'),
+                                    'bg-content/10 text-content/40' => str_contains($badge, 'zinc'),
                                 ])>
                                     {{ $label }}
                                 </span>
@@ -900,33 +900,33 @@ class extends Component
                                     @if ($appointment->status === AppointmentStatus::Pending)
                                         <button type="button" wire:click="markConfirmed({{ $appointment->id }})"
                                                 title="Подтвердить"
-                                                class="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/10 text-blue-400 transition hover:bg-blue-500 hover:text-black">
+                                                class="flex h-8 w-8 items-center justify-center rounded-lg bg-info/10 text-info transition hover:bg-info hover:text-black">
                                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
                                         </button>
                                         <button type="button" wire:click="markCancelled({{ $appointment->id }})"
                                                 title="Отменить"
-                                                class="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-500/10 text-rose-500 transition hover:bg-rose-500 hover:text-black">
+                                                class="flex h-8 w-8 items-center justify-center rounded-lg bg-danger/10 text-danger transition hover:bg-danger hover:text-black">
                                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
                                         </button>
                                     @elseif ($appointment->status === AppointmentStatus::Confirmed)
                                         <button type="button" wire:click="markCompleted({{ $appointment->id }})"
                                                 title="Завершить"
-                                                class="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500 transition hover:bg-emerald-500 hover:text-black">
+                                                class="flex h-8 w-8 items-center justify-center rounded-lg bg-success/10 text-success transition hover:bg-success hover:text-black">
                                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
                                         </button>
                                         <button type="button" wire:click="markCancelled({{ $appointment->id }})"
                                                 title="Отменить"
-                                                class="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-500/10 text-rose-500 transition hover:bg-rose-500 hover:text-black">
+                                                class="flex h-8 w-8 items-center justify-center rounded-lg bg-danger/10 text-danger transition hover:bg-danger hover:text-black">
                                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
                                         </button>
                                     @endif
                                     <button type="button" wire:click="edit({{ $appointment->id }})"
-                                            class="flex h-8 w-8 items-center justify-center rounded-lg border border-white/[0.06] text-white/40 transition hover:border-white/10 hover:text-white">
+                                            class="flex h-8 w-8 items-center justify-center rounded-lg border border-content/[0.06] text-content/40 transition hover:border-content/10 hover:text-content">
                                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" /></svg>
                                     </button>
                                     <button type="button" wire:click="delete({{ $appointment->id }})"
                                             wire:confirm="Удалить запись?"
-                                            class="flex h-8 w-8 items-center justify-center rounded-lg border border-white/[0.06] text-white/20 transition hover:text-rose-500">
+                                            class="flex h-8 w-8 items-center justify-center rounded-lg border border-content/[0.06] text-content/20 transition hover:text-danger">
                                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" /></svg>
                                     </button>
                                 </div>
@@ -935,7 +935,7 @@ class extends Component
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="{{ $isBarberView ? 5 : 6 }}" class="px-6 py-12 text-center text-white/20">На этот день записей нет</td>
+                            <td colspan="{{ $isBarberView ? 5 : 6 }}" class="px-6 py-12 text-center text-content/20">На этот день записей нет</td>
                         </tr>
                     @endforelse
                 </tbody>

@@ -21,18 +21,21 @@
 
 <div>
     {{-- Mobile top bar --}}
-    <div class="sticky top-0 z-30 flex items-center justify-between border-b border-white/[0.06] bg-[#090909]/80 px-4 py-3 backdrop-blur-xl lg:hidden">
+    <div class="sticky top-0 z-30 flex items-center justify-between border-b border-content/[0.06] bg-surface/80 px-4 py-3 backdrop-blur-xl lg:hidden">
         <a href="{{ route('booking') }}" class="flex items-center gap-2.5">
-            <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 text-sm font-extrabold text-black">B</div>
+            <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-brass-bright to-brass text-sm font-extrabold text-on-brass">B</div>
             <div class="leading-none">
-                <div class="text-sm font-bold tracking-tight text-white">Blade</div>
-                <div class="text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-500/70">Admin Panel</div>
+                <div class="font-display text-base font-semibold uppercase tracking-[0.18em] text-content">Blade</div>
+                <div class="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-brass-ink/70">Admin Panel</div>
             </div>
         </a>
-        <button type="button" @click="open = true"
-                class="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.06] text-white/40 transition hover:border-white/10 hover:text-white">
-            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" /></svg>
-        </button>
+        <div class="flex items-center gap-2">
+            <x-theme-toggle class="flex h-10 w-10 items-center justify-center rounded-xl border border-content/[0.06] text-content/50 transition hover:border-brass/40 hover:text-brass-ink" />
+            <button type="button" @click="open = true"
+                    class="flex h-10 w-10 items-center justify-center rounded-xl border border-content/[0.06] text-content/40 transition hover:border-content/10 hover:text-content">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" /></svg>
+            </button>
+        </div>
     </div>
 
     {{-- Mobile overlay --}}
@@ -45,18 +48,18 @@
 
     {{-- Sidebar --}}
     <aside :class="{ 'translate-x-0!': open, 'lg:w-20': collapsed }"
-           class="fixed inset-y-0 left-0 z-50 flex w-64 -translate-x-full flex-col border-r border-white/[0.06] bg-[#0c0c0c] transition-all duration-300 ease-in-out lg:translate-x-0">
+           class="fixed inset-y-0 left-0 z-50 flex w-64 -translate-x-full flex-col border-r border-content/[0.06] bg-surface-raised transition-all duration-300 ease-in-out lg:translate-x-0">
         {{-- Logo --}}
         <div class="flex items-center justify-between px-5 py-5" :class="{ 'lg:justify-center lg:px-3': collapsed }">
             <a href="{{ route('booking') }}" class="flex items-center gap-2.5 group">
-                <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 text-sm font-extrabold text-black transition-transform group-hover:scale-105">B</div>
+                <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brass-bright to-brass text-sm font-extrabold text-on-brass transition-transform group-hover:scale-105">B</div>
                 <div class="leading-none" :class="{ 'lg:hidden': collapsed }">
-                    <div class="text-sm font-bold tracking-tight text-white">Blade</div>
-                    <div class="text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-500/70">Admin Panel</div>
+                    <div class="font-display text-base font-semibold uppercase tracking-[0.18em] text-content">Blade</div>
+                    <div class="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-brass-ink/70">Admin Panel</div>
                 </div>
             </a>
             <button type="button" @click="open = false"
-                    class="flex h-8 w-8 items-center justify-center rounded-lg text-white/40 transition hover:text-white lg:hidden">
+                    class="flex h-8 w-8 items-center justify-center rounded-lg text-content/40 transition hover:text-content lg:hidden">
                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
             </button>
         </div>
@@ -68,8 +71,8 @@
                    :class="{ 'lg:justify-center': collapsed }"
                    @class([
                        'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors',
-                       'bg-amber-500/10 text-amber-400' => request()->routeIs($link['route']),
-                       'text-white/45 hover:bg-white/[0.04] hover:text-white' => !request()->routeIs($link['route']),
+                       'bg-brass/10 text-brass-ink' => request()->routeIs($link['route']),
+                       'text-content/45 hover:bg-content/[0.04] hover:text-content' => !request()->routeIs($link['route']),
                    ])>
                     <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">{!! $link['icon'] !!}</svg>
                     <span :class="{ 'lg:hidden': collapsed }">{{ $link['label'] }}</span>
@@ -79,21 +82,28 @@
 
         {{-- Logout --}}
         @auth
-            <div class="border-t border-white/[0.06] p-3">
+            <div class="border-t border-content/[0.06] p-3">
                 <a href="{{ route('logout') }}" title="Выход"
                    :class="{ 'lg:justify-center': collapsed }"
-                   class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-rose-500/60 transition hover:bg-rose-500/10 hover:text-rose-500">
+                   class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-danger/60 transition hover:bg-danger/10 hover:text-danger">
                     <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 9V5.25A2.25 2.25 0 0 1 10.5 3h6a2.25 2.25 0 0 1 2.25 2.25v13.5A2.25 2.25 0 0 1 16.5 21h-6a2.25 2.25 0 0 1-2.25-2.25V15M12 9l3 3m0 0-3 3m3-3H2.25" /></svg>
                     <span :class="{ 'lg:hidden': collapsed }">Выход</span>
                 </a>
             </div>
         @endauth
 
+        {{-- Theme toggle --}}
+        <div class="border-t border-content/[0.06] p-3">
+            <x-theme-toggle label="Тема"
+                            ::class="{ 'lg:justify-center': collapsed }"
+                            class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-content/45 transition-colors hover:bg-content/[0.04] hover:text-content" />
+        </div>
+
         {{-- Collapse / expand toggle (desktop only) --}}
-        <div class="hidden border-t border-white/[0.06] p-3 lg:block">
+        <div class="hidden border-t border-content/[0.06] p-3 lg:block">
             <button type="button" @click="collapsed = !collapsed"
                     :class="{ 'lg:justify-center': collapsed }"
-                    class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-white/45 transition-colors hover:bg-white/[0.04] hover:text-white">
+                    class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-content/45 transition-colors hover:bg-content/[0.04] hover:text-content">
                 <svg class="h-5 w-5 shrink-0 transition-transform duration-300" :class="{ 'rotate-180': collapsed }" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M18.75 19.5 11.25 12l7.5-7.5m-7.5 15L3.75 12l7.5-7.5" /></svg>
                 <span :class="{ 'lg:hidden': collapsed }">Свернуть</span>
             </button>
