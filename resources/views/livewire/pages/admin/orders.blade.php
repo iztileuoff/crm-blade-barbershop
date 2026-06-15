@@ -226,7 +226,7 @@ class extends Component
 <div class="animate-fade-in-up">
     <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>
-            <h1 class="text-3xl font-extrabold tracking-tight text-content">Продажи товаров</h1>
+            <h1 class="font-display text-4xl font-semibold uppercase tracking-tight text-content">Продажи товаров</h1>
             <p class="mt-1 text-sm text-content/40">Касса — розничные продажи</p>
         </div>
         <div class="flex flex-wrap items-center gap-3">
@@ -249,7 +249,7 @@ class extends Component
             <div class="flex items-center justify-between">
                 <div>
                     <span class="text-xs font-bold uppercase tracking-widest text-success/70">Выручка за день</span>
-                    <div class="mt-2 text-4xl font-extrabold text-content tabular-nums">
+                    <div class="mt-2 font-display text-4xl font-bold tabular-nums text-content">
                         {{ number_format($this->todayTotal, 0, '.', ' ') }} сум
                     </div>
                     <div class="mt-1 text-xs text-success/60">{{ $this->orders->count() }} продаж{{ match(true) { $this->orders->count() % 10 === 1 && $this->orders->count() % 100 !== 11 => 'а', in_array($this->orders->count() % 10, [2,3,4]) && !in_array($this->orders->count() % 100, [12,13,14]) => 'и', default => '' } }}</div>
@@ -264,7 +264,7 @@ class extends Component
                 <div class="flex items-center justify-between">
                     <div>
                         <span class="text-xs font-bold uppercase tracking-widest text-danger/70">Долги за день</span>
-                        <div class="mt-2 text-4xl font-extrabold text-content tabular-nums">
+                        <div class="mt-2 font-display text-4xl font-bold tabular-nums text-content">
                             {{ number_format($this->todayDebt, 0, '.', ' ') }} сум
                         </div>
                         <a href="{{ route('admin.debts') }}" class="mt-1 inline-flex items-center gap-1 text-xs text-danger/60 hover:text-danger">

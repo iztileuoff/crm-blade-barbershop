@@ -60,7 +60,7 @@ class extends Component
 <div class="animate-fade-in-up">
     <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>
-            <h1 class="text-3xl font-extrabold tracking-tight text-content">Настройки</h1>
+            <h1 class="font-display text-4xl font-semibold uppercase tracking-tight text-content">Настройки</h1>
             <p class="mt-1 text-sm text-content/40">Информация о салоне и контакты</p>
         </div>
     </div>

@@ -116,7 +116,7 @@ class extends Component
 <div class="animate-fade-in-up">
     <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>
-            <h1 class="text-3xl font-extrabold tracking-tight text-content">Долги</h1>
+            <h1 class="font-display text-4xl font-semibold uppercase tracking-tight text-content">Долги</h1>
             <p class="mt-1 text-sm text-content/40">Неоплаченные записи и продажи</p>
         </div>
     </div>
@@ -125,17 +125,17 @@ class extends Component
     <div class="mb-8 grid gap-4 sm:grid-cols-3">
         <div class="overflow-hidden rounded-2xl border border-danger/20 bg-gradient-to-br from-danger/10 to-danger/[0.02] p-5 backdrop-blur-md">
             <div class="text-xs font-bold uppercase tracking-widest text-danger/70">Всего долгов</div>
-            <div class="mt-2 text-3xl font-extrabold text-content tabular-nums">{{ number_format($this->grandTotal, 0, '.', ' ') }} сум</div>
+            <div class="mt-2 font-display text-3xl font-bold tabular-nums text-content">{{ number_format($this->grandTotal, 0, '.', ' ') }} сум</div>
             <div class="mt-1 text-xs text-danger/50">{{ $this->appointmentDebts->count() + $this->orderDebts->count() }} позиций</div>
         </div>
         <div class="overflow-hidden rounded-2xl border border-brass/20 bg-gradient-to-br from-brass/10 to-brass/[0.02] p-5 backdrop-blur-md">
             <div class="text-xs font-bold uppercase tracking-widest text-brass-ink/70">По записям</div>
-            <div class="mt-2 text-3xl font-extrabold text-content tabular-nums">{{ number_format($this->totalAppointmentDebt, 0, '.', ' ') }} сум</div>
+            <div class="mt-2 font-display text-3xl font-bold tabular-nums text-content">{{ number_format($this->totalAppointmentDebt, 0, '.', ' ') }} сум</div>
             <div class="mt-1 text-xs text-brass-ink/50">{{ $this->appointmentDebts->count() }} записей</div>
         </div>
         <div class="overflow-hidden rounded-2xl border border-info/20 bg-gradient-to-br from-info/10 to-info/[0.02] p-5 backdrop-blur-md">
             <div class="text-xs font-bold uppercase tracking-widest text-info/70">По продажам</div>
-            <div class="mt-2 text-3xl font-extrabold text-content tabular-nums">{{ number_format($this->totalOrderDebt, 0, '.', ' ') }} сум</div>
+            <div class="mt-2 font-display text-3xl font-bold tabular-nums text-content">{{ number_format($this->totalOrderDebt, 0, '.', ' ') }} сум</div>
             <div class="mt-1 text-xs text-info/50">{{ $this->orderDebts->count() }} продаж</div>
         </div>
     </div>
