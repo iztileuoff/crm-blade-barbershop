@@ -175,23 +175,6 @@ class extends Component
         $startsAt = Carbon::parse($this->date.' '.$this->time);
         $endsAt = $startsAt->copy()->addMinutes((int) $service->duration_minutes);
 
-        $clash = Appointment::query()
-            ->where('barber_id', $barber->id)
-            ->active()
-            ->where(function ($q) use ($startsAt, $endsAt) {
-                $q->where('starts_at', '<', $endsAt)
-                    ->where('ends_at', '>', $startsAt);
-            })
-            ->exists();
-
-        if ($clash) {
-            $this->addError('time', 'Это время только что заняли. Выберите другое.');
-            $this->time = null;
-            $this->step = 3;
-
-            return;
-        }
-
         $client = Client::firstOrCreate(
             ['phone' => $normalized],
             ['name' => $this->name, 'birth_date' => $this->birth_date ?: null],
@@ -385,11 +368,12 @@ class extends Component
                     @foreach ($this->availableSlots as $slot)
                         @php($isTaken = in_array($slot['value'], $takenSlots, true))
                         <button type="button"
-                                @if ($isTaken) disabled @else wire:click="selectTime('{{ $slot['value'] }}')" @endif
+                                wire:click="selectTime('{{ $slot['value'] }}')"
+                                @if ($isTaken) title="Уже есть запись на это время" @endif
                                 @class([
-                                    'rounded-xl border px-3 py-2.5 text-sm font-semibold transition-all duration-200',
-                                    'cursor-not-allowed border-danger/30 bg-danger/10 text-danger/70 line-through' => $isTaken,
-                                    'border-content/[0.06] bg-content/[0.03] hover:border-brass/40 hover:bg-brass/10 hover:text-brass-ink active:scale-95' => ! $isTaken,
+                                    'rounded-xl border px-3 py-2.5 text-sm font-semibold transition-all duration-200 active:scale-95',
+                                    'border-danger/40 bg-danger/10 text-danger hover:bg-danger/20' => $isTaken,
+                                    'border-content/[0.06] bg-content/[0.03] hover:border-brass/40 hover:bg-brass/10 hover:text-brass-ink' => ! $isTaken,
                                 ])>
                             {{ $slot['label'] }}
                         </button>
