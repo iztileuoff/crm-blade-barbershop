@@ -12,6 +12,15 @@ it('renders the login screen for guests', function () {
         ->assertSee('Вход');
 });
 
+it('shows the booking tab in the admin navigation', function () {
+    $user = User::factory()->create(['role' => Role::SUPER_ADMIN]);
+
+    $this->actingAs($user)
+        ->get(route('admin.dashboard'))
+        ->assertOk()
+        ->assertSee('Новая запись');
+});
+
 it('renders every admin page for a super admin', function (string $route) {
     $user = User::factory()->create(['role' => Role::SUPER_ADMIN]);
 

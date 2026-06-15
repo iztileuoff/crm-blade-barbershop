@@ -233,7 +233,7 @@ class extends Component
     }
 }; ?>
 
-<div>
+<div class="mx-auto w-full max-w-lg">
     {{-- Step indicator --}}
     @if ($step < 5)
         <div class="mb-6 flex items-center justify-between">
