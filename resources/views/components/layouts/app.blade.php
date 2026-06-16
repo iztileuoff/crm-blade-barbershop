@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru" class="h-full">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="h-full">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -36,6 +36,9 @@
             </button>
 
             <div class="flex items-center gap-2.5">
+                {{-- Language switcher --}}
+                <x-language-switcher class="flex h-10 items-center gap-1.5 rounded-xl border border-content/[0.06] px-2.5 text-content/50 transition hover:border-brass/40 hover:text-brass-ink" />
+
                 {{-- Theme toggle --}}
                 <x-theme-toggle class="flex h-10 w-10 items-center justify-center rounded-xl border border-content/[0.06] text-content/50 transition hover:border-brass/40 hover:text-brass-ink" />
 

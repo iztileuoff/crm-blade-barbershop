@@ -10,6 +10,15 @@ Volt::route('/', 'pages.booking')->name('booking')->middleware('auth');
 // Контроллер (не замыкание), чтобы работал route:cache на проде.
 Route::post('/telegram/webhook', TelegramWebhookController::class)->name('telegram.webhook');
 
+// Switch the UI language. Stored in the session and applied by the SetLocale middleware.
+Route::get('/locale/{locale}', function (string $locale) {
+    if (array_key_exists($locale, config('app.supported_locales', []))) {
+        session(['locale' => $locale]);
+    }
+
+    return redirect()->back();
+})->name('locale.switch');
+
 Volt::route('/login', 'pages.auth.login')->name('login')->middleware('guest');
 Route::get('/logout', function () {
     auth()->logout();

@@ -86,6 +86,23 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Supported Locales
+    |--------------------------------------------------------------------------
+    |
+    | Locales a visitor may switch the public-facing UI into. Keys are the
+    | locale codes used for translation files; values are the native labels
+    | shown in the language switcher.
+    |
+    */
+
+    'supported_locales' => [
+        'ru' => 'Русский',
+        'uz' => 'Oʻzbekcha',
+        'kaa' => 'Qaraqalpaqsha',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Encryption Key
     |--------------------------------------------------------------------------
     |

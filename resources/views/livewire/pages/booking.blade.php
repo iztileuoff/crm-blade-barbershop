@@ -149,16 +149,16 @@ class extends Component
             'date' => ['required', 'date'],
             'time' => ['required', 'regex:/^\d{2}:\d{2}$/'],
         ], attributes: [
-            'name' => 'имя',
-            'phone' => 'телефон',
-            'birth_date' => 'дата рождения',
-            'time' => 'время',
-            'date' => 'дата',
+            'name' => __('booking.validation.name'),
+            'phone' => __('booking.validation.phone'),
+            'birth_date' => __('booking.validation.birth_date'),
+            'time' => __('booking.validation.time'),
+            'date' => __('booking.validation.date'),
         ]);
 
         $normalized = Client::normalizePhone($this->phone);
         if ($normalized === null) {
-            $this->addError('phone', 'Введите корректный номер: 998XXXXXXXXX');
+            $this->addError('phone', __('booking.validation.invalid_phone'));
 
             return;
         }
@@ -166,7 +166,7 @@ class extends Component
         $service = $this->selectedService;
         $barber = $this->selectedBarber;
         if (! $service || ! $barber) {
-            $this->addError('serviceId', 'Выберите услугу и мастера заново.');
+            $this->addError('serviceId', __('booking.validation.reselect'));
             $this->step = 1;
 
             return;
@@ -220,7 +220,7 @@ class extends Component
     {{-- Step indicator --}}
     @if ($step < 5)
         <div class="mb-6 flex items-center justify-between">
-            @foreach (['Услуга', 'Мастер', 'Время', 'Данные'] as $i => $label)
+            @foreach ([__('booking.steps.service'), __('booking.steps.barber'), __('booking.steps.time'), __('booking.steps.details')] as $i => $label)
                 @php($n = $i + 1)
                 <div class="flex flex-col items-center gap-1.5">
                     <div @class([
@@ -248,8 +248,8 @@ class extends Component
     {{-- STEP 1: Services --}}
     @if ($step === 1)
         <div class="animate-fade-in-up">
-            <h2 class="mb-1 text-lg font-bold">Выберите услугу</h2>
-            <p class="mb-5 text-sm text-content/40">Что бы вы хотели сделать?</p>
+            <h2 class="mb-1 text-lg font-bold">{{ __('booking.service.title') }}</h2>
+            <p class="mb-5 text-sm text-content/40">{{ __('booking.service.subtitle') }}</p>
             <div class="space-y-2.5">
                 @forelse ($this->services as $service)
                     <button type="button"
@@ -263,7 +263,7 @@ class extends Component
                             </div>
                             <div>
                                 <div class="text-sm font-semibold">{{ $service->name }}</div>
-                                <div class="text-xs text-content/35">{{ $service->duration_minutes }} мин</div>
+                                <div class="text-xs text-content/35">{{ $service->duration_minutes }} {{ __('booking.minutes_short') }}</div>
                             </div>
                         </div>
                         <div class="flex items-center gap-2">
@@ -274,7 +274,7 @@ class extends Component
                     </button>
                 @empty
                     <div class="rounded-2xl border border-content/[0.06] bg-content/[0.03] p-8 text-center text-sm text-content/30">
-                        Услуги пока не добавлены
+                        {{ __('booking.service.empty') }}
                     </div>
                 @endforelse
             </div>
@@ -286,10 +286,10 @@ class extends Component
         <div class="animate-fade-in-up">
             <button type="button" wire:click="back" class="mb-4 flex items-center gap-1 text-xs text-content/30 transition hover:text-content/60">
                 <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" /></svg>
-                Назад
+                {{ __('booking.back') }}
             </button>
-            <h2 class="mb-1 text-lg font-bold">Выберите мастера</h2>
-            <p class="mb-5 text-sm text-content/40">Кто будет вашим мастером?</p>
+            <h2 class="mb-1 text-lg font-bold">{{ __('booking.barber.title') }}</h2>
+            <p class="mb-5 text-sm text-content/40">{{ __('booking.barber.subtitle') }}</p>
             <div class="grid grid-cols-2 gap-3">
                 @forelse ($this->barbers as $barber)
                     @php($photo = $barber->photoUrl)
@@ -312,7 +312,7 @@ class extends Component
                     </button>
                 @empty
                     <div class="col-span-2 rounded-2xl border border-content/[0.06] bg-content/[0.03] p-8 text-center text-sm text-content/30">
-                        Мастера пока не добавлены
+                        {{ __('booking.barber.empty') }}
                     </div>
                 @endforelse
             </div>
@@ -324,10 +324,10 @@ class extends Component
         <div class="animate-fade-in-up">
             <button type="button" wire:click="back" class="mb-4 flex items-center gap-1 text-xs text-content/30 transition hover:text-content/60">
                 <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" /></svg>
-                Назад
+                {{ __('booking.back') }}
             </button>
-            <h2 class="mb-1 text-lg font-bold">Дата и время</h2>
-            <p class="mb-5 text-sm text-content/40">Когда вам удобно?</p>
+            <h2 class="mb-1 text-lg font-bold">{{ __('booking.datetime.title') }}</h2>
+            <p class="mb-5 text-sm text-content/40">{{ __('booking.datetime.subtitle') }}</p>
 
             {{-- Horizontal date picker --}}
             <div class="hide-scrollbar -mx-4 mb-5 flex gap-2 overflow-x-auto px-4 pb-1">
@@ -351,7 +351,7 @@ class extends Component
                                 'text-[8px] font-bold uppercase tracking-wide',
                                 'text-black/40' => $isSelected,
                                 'text-brass-ink/60' => ! $isSelected,
-                            ])>Сегодня</span>
+                            ])>{{ __('booking.datetime.today') }}</span>
                         @endif
                     </button>
                 @endfor
@@ -360,7 +360,7 @@ class extends Component
             {{-- Time slots --}}
             @if (count($this->availableSlots) === 0)
                 <div class="rounded-2xl border border-brass/10 bg-brass/5 p-5 text-center text-sm text-brass-ink/60">
-                    В этот день нет свободных окон. Попробуйте другую дату.
+                    {{ __('booking.datetime.no_slots') }}
                 </div>
             @else
                 @php($takenSlots = $this->takenSlots)
@@ -369,7 +369,7 @@ class extends Component
                         @php($isTaken = in_array($slot['value'], $takenSlots, true))
                         <button type="button"
                                 wire:click="selectTime('{{ $slot['value'] }}')"
-                                @if ($isTaken) title="Уже есть запись на это время" @endif
+                                @if ($isTaken) title="{{ __('booking.datetime.taken') }}" @endif
                                 @class([
                                     'rounded-xl border px-3 py-2.5 text-sm font-semibold transition-all duration-200 active:scale-95',
                                     'border-danger/40 bg-danger/10 text-danger hover:bg-danger/20' => $isTaken,
@@ -388,17 +388,17 @@ class extends Component
         <div class="animate-fade-in-up">
             <button type="button" wire:click="back" class="mb-4 flex items-center gap-1 text-xs text-content/30 transition hover:text-content/60">
                 <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" /></svg>
-                Назад
+                {{ __('booking.back') }}
             </button>
-            <h2 class="mb-1 text-lg font-bold">Подтверждение</h2>
-            <p class="mb-5 text-sm text-content/40">Проверьте детали и введите контакты</p>
+            <h2 class="mb-1 text-lg font-bold">{{ __('booking.confirm.title') }}</h2>
+            <p class="mb-5 text-sm text-content/40">{{ __('booking.confirm.subtitle') }}</p>
 
             {{-- Booking summary --}}
             <div class="mb-5 rounded-2xl border border-content/[0.06] bg-content/[0.03] p-4">
                 <div class="flex items-start justify-between border-b border-content/[0.06] pb-3">
                     <div>
                         <div class="text-sm font-semibold">{{ $this->selectedService?->name }}</div>
-                        <div class="text-xs text-content/35">{{ $this->selectedService?->duration_minutes }} мин</div>
+                        <div class="text-xs text-content/35">{{ $this->selectedService?->duration_minutes }} {{ __('booking.minutes_short') }}</div>
                     </div>
                     @if ($this->selectedBarber?->price)
                         <div class="text-sm font-bold text-brass-ink">{{ $this->selectedBarber?->formattedPrice }}</div>
@@ -427,19 +427,19 @@ class extends Component
             {{-- Contact form --}}
             <form wire:submit.prevent="confirm" class="space-y-3">
                 <div>
-                    <label for="name" class="mb-1.5 block text-xs font-semibold text-content/50">Имя</label>
-                    <input id="name" type="text" wire:model="name" placeholder="Как вас зовут?"
+                    <label for="name" class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('booking.confirm.name') }}</label>
+                    <input id="name" type="text" wire:model="name" placeholder="{{ __('booking.confirm.name_placeholder') }}"
                            class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content placeholder-content/20 outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
                     @error('name') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                 </div>
                 <div>
-                    <label for="phone" class="mb-1.5 block text-xs font-semibold text-content/50">Телефон</label>
+                    <label for="phone" class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('booking.confirm.phone') }}</label>
                     <input id="phone" type="tel" wire:model="phone" placeholder="998 90 123 45 67"
                            class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content placeholder-content/20 outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
                     @error('phone') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                 </div>
                 <div>
-                    <label for="birth_date" class="mb-1.5 block text-xs font-semibold text-content/50">Дата рождения <span class="font-normal text-content/25">(необязательно)</span></label>
+                    <label for="birth_date" class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('booking.confirm.birth_date') }} <span class="font-normal text-content/25">{{ __('booking.confirm.optional') }}</span></label>
                     <input id="birth_date" type="date" wire:model="birth_date"
                            class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20 dark:[color-scheme:dark]">
                     @error('birth_date') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
@@ -447,8 +447,8 @@ class extends Component
                 <button type="submit"
                         class="mt-1 w-full rounded-xl bg-gradient-to-r from-brass to-brass px-4 py-3.5 text-sm font-bold text-black shadow-lg shadow-brass/20 transition-all hover:shadow-brass/30 active:scale-[0.98] disabled:opacity-50"
                         wire:loading.attr="disabled">
-                    <span wire:loading.remove>Подтвердить запись</span>
-                    <span wire:loading>Бронируем…</span>
+                    <span wire:loading.remove>{{ __('booking.confirm.submit') }}</span>
+                    <span wire:loading>{{ __('booking.confirm.submitting') }}</span>
                 </button>
             </form>
         </div>
@@ -462,21 +462,23 @@ class extends Component
                     <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                 </svg>
             </div>
-            <h2 class="mb-2 text-xl font-bold">Заявка принята!</h2>
+            <h2 class="mb-2 text-xl font-bold">{{ __('booking.success.title') }}</h2>
             <p class="mx-auto max-w-xs text-sm text-content/40">
-                Мы свяжемся с вами для подтверждения записи на
-                {{ \Illuminate\Support\Carbon::parse($date)->translatedFormat('d M') }}
-                в {{ $time }} к мастеру {{ $this->selectedBarber?->name }}.
+                {{ __('booking.success.message', [
+                    'date' => \Illuminate\Support\Carbon::parse($date)->translatedFormat('d M'),
+                    'time' => $time,
+                    'barber' => $this->selectedBarber?->name,
+                ]) }}
             </p>
-            <p class="mt-1.5 text-xs text-content/25">После подтверждения за 30 минут до визита придёт SMS-напоминание</p>
+            <p class="mt-1.5 text-xs text-content/25">{{ __('booking.success.sms_note') }}</p>
 
             <div class="mx-auto mt-6 max-w-xs rounded-2xl border border-content/[0.06] bg-content/[0.03] p-4 text-left text-sm">
                 <div class="flex items-center justify-between">
-                    <span class="text-content/40">Услуга</span>
+                    <span class="text-content/40">{{ __('booking.success.service') }}</span>
                     <span class="font-medium">{{ $this->selectedService?->name }}</span>
                 </div>
                 <div class="mt-2 flex items-center justify-between">
-                    <span class="text-content/40">Стоимость</span>
+                    <span class="text-content/40">{{ __('booking.success.price') }}</span>
                     <span class="font-semibold text-brass-ink">{{ $this->selectedBarber?->formattedPrice ?: '—' }}</span>
                 </div>
             </div>
@@ -486,7 +488,7 @@ class extends Component
                 <svg class="h-4 w-4 text-content/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182" />
                 </svg>
-                Записаться ещё раз
+                {{ __('booking.success.again') }}
             </button>
         </div>
     @endif

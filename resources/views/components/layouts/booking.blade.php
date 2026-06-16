@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="ru" class="h-full">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="h-full">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ $title ?? 'Онлайн-запись — Blade Barbershop' }}</title>
-    <meta name="description" content="Онлайн-запись в барбершоп Blade. Выберите услугу, мастера и удобное время.">
+    <title>{{ $title ?? __('booking.meta_title') }}</title>
+    <meta name="description" content="{{ __('booking.meta_description') }}">
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700,800|oswald:300,400,500,600,700" rel="stylesheet" />
     <script>
@@ -52,7 +52,10 @@
                         <div class="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-brass-ink/70">Barbershop</div>
                     </div>
                 </a>
-                <x-theme-toggle class="flex h-9 w-9 items-center justify-center rounded-xl border border-content/[0.06] text-content/50 transition hover:border-brass/40 hover:text-brass-ink" />
+                <div class="flex items-center gap-2">
+                    <x-language-switcher />
+                    <x-theme-toggle class="flex h-9 w-9 items-center justify-center rounded-xl border border-content/[0.06] text-content/50 transition hover:border-brass/40 hover:text-brass-ink" />
+                </div>
             </div>
         </header>
 
