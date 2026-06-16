@@ -54,6 +54,19 @@
     --danger: #e11d48;
     --info: #2563eb;
     --royal: #7c3aed;
+
+    /* RGB channels for tokens used with an opacity modifier. Consumed by the
+       color-mix() → rgb() build fallback (see vite.config.js) so translucent
+       colors render in browsers without color-mix() (e.g. Chrome 109).
+       Keep these in sync with the hex values above. */
+    --content-rgb: 23 25 28;
+    --surface-rgb: 243 241 234;
+    --brass-rgb: 200 162 75;
+    --brass-ink-rgb: 138 106 22;
+    --success-rgb: 5 150 105;
+    --danger-rgb: 225 29 72;
+    --info-rgb: 37 99 235;
+    --royal-rgb: 124 58 237;
 }
 
 /* ─── Dark theme — "Steel & Brass" ───────────────────────────────────── */
@@ -74,6 +87,15 @@
     --danger: #fb7185;
     --info: #60a5fa;
     --royal: #a78bfa;
+
+    --content-rgb: 215 220 226;
+    --surface-rgb: 11 12 14;
+    --brass-rgb: 200 162 75;
+    --brass-ink-rgb: 216 178 95;
+    --success-rgb: 52 211 153;
+    --danger-rgb: 251 113 133;
+    --info-rgb: 96 165 250;
+    --royal-rgb: 167 139 250;
 }
 
 @layer base {
