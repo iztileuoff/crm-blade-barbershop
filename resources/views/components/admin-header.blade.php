@@ -134,9 +134,9 @@
             @endforeach
         </nav>
 
-        {{-- Logout --}}
+        {{-- Logout (mobile drawer only — desktop uses the top header) --}}
         @auth
-            <div class="border-t border-content/[0.06] p-3">
+            <div class="border-t border-content/[0.06] p-3 lg:hidden">
                 <a href="{{ route('logout') }}" title="Выход"
                    :class="{ 'lg:justify-center': collapsed }"
                    class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-danger/60 transition hover:bg-danger/10 hover:text-danger">
@@ -146,21 +146,10 @@
             </div>
         @endauth
 
-        {{-- Theme toggle --}}
-        <div class="border-t border-content/[0.06] p-3">
+        {{-- Theme toggle (mobile drawer only — desktop uses the top header) --}}
+        <div class="border-t border-content/[0.06] p-3 lg:hidden">
             <x-theme-toggle label="Тема"
-                            ::class="{ 'lg:justify-center': collapsed }"
                             class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-content/45 transition-colors hover:bg-content/[0.04] hover:text-content" />
-        </div>
-
-        {{-- Collapse / expand toggle (desktop only) --}}
-        <div class="hidden border-t border-content/[0.06] p-3 lg:block">
-            <button type="button" @click="collapsed = !collapsed"
-                    :class="{ 'lg:justify-center': collapsed }"
-                    class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-content/45 transition-colors hover:bg-content/[0.04] hover:text-content">
-                <svg class="h-5 w-5 shrink-0 transition-transform duration-300" :class="{ 'rotate-180': collapsed }" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M18.75 19.5 11.25 12l7.5-7.5m-7.5 15L3.75 12l7.5-7.5" /></svg>
-                <span :class="{ 'lg:hidden': collapsed }">Свернуть</span>
-            </button>
         </div>
     </aside>
 </div>
