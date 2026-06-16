@@ -195,12 +195,6 @@ class extends Component
                                 @error('specialization_id') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                             </div>
                             <div>
-                                <label class="mb-1.5 block text-xs font-semibold text-content/50">Цена по умолчанию (сум)</label>
-                                <input type="number" wire:model="price" placeholder="Если не задана цена за услугу..."
-                                       class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
-                                @error('price') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
-                            </div>
-                            <div>
                                 <label class="mb-1.5 block text-xs font-semibold text-content/50">Процент ЗП (%)</label>
                                 <div class="relative">
                                     <input type="number" wire:model="salary_percent" min="0" max="100" placeholder="50"
