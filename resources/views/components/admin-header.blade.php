@@ -9,6 +9,24 @@
     ['route' => 'admin.products', 'label' => 'Товары', 'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="m21 7.5-9-5.25L3 7.5m18 0-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />'],
     ['route' => 'admin.orders', 'label' => 'Продажи', 'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z" />'],
     ['route' => 'admin.debts', 'label' => 'Долги', 'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Z" />'],
+    [
+        'label' => 'SMS',
+        'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 0 1-.825-.242m9.345-8.334a2.126 2.126 0 0 0-.476-.095 48.64 48.64 0 0 0-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0 0 11.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155" />',
+        'children' => [
+            ['route' => 'admin.sms.templates', 'label' => 'Шаблоны', 'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25Z" />'],
+            ['route' => 'admin.sms.history', 'label' => 'История', 'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />'],
+            ['route' => 'admin.sms.settings', 'label' => 'Настройки Eskiz', 'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" />'],
+        ],
+    ],
+    [
+        'label' => 'Telegram',
+        'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />',
+        'children' => [
+            ['route' => 'admin.telegram.templates', 'label' => 'Шаблоны', 'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />'],
+            ['route' => 'admin.telegram.broadcast', 'label' => 'Рассылка', 'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M10.34 15.84c-.688-.06-1.386-.09-2.09-.09H7.5a4.5 4.5 0 1 1 0-9h.75c.704 0 1.402-.03 2.09-.09m0 9.18c.253.962.584 1.892.985 2.783.247.55.06 1.21-.463 1.511l-.657.38c-.551.318-1.26.117-1.527-.461a20.845 20.845 0 0 1-1.44-4.282m3.102.069a18.03 18.03 0 0 1-.59-4.59c0-1.586.205-3.124.59-4.59m0 9.18a23.848 23.848 0 0 1 8.835 2.535M10.34 6.66a23.847 23.847 0 0 0 8.835-2.535m0 0A23.74 23.74 0 0 0 18.795 3m.38 1.125a23.91 23.91 0 0 1 1.014 5.395m-1.014 8.855c-.118.38-.245.754-.38 1.125m.38-1.125a23.91 23.91 0 0 0 1.014-5.395m0-3.46c.495.413.811 1.035.811 1.73 0 .695-.316 1.317-.811 1.73m0-3.46a24.347 24.347 0 0 1 0 3.46" />'],
+            ['route' => 'admin.telegram.linked', 'label' => 'Привязанные', 'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" />'],
+        ],
+    ],
     ['route' => 'admin.settings', 'label' => 'Настройки', 'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.24-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.281Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />'],
 ])
 @if(auth()->user()?->isSuperAdmin())
@@ -17,7 +35,7 @@
 
 {{-- Barbers only ever see their own appointments --}}
 @if(auth()->user()?->isBarber())
-    @php($links = array_values(array_filter($links, fn ($link) => $link['route'] === 'admin.appointments')))
+    @php($links = array_values(array_filter($links, fn ($link) => ($link['route'] ?? null) === 'admin.appointments')))
 @endif
 
 <div>
@@ -68,16 +86,51 @@
         {{-- Nav --}}
         <nav class="flex-1 space-y-1 overflow-y-auto px-3 py-2">
             @foreach($links as $link)
-                <a href="{{ route($link['route']) }}" @click="open = false" title="{{ $link['label'] }}"
-                   :class="{ 'lg:justify-center': collapsed }"
-                   @class([
-                       'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors',
-                       'bg-brass/10 text-brass-ink' => request()->routeIs($link['route']),
-                       'text-content/45 hover:bg-content/[0.04] hover:text-content' => !request()->routeIs($link['route']),
-                   ])>
-                    <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">{!! $link['icon'] !!}</svg>
-                    <span :class="{ 'lg:hidden': collapsed }">{{ $link['label'] }}</span>
-                </a>
+                @if(isset($link['children']))
+                    @php($groupActive = collect($link['children'])->contains(fn ($child) => request()->routeIs($child['route'])))
+                    <div x-data="{ expanded: @js($groupActive) }">
+                        <button type="button" @click="expanded = !expanded" title="{{ $link['label'] }}"
+                                :class="{ 'lg:justify-center': collapsed }"
+                                @class([
+                                    'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors',
+                                    'bg-brass/10 text-brass-ink' => $groupActive,
+                                    'text-content/45 hover:bg-content/[0.04] hover:text-content' => !$groupActive,
+                                ])>
+                            <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">{!! $link['icon'] !!}</svg>
+                            <span class="flex-1 text-left" :class="{ 'lg:hidden': collapsed }">{{ $link['label'] }}</span>
+                            <svg class="h-4 w-4 shrink-0 transition-transform duration-200" :class="{ 'rotate-180': expanded, 'lg:hidden': collapsed }" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
+                        </button>
+                        <div x-show="expanded" x-cloak
+                             x-transition:enter="transition ease-out duration-150"
+                             x-transition:enter-start="opacity-0 -translate-y-1"
+                             x-transition:enter-end="opacity-100 translate-y-0"
+                             class="mt-1 space-y-1 border-l border-content/[0.06] pl-3" :class="{ 'lg:border-l-0 lg:pl-0': collapsed }">
+                            @foreach($link['children'] as $child)
+                                <a href="{{ route($child['route']) }}" @click="open = false" title="{{ $child['label'] }}"
+                                   :class="{ 'lg:justify-center': collapsed }"
+                                   @class([
+                                       'flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-colors',
+                                       'bg-brass/10 text-brass-ink' => request()->routeIs($child['route']),
+                                       'text-content/45 hover:bg-content/[0.04] hover:text-content' => !request()->routeIs($child['route']),
+                                   ])>
+                                    <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">{!! $child['icon'] !!}</svg>
+                                    <span :class="{ 'lg:hidden': collapsed }">{{ $child['label'] }}</span>
+                                </a>
+                            @endforeach
+                        </div>
+                    </div>
+                @else
+                    <a href="{{ route($link['route']) }}" @click="open = false" title="{{ $link['label'] }}"
+                       :class="{ 'lg:justify-center': collapsed }"
+                       @class([
+                           'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors',
+                           'bg-brass/10 text-brass-ink' => request()->routeIs($link['route']),
+                           'text-content/45 hover:bg-content/[0.04] hover:text-content' => !request()->routeIs($link['route']),
+                       ])>
+                        <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">{!! $link['icon'] !!}</svg>
+                        <span :class="{ 'lg:hidden': collapsed }">{{ $link['label'] }}</span>
+                    </a>
+                @endif
             @endforeach
         </nav>
 

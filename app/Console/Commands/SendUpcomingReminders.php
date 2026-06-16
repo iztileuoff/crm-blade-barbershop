@@ -6,6 +6,7 @@ use App\Enums\AppointmentStatus;
 use App\Models\Appointment;
 use App\Services\SmsService;
 use App\Services\TelegramService;
+use App\Support\NotificationTemplates;
 use App\Telegram\AppointmentFormatter;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
@@ -64,12 +65,11 @@ class SendUpcomingReminders extends Command
             );
         }
 
-        $message = sprintf(
-            'Напоминаем, вы записаны на %s. Ждем вас в Blade Barbershop!',
-            $appointment->starts_at->format('H:i'),
-        );
+        $message = NotificationTemplates::render('sms_reminder', [
+            'time' => $appointment->starts_at->format('H:i'),
+        ]);
 
-        return $sms->sendSms($client->phone, $message);
+        return $sms->sendSms($client->phone, $message, $client->id, 'reminder');
     }
 
     /**

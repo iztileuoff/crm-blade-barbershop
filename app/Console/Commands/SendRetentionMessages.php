@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Client;
 use App\Services\SmsService;
+use App\Support\NotificationTemplates;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
@@ -27,10 +28,10 @@ class SendRetentionMessages extends Command
             })
             ->get();
 
-        $message = sprintf('Прошло %d дней с вашего визита. Пора обновить стрижку!', $days);
+        $message = NotificationTemplates::render('sms_retention', ['days' => $days]);
 
         foreach ($clients as $client) {
-            if ($sms->sendSms($client->phone, $message)) {
+            if ($sms->sendSms($client->phone, $message, $client->id, 'retention')) {
                 $client->forceFill(['last_retention_sent_at' => Carbon::now()])->save();
                 $this->info("SMS-удержание отправлено клиенту {$client->phone}");
             }

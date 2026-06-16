@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\SmsMessage;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -22,14 +23,34 @@ class SmsService
     ) {}
 
     /**
-     * Отправить SMS клиенту.
+     * Настроены ли учётные данные Eskiz (логин/пароль).
+     */
+    public function isConfigured(): bool
+    {
+        return $this->email !== '' && $this->password !== '';
+    }
+
+    public function from(): string
+    {
+        return $this->from;
+    }
+
+    public function baseUrl(): string
+    {
+        return $this->baseUrl;
+    }
+
+    /**
+     * Отправить SMS клиенту. Любая попытка (успех или ошибка) пишется в историю.
      *
      * @param  string  $phone  Номер в формате 998XXXXXXXXX
      * @param  string  $message  Текст сообщения (только латиница допустима для Eskiz при бесплатном тарифе)
+     * @param  int|null  $clientId  Связанный клиент (для истории), если есть
+     * @param  string  $context  Источник: reminder | retention | broadcast | manual
      */
-    public function sendSms(string $phone, string $message): bool
+    public function sendSms(string $phone, string $message, ?int $clientId = null, string $context = 'manual'): bool
     {
-        if ($this->email === '' || $this->password === '') {
+        if (! $this->isConfigured()) {
             Log::warning('SMS не отправлено: учётные данные Eskiz не настроены.', [
                 'phone' => $phone,
             ]);
@@ -60,8 +81,12 @@ class SmsService
                     'body' => $response->body(),
                 ]);
 
+                $this->record($phone, $message, 'failed', $clientId, $context);
+
                 return false;
             }
+
+            $this->record($phone, $message, 'sent', $clientId, $context);
 
             return true;
         } catch (\Throwable $e) {
@@ -70,8 +95,67 @@ class SmsService
                 'error' => $e->getMessage(),
             ]);
 
+            $this->record($phone, $message, 'failed', $clientId, $context);
+
             return false;
         }
+    }
+
+    /**
+     * Проверить, что Eskiz принимает учётные данные (получает токен).
+     */
+    public function checkConnection(): bool
+    {
+        if (! $this->isConfigured()) {
+            return false;
+        }
+
+        try {
+            Cache::forget(self::TOKEN_CACHE_KEY);
+
+            return $this->token() !== '';
+        } catch (\Throwable $e) {
+            Log::warning('Проверка подключения Eskiz не удалась', ['error' => $e->getMessage()]);
+
+            return false;
+        }
+    }
+
+    /**
+     * Остаток средств на счёте Eskiz, либо null если получить не удалось.
+     */
+    public function balance(): ?string
+    {
+        if (! $this->isConfigured()) {
+            return null;
+        }
+
+        try {
+            $response = $this->client()->get('/user/get-limit');
+
+            if (! $response->successful()) {
+                return null;
+            }
+
+            $balance = $response->json('data.balance');
+
+            return $balance !== null ? (string) $balance : null;
+        } catch (\Throwable $e) {
+            Log::warning('Не удалось получить баланс Eskiz', ['error' => $e->getMessage()]);
+
+            return null;
+        }
+    }
+
+    private function record(string $phone, string $message, string $status, ?int $clientId, string $context): void
+    {
+        SmsMessage::create([
+            'client_id' => $clientId,
+            'phone' => $phone,
+            'message' => $message,
+            'status' => $status,
+            'context' => $context,
+        ]);
     }
 
     private function client(): PendingRequest
