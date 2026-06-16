@@ -1,6 +1,6 @@
 <div x-data="{ open: false }" @click.outside="open = false" class="relative">
     <input type="text" x-on:focus="open = true" wire:model.live.debounce.300ms="{{ $searchModel }}"
-        placeholder="{{ $placeholder ?? 'Поиск...' }}"
+        placeholder="{{ $placeholder ?? __('common.search').'...' }}"
         class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content placeholder-content/20 outline-none">
 
     <div x-show="open" x-transition
@@ -17,7 +17,7 @@
             </button>
         @empty
             <div class="px-4 py-2 text-content/40 text-sm">
-                Ничего не найдено
+                {{ __('common.nothing_found') }}
             </div>
         @endforelse
     </div>

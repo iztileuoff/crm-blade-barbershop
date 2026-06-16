@@ -37,33 +37,33 @@ class extends Component
 
 <div class="animate-fade-in-up">
     <div class="mb-8">
-        <h1 class="font-display text-4xl font-semibold uppercase tracking-tight text-content">SMS · Настройки Eskiz</h1>
-        <p class="mt-1 text-sm text-content/40">Интеграция с Eskiz SMS</p>
+        <h1 class="font-display text-4xl font-semibold uppercase tracking-tight text-content">{{ __('sms.settings_title') }}</h1>
+        <p class="mt-1 text-sm text-content/40">{{ __('sms.settings_subtitle') }}</p>
     </div>
 
     <div class="mb-6 flex items-start gap-2 rounded-xl border border-content/[0.08] bg-content/[0.03] px-4 py-3 text-xs text-content/60">
         <svg class="mt-0.5 h-4 w-4 shrink-0 text-content/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" /></svg>
-        <span>Логин и пароль Eskiz хранятся в файле <code class="rounded bg-content/[0.06] px-1.5 py-0.5">.env</code> (<code class="rounded bg-content/[0.06] px-1.5 py-0.5">ESKIZ_EMAIL</code>, <code class="rounded bg-content/[0.06] px-1.5 py-0.5">ESKIZ_PASSWORD</code>) и не редактируются из панели в целях безопасности.</span>
+        <span>{{ __('sms.env_note') }}</span>
     </div>
 
     <div class="overflow-hidden rounded-2xl border border-content/[0.06] bg-content/[0.03] shadow-xl backdrop-blur-md">
         <div class="border-b border-content/[0.06] bg-content/[0.03] px-6 py-4">
-            <h3 class="text-sm font-bold text-content">Состояние интеграции</h3>
+            <h3 class="text-sm font-bold text-content">{{ __('sms.integration_status') }}</h3>
         </div>
         <div class="divide-y divide-content/[0.04]">
             <div class="flex items-center justify-between px-6 py-4">
-                <span class="text-sm text-content/50">Учётные данные</span>
+                <span class="text-sm text-content/50">{{ __('sms.credentials') }}</span>
                 @if ($configured)
                     <span class="inline-flex items-center gap-1.5 rounded-full bg-success/10 px-3 py-1 text-xs font-bold text-success">
                         <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
-                        Настроены
+                        {{ __('sms.configured') }}
                     </span>
                 @else
-                    <span class="inline-flex items-center gap-1.5 rounded-full bg-danger/10 px-3 py-1 text-xs font-bold text-danger">Не настроены</span>
+                    <span class="inline-flex items-center gap-1.5 rounded-full bg-danger/10 px-3 py-1 text-xs font-bold text-danger">{{ __('sms.not_configured') }}</span>
                 @endif
             </div>
             <div class="flex items-center justify-between px-6 py-4">
-                <span class="text-sm text-content/50">Имя отправителя (from)</span>
+                <span class="text-sm text-content/50">{{ __('sms.sender_name') }}</span>
                 <span class="font-mono text-sm text-content">{{ $from ?: '—' }}</span>
             </div>
             <div class="flex items-center justify-between px-6 py-4">
@@ -72,17 +72,17 @@ class extends Component
             </div>
             @if ($checked)
                 <div class="flex items-center justify-between px-6 py-4">
-                    <span class="text-sm text-content/50">Подключение</span>
+                    <span class="text-sm text-content/50">{{ __('sms.connection') }}</span>
                     @if ($connectionOk)
-                        <span class="inline-flex items-center gap-1.5 rounded-full bg-success/10 px-3 py-1 text-xs font-bold text-success">Успешно</span>
+                        <span class="inline-flex items-center gap-1.5 rounded-full bg-success/10 px-3 py-1 text-xs font-bold text-success">{{ __('sms.success') }}</span>
                     @else
-                        <span class="inline-flex items-center gap-1.5 rounded-full bg-danger/10 px-3 py-1 text-xs font-bold text-danger">Ошибка</span>
+                        <span class="inline-flex items-center gap-1.5 rounded-full bg-danger/10 px-3 py-1 text-xs font-bold text-danger">{{ __('sms.error') }}</span>
                     @endif
                 </div>
                 @if ($connectionOk)
                     <div class="flex items-center justify-between px-6 py-4">
-                        <span class="text-sm text-content/50">Баланс</span>
-                        <span class="font-bold text-content">{{ $balance !== null ? $balance.' сум' : 'недоступен' }}</span>
+                        <span class="text-sm text-content/50">{{ __('sms.balance') }}</span>
+                        <span class="font-bold text-content">{{ $balance !== null ? $balance.' '.__('common.currency') : __('sms.balance_unavailable') }}</span>
                     </div>
                 @endif
             @endif
@@ -92,8 +92,8 @@ class extends Component
                     @disabled(! $configured)
                     class="flex items-center gap-2 rounded-xl bg-brass px-5 py-2.5 text-sm font-bold text-black transition-all hover:bg-brass-bright active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40">
                 <svg wire:loading wire:target="check" class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
-                <span wire:loading.remove wire:target="check">Проверить подключение</span>
-                <span wire:loading wire:target="check">Проверка…</span>
+                <span wire:loading.remove wire:target="check">{{ __('sms.check_connection') }}</span>
+                <span wire:loading wire:target="check">{{ __('sms.checking') }}</span>
             </button>
         </div>
     </div>

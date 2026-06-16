@@ -19,7 +19,7 @@ class extends Component
             ->get()
             ->map(fn (Client $client) => [
                 'type' => 'client',
-                'label' => 'Клиент',
+                'label' => __('common.client'),
                 'id' => $client->id,
                 'name' => $client->name,
                 'phone' => Client::formatPhone((string) $client->phone),
@@ -32,7 +32,7 @@ class extends Component
             ->get()
             ->map(fn (User $user) => [
                 'type' => 'barber',
-                'label' => 'Мастер',
+                'label' => __('common.barber'),
                 'id' => $user->id,
                 'name' => $user->name,
                 'phone' => Client::formatPhone((string) $user->phone),
@@ -57,8 +57,8 @@ class extends Component
 
 <div class="animate-fade-in-up">
     <div class="mb-8">
-        <h1 class="font-display text-4xl font-semibold uppercase tracking-tight text-content">Telegram · Привязанные</h1>
-        <p class="mt-1 text-sm text-content/40">Клиенты и мастера с подключённым Telegram · Всего: <span class="font-bold text-content/70">{{ $this->linked->count() }}</span></p>
+        <h1 class="font-display text-4xl font-semibold uppercase tracking-tight text-content">{{ __('telegram.linked_title') }}</h1>
+        <p class="mt-1 text-sm text-content/40">{{ __('telegram.linked_subtitle') }} · {{ __('common.total_count') }}: <span class="font-bold text-content/70">{{ $this->linked->count() }}</span></p>
     </div>
 
     <div class="overflow-hidden rounded-2xl border border-content/[0.06] bg-content/[0.03] shadow-xl backdrop-blur-md">
@@ -66,11 +66,11 @@ class extends Component
             <table class="w-full text-left text-sm">
                 <thead>
                     <tr class="border-b border-content/[0.06] bg-content/[0.03] text-xs font-bold uppercase tracking-wider text-content/30">
-                        <th class="px-6 py-4">Имя</th>
-                        <th class="px-6 py-4">Тип</th>
-                        <th class="hidden px-6 py-4 sm:table-cell">Телефон</th>
-                        <th class="hidden px-6 py-4 sm:table-cell">Chat ID</th>
-                        <th class="px-6 py-4 text-right">Действия</th>
+                        <th class="px-6 py-4">{{ __('common.name') }}</th>
+                        <th class="px-6 py-4">{{ __('common.type') }}</th>
+                        <th class="hidden px-6 py-4 sm:table-cell">{{ __('common.phone') }}</th>
+                        <th class="hidden px-6 py-4 sm:table-cell">{{ __('telegram.col_chat_id') }}</th>
+                        <th class="px-6 py-4 text-right">{{ __('common.actions') }}</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-content/[0.04]">
@@ -90,17 +90,17 @@ class extends Component
                                 <div class="flex items-center justify-end">
                                     <button type="button"
                                             wire:click="{{ $row['type'] === 'barber' ? 'unlinkBarber' : 'unlinkClient' }}({{ $row['id'] }})"
-                                            wire:confirm="Отвязать Telegram у «{{ $row['name'] }}»?"
+                                            wire:confirm="{{ __('telegram.unlink_confirm', ['name' => $row['name']]) }}"
                                             class="flex items-center gap-1.5 rounded-lg border border-content/[0.06] px-3 py-2 text-xs font-bold text-danger/60 transition hover:border-danger/20 hover:text-danger">
                                         <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 10.5 21 3m0 0h-5.25M21 3v5.25M10.5 6H6.75A2.25 2.25 0 0 0 4.5 8.25v9a2.25 2.25 0 0 0 2.25 2.25h9a2.25 2.25 0 0 0 2.25-2.25V13.5" /></svg>
-                                        Отвязать
+                                        {{ __('telegram.unlink') }}
                                     </button>
                                 </div>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="px-6 py-12 text-center text-content/20">Нет привязанных пользователей</td>
+                            <td colspan="5" class="px-6 py-12 text-center text-content/20">{{ __('telegram.empty_linked') }}</td>
                         </tr>
                     @endforelse
                 </tbody>

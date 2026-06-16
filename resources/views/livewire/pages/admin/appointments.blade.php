@@ -332,7 +332,7 @@ class extends Component
         $endsAt = Carbon::createFromFormat('H:i', $value);
 
         if ($endsAt->lte($startsAt)) {
-            $this->addError('form_end_time', 'Время окончания должно быть позже начала.');
+            $this->addError('form_end_time', __('appointments.err_end_after_start'));
         } else {
             $this->resetErrorBag('form_end_time');
         }
@@ -349,7 +349,7 @@ class extends Component
             ->values();
 
         if ($validServices->isEmpty()) {
-            $this->addError('selectedServices', 'Добавьте хотя бы одну услугу.');
+            $this->addError('selectedServices', __('appointments.err_add_service'));
 
             return;
         }
@@ -357,7 +357,7 @@ class extends Component
         $uniqueIds = $validServices->pluck('service_id')->map(fn ($id) => (int) $id)->unique();
 
         if ($uniqueIds->count() !== $validServices->count()) {
-            $this->addError('selectedServices', 'Каждая услуга должна быть указана только один раз.');
+            $this->addError('selectedServices', __('appointments.err_service_once'));
 
             return;
         }
@@ -366,7 +366,7 @@ class extends Component
         $endsAt = Carbon::parse($this->form_date.' '.$this->form_end_time);
 
         if ($endsAt->lte($startsAt)) {
-            $this->addError('form_end_time', 'Время окончания должно быть позже времени начала.');
+            $this->addError('form_end_time', __('appointments.err_end_after_start'));
 
             return;
         }
@@ -451,15 +451,15 @@ class extends Component
 <div class="animate-fade-in-up">
     <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>
-            <h1 class="font-display text-4xl font-semibold uppercase tracking-tight text-content">Записи</h1>
-            <p class="mt-1 text-sm text-content/40">Управление журналом посещений</p>
+            <h1 class="font-display text-4xl font-semibold uppercase tracking-tight text-content">{{ __('appointments.title') }}</h1>
+            <p class="mt-1 text-sm text-content/40">{{ __('appointments.subtitle') }}</p>
         </div>
         @unless ($isBarberView)
             <div class="flex items-center gap-3">
                 <div class="relative">
                     <select wire:model.live="barberFilter"
                             class="appearance-none rounded-xl border border-content/[0.08] bg-surface-sunken py-2.5 pl-4 pr-10 text-sm text-content outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
-                        <option value="" style="color: #fff; background-color: #1a1a1a;">Все мастера</option>
+                        <option value="" style="color: #fff; background-color: #1a1a1a;">{{ __('appointments.all_barbers') }}</option>
                         @foreach ($this->barbers as $barber)
                             <option value="{{ $barber->id }}" style="color: #fff; background-color: #1a1a1a;">{{ $barber->name }}</option>
                         @endforeach
@@ -471,7 +471,7 @@ class extends Component
                 <button type="button" wire:click="openCreate"
                         class="flex items-center gap-2 rounded-xl bg-gradient-to-r from-brass to-brass px-5 py-2.5 text-sm font-bold text-black shadow-lg shadow-brass/20 transition-all hover:scale-[1.02] hover:shadow-brass/30 active:scale-[0.98]">
                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-                    Новая запись
+                    {{ __('appointments.new') }}
                 </button>
             </div>
         @endunless
@@ -501,7 +501,7 @@ class extends Component
             <div class="absolute inset-0 bg-surface/80 backdrop-blur-sm" wire:click="cancel"></div>
             <div class="relative z-10 flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-content/[0.12] bg-surface-raised shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_32px_64px_rgba(0,0,0,0.8)]">
                 <div class="flex items-center justify-between border-b border-content/[0.06] px-6 py-4">
-                    <h3 class="text-sm font-bold text-content">{{ $editingId ? 'Редактирование записи' : 'Создание новой записи' }}</h3>
+                    <h3 class="text-sm font-bold text-content">{{ $editingId ? __('appointments.edit_title') : __('appointments.create_title') }}</h3>
                     <button type="button" wire:click="cancel"
                             class="flex h-8 w-8 items-center justify-center rounded-lg text-content/30 transition hover:bg-content/[0.06] hover:text-content">
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
@@ -511,23 +511,23 @@ class extends Component
                     <div class="flex-1 max-h-[60vh] overflow-y-auto px-6 py-6" style="max-height: 70vh;overflow-y: auto;">
                         <div class="grid gap-6 sm:grid-cols-2">
                             <div>
-                                <label class="mb-1.5 block text-xs font-semibold text-content/50">Клиент</label>
+                                <label class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('common.client') }}</label>
                                 <x-search-select
                                     :options="$this->filteredClients"
                                     searchModel="clientSearch"
                                     onSelect="selectClient"
                                     labelField="name"
                                     subLabelField="phone"
-                                    placeholder="Поиск клиента..."
+                                    placeholder="{{ __('appointments.search_client') }}"
                                 />
                                 @error('client_id') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                             </div>
                             <div>
-                                <label class="mb-1.5 block text-xs font-semibold text-content/50">Мастер</label>
+                                <label class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('common.barber') }}</label>
                                 <div class="relative">
                                     <select wire:model.live="barber_id"
                                             class="block w-full appearance-none rounded-xl border border-content/[0.08] bg-surface-sunken py-3 pl-4 pr-10 text-sm text-content outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
-                                        <option value="" style="color: #fff; background-color: #1a1a1a;">Выберите мастера...</option>
+                                        <option value="" style="color: #fff; background-color: #1a1a1a;">{{ __('appointments.select_barber') }}</option>
                                         @foreach ($this->barbers as $barber)
                                             <option value="{{ $barber->id }}" style="color: #fff; background-color: #1a1a1a;" @if($barber->price)
                                                 data-price="{{ $barber->price }}"
@@ -543,19 +543,19 @@ class extends Component
                                 @error('barber_id') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                             </div>
                             <div>
-                                <label class="mb-1.5 block text-xs font-semibold text-content/50">Дата</label>
+                                <label class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('common.date') }}</label>
                                 <input type="date" wire:model="form_date"
                                        class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
                                 @error('form_date') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                             </div>
                             <div>
-                                <label class="mb-1.5 block text-xs font-semibold text-content/50">Способ оплаты</label>
+                                <label class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('appointments.payment_method') }}</label>
                                 <div class="relative">
                                     <select wire:model.live="payment_type"
                                             class="block w-full appearance-none rounded-xl border border-content/[0.08] bg-surface-sunken py-3 pl-4 pr-10 text-sm text-content outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
-                                        <option value="cash" style="color: #fff; background-color: #1a1a1a;">Наличные</option>
-                                        <option value="card" style="color: #fff; background-color: #1a1a1a;">Карта</option>
-                                        <option value="both" style="color: #fff; background-color: #1a1a1a;">Нал + Карта</option>
+                                        <option value="cash" style="color: #fff; background-color: #1a1a1a;">{{ __('enums.payment_type.cash') }}</option>
+                                        <option value="card" style="color: #fff; background-color: #1a1a1a;">{{ __('enums.payment_type.card') }}</option>
+                                        <option value="both" style="color: #fff; background-color: #1a1a1a;">{{ __('enums.payment_type.both') }}</option>
                                     </select>
                                     <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-content/30">
                                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
@@ -568,22 +568,22 @@ class extends Component
                                 <div class="sm:col-span-2">
                                     <div class="grid grid-cols-2 gap-4 rounded-xl border border-royal/20 bg-royal/5 p-4">
                                         <div>
-                                            <label class="mb-1.5 block text-xs font-semibold text-content/50">Наличные (сум)</label>
+                                            <label class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('enums.payment_type.cash') }} ({{ __('common.currency') }})</label>
                                             <div class="relative">
                                                 <input type="number" wire:model.live="cash_amount"
                                                        placeholder="0" min="0"
                                                        class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] py-3 pl-4 pr-12 text-sm text-content outline-none transition focus:border-success/40 focus:ring-1 focus:ring-success/20">
-                                                <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-medium text-content/25">сум</span>
+                                                <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-medium text-content/25">{{ __('common.currency') }}</span>
                                             </div>
                                             @error('cash_amount') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                                         </div>
                                         <div>
-                                            <label class="mb-1.5 block text-xs font-semibold text-content/50">Карта (сум)</label>
+                                            <label class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('enums.payment_type.card') }} ({{ __('common.currency') }})</label>
                                             <div class="relative">
                                                 <input type="number" wire:model.live="card_amount"
                                                        placeholder="0" min="0"
                                                        class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] py-3 pl-4 pr-12 text-sm text-content outline-none transition focus:border-info/40 focus:ring-1 focus:ring-info/20">
-                                                <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-medium text-content/25">сум</span>
+                                                <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-medium text-content/25">{{ __('common.currency') }}</span>
                                             </div>
                                             @error('card_amount') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                                         </div>
@@ -604,8 +604,8 @@ class extends Component
                                                 'text-xs font-semibold transition-colors',
                                                 'text-danger/80' => $debtEnabled,
                                                 'text-content/50' => ! $debtEnabled,
-                                            ])>В долг</label>
-                                            <p class="mt-0.5 text-[10px] text-content/30">Если клиент не оплачивает сейчас</p>
+                                            ])>{{ __('appointments.on_debt') }}</label>
+                                            <p class="mt-0.5 text-[10px] text-content/30">{{ __('appointments.debt_hint') }}</p>
                                         </div>
                                         <button type="button" wire:click="$toggle('debtEnabled')"
                                                 role="switch" aria-checked="{{ $debtEnabled ? 'true' : 'false' }}"
@@ -626,10 +626,10 @@ class extends Component
                                             <input type="number" wire:model.live="debt_amount"
                                                    placeholder="0" min="0"
                                                    class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] py-3 pl-4 pr-12 text-sm text-content outline-none transition focus:border-danger/40 focus:ring-1 focus:ring-danger/20">
-                                            <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-medium text-content/25">сум</span>
+                                            <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-medium text-content/25">{{ __('common.currency') }}</span>
                                         </div>
                                         @error('debt_amount') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
-                                        <p class="mt-2 text-[10px] text-danger/70">Клиент обязателен при долге</p>
+                                        <p class="mt-2 text-[10px] text-danger/70">{{ __('appointments.debt_client_required') }}</p>
                                     @endif
                                 </div>
                             </div>
@@ -637,11 +637,11 @@ class extends Component
                             {{-- Services --}}
                             <div class="sm:col-span-2">
                                 <div class="mb-3 flex items-center justify-between gap-2">
-                                    <label class="text-xs font-semibold text-content/50">Услуги</label>
+                                    <label class="text-xs font-semibold text-content/50">{{ __('common.services') }}</label>
                                     <button type="button" wire:click="addService"
                                             class="flex items-center gap-1.5 rounded-lg border border-content/[0.08] bg-content/[0.02] px-3 py-1.5 text-xs font-bold text-content/60 transition hover:border-brass/40 hover:bg-brass/5 hover:text-brass-ink">
                                         <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-                                        Добавить услугу
+                                        {{ __('appointments.add_service') }}
                                     </button>
                                 </div>
 
@@ -679,23 +679,23 @@ class extends Component
                                                         'border-danger/40 focus:border-danger/60' => $isDuplicate,
                                                         'border-content/[0.08] focus:border-brass/40 focus:ring-1 focus:ring-brass/20' => ! $isDuplicate,
                                                     ])>
-                                                <option value="" style="color: #fff; background-color: #1a1a1a;">Выберите услугу...</option>
+                                                <option value="" style="color: #fff; background-color: #1a1a1a;">{{ __('appointments.select_service') }}</option>
                                                 @foreach ($this->services as $service)
                                                     <option value="{{ $service->id }}"
                                                             style="color: #fff; background-color: #1a1a1a;"
                                                             @disabled(in_array($service->id, $otherUsed))>
-                                                        {{ $service->name }} ({{ $service->duration_minutes }} мин)
+                                                        {{ $service->name }} ({{ $service->duration_minutes }} {{ __('common.minutes_short') }})
                                                     </option>
                                                 @endforeach
                                             </select>
                                             @if ($isDuplicate)
-                                                <span class="shrink-0 text-[10px] font-bold text-danger">дубль</span>
+                                                <span class="shrink-0 text-[10px] font-bold text-danger">{{ __('appointments.duplicate') }}</span>
                                             @endif
                                             <div class="relative w-36 shrink-0">
                                                 <input type="number" wire:model.live="selectedServices.{{ $i }}.amount"
                                                        placeholder="0" min="0"
                                                        class="block w-full rounded-lg border border-content/[0.08] bg-transparent py-2 pl-3 pr-10 text-sm text-content outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
-                                                <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-medium text-content/25">сум</span>
+                                                <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-medium text-content/25">{{ __('common.currency') }}</span>
                                             </div>
                                             <button type="button" wire:click="removeService({{ $i }})"
                                                     class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-content/20 transition hover:bg-danger/10 hover:text-danger">
@@ -705,15 +705,15 @@ class extends Component
                                     @empty
                                         <div class="flex flex-col items-center gap-2 py-8 text-center">
                                             <svg class="h-8 w-8 text-content/10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 0 0 9.568 3Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6Z" /></svg>
-                                            <p class="text-xs text-content/25">Нет услуг — нажмите «Добавить услугу»</p>
+                                            <p class="text-xs text-content/25">{{ __('appointments.no_services_hint') }}</p>
                                         </div>
                                     @endforelse
                                 </div>
 
                                 @if (count($selectedServices) > 0)
                                     <div class="mt-2.5 flex items-center justify-end gap-2 rounded-xl border border-brass/10 bg-brass/5 px-4 py-2.5">
-                                        <span class="text-xs text-content/40">Итого:</span>
-                                        <span class="text-sm font-bold text-brass-ink">{{ number_format((int) $price, 0, '.', ' ') }} сум</span>
+                                        <span class="text-xs text-content/40">{{ __('common.total') }}:</span>
+                                        <span class="text-sm font-bold text-brass-ink">{{ number_format((int) $price, 0, '.', ' ') }} {{ __('common.currency') }}</span>
                                     </div>
                                 @endif
                             </div>
@@ -721,9 +721,9 @@ class extends Component
                             {{-- Time selects --}}
                             <div class="sm:col-span-2">
                                 <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-                                    <label class="text-xs font-semibold text-content/50">Время</label>
+                                    <label class="text-xs font-semibold text-content/50">{{ __('common.time') }}</label>
                                     <div class="flex items-center gap-1 rounded-xl border border-content/[0.06] bg-content/[0.03] p-1">
-                                        @foreach ([15 => '15 мин', 30 => '30 мин', 60 => '1 ч'] as $step => $label)
+                                        @foreach ([15 => '15 '.__('common.minutes_short'), 30 => '30 '.__('common.minutes_short'), 60 => __('appointments.one_hour')] as $step => $label)
                                             <button type="button" wire:click="setTimeStep({{ $step }})"
                                                     @class([
                                                         'rounded-lg px-3 py-1 text-xs font-bold transition',
@@ -737,10 +737,10 @@ class extends Component
                                 </div>
                                 <div class="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label class="mb-1.5 block text-xs font-semibold text-content/40">Начало</label>
+                                        <label class="mb-1.5 block text-xs font-semibold text-content/40">{{ __('appointments.start') }}</label>
                                         <select wire:model.live="form_start_time"
                                                 class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20 [&>option]:bg-surface">
-                                            <option value="" style="color: #fff; background-color: #1a1a1a;">— выберите —</option>
+                                            <option value="" style="color: #fff; background-color: #1a1a1a;">{{ __('appointments.select_placeholder') }}</option>
                                             @foreach ($this->timeSlots as $slot)
                                                 <option value="{{ $slot }}" style="color: #fff; background-color: #1a1a1a;">{{ $slot }}</option>
                                             @endforeach
@@ -748,10 +748,10 @@ class extends Component
                                         @error('form_start_time') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                                     </div>
                                     <div>
-                                        <label class="mb-1.5 block text-xs font-semibold text-content/40">Окончание</label>
+                                        <label class="mb-1.5 block text-xs font-semibold text-content/40">{{ __('appointments.end') }}</label>
                                         <select wire:model.live="form_end_time"
                                                 class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20 [&>option]:bg-surface">
-                                            <option value="" style="color: #fff; background-color: #1a1a1a;">— выберите —</option>
+                                            <option value="" style="color: #fff; background-color: #1a1a1a;">{{ __('appointments.select_placeholder') }}</option>
                                             @foreach ($this->timeSlots as $slot)
                                                 <option value="{{ $slot }}" style="color: #fff; background-color: #1a1a1a;">{{ $slot }}</option>
                                             @endforeach
@@ -762,8 +762,8 @@ class extends Component
                             </div>
 
                             <div class="sm:col-span-2">
-                                <label class="mb-1.5 block text-xs font-semibold text-content/50">Заметка</label>
-                                <textarea wire:model="note" rows="2" placeholder="Дополнительная информация..."
+                                <label class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('appointments.note') }}</label>
+                                <textarea wire:model="note" rows="2" placeholder="{{ __('appointments.note_placeholder') }}"
                                           class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content placeholder-content/20 outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20"></textarea>
                                 @error('note') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                             </div>
@@ -772,11 +772,11 @@ class extends Component
                     <div class="flex items-center justify-end gap-3 border-t border-content/[0.06] px-6 py-4">
                         <button type="button" wire:click="cancel"
                                 class="rounded-xl border border-content/[0.08] px-5 py-2.5 text-sm font-bold text-content/60 transition hover:bg-content/[0.06] hover:text-content">
-                            Отмена
+                            {{ __('common.cancel') }}
                         </button>
                         <button type="submit"
                                 class="rounded-xl bg-brass px-6 py-2.5 text-sm font-bold text-black transition-all hover:bg-brass-bright active:scale-[0.98]">
-                            {{ $editingId ? 'Сохранить изменения' : 'Создать запись' }}
+                            {{ $editingId ? __('appointments.save_changes') : __('appointments.create') }}
                         </button>
                     </div>
                 </form>
@@ -790,22 +790,22 @@ class extends Component
                 <thead>
                     <tr class="border-b border-content/[0.06] bg-content/[0.03] text-xs font-bold uppercase tracking-wider text-content/30">
                         <th class="cursor-pointer px-6 py-4 transition hover:text-content" wire:click="sortBy('starts_at')">
-                            Время
+                            {{ __('common.time') }}
                             @if ($sortField === 'starts_at')
                                 <span class="ml-1">{{ $sortDirection === 'asc' ? '↑' : '↓' }}</span>
                             @endif
                         </th>
-                        <th class="px-6 py-4">Клиент / Заметка</th>
-                        <th class="hidden px-6 py-4 md:table-cell">Мастер</th>
-                        <th class="hidden px-6 py-4 md:table-cell">Услуги / Итого</th>
+                        <th class="px-6 py-4">{{ __('appointments.client_note') }}</th>
+                        <th class="hidden px-6 py-4 md:table-cell">{{ __('common.barber') }}</th>
+                        <th class="hidden px-6 py-4 md:table-cell">{{ __('appointments.services_total') }}</th>
                         <th class="cursor-pointer px-6 py-4 transition hover:text-content" wire:click="sortBy('status')">
-                            Статус
+                            {{ __('common.status') }}
                             @if ($sortField === 'status')
                                 <span class="ml-1">{{ $sortDirection === 'asc' ? '↑' : '↓' }}</span>
                             @endif
                         </th>
                         @unless ($isBarberView)
-                            <th class="px-6 py-4 text-right">Действия</th>
+                            <th class="px-6 py-4 text-right">{{ __('common.actions') }}</th>
                         @endunless
                     </tr>
                 </thead>
@@ -842,7 +842,7 @@ class extends Component
                                     @foreach ($appointment->services as $service)
                                         <div class="flex items-center justify-between gap-3">
                                             <span class="text-content/60">{{ $service->name }}</span>
-                                            <span class="text-[10px] font-bold text-content/40">{{ number_format($service->pivot->amount, 0, '.', ' ') }} сум</span>
+                                            <span class="text-[10px] font-bold text-content/40">{{ number_format($service->pivot->amount, 0, '.', ' ') }} {{ __('common.currency') }}</span>
                                         </div>
                                     @endforeach
                                 </div>
@@ -853,29 +853,29 @@ class extends Component
                                             'text-brass-ink' => $appointment->price !== null,
                                             'text-content/30' => $appointment->price === null,
                                         ])>
-                                            Итого: {{ $appointment->formattedPrice }}
+                                            {{ __('common.total') }}: {{ $appointment->formattedPrice }}
                                         </span>
                                         @if ($appointment->payment_type === PaymentType::Both && ($appointment->cash_amount || $appointment->card_amount))
                                             <div class="flex flex-col items-end gap-0.5">
                                                 <span class="inline-flex items-center rounded-full bg-royal/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-royal">
                                                     {{ $appointment->payment_type->label() }}
                                                 </span>
-                                                <span class="text-[9px] text-success/70">нал: {{ number_format((int) $appointment->cash_amount, 0, '.', ' ') }} сум</span>
-                                                <span class="text-[9px] text-info/70">карта: {{ number_format((int) $appointment->card_amount, 0, '.', ' ') }} сум</span>
+                                                <span class="text-[9px] text-success/70">{{ __('appointments.cash_short') }}: {{ number_format((int) $appointment->cash_amount, 0, '.', ' ') }} {{ __('common.currency') }}</span>
+                                                <span class="text-[9px] text-info/70">{{ __('appointments.card_short') }}: {{ number_format((int) $appointment->card_amount, 0, '.', ' ') }} {{ __('common.currency') }}</span>
                                             </div>
                                         @else
                                             <span @class([
                                                 'inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider',
                                                 $appointment->payment_type?->badgeClasses() ?? PaymentType::Cash->badgeClasses(),
                                             ])>
-                                                {{ $appointment->payment_type?->label() ?? 'Наличные' }}
+                                                {{ $appointment->payment_type?->label() ?? __('enums.payment_type.cash') }}
                                             </span>
                                         @endif
                                     </div>
                                     @if ($appointment->hasDebt)
                                         <div class="mt-1 flex items-center gap-1.5 rounded-lg bg-danger/10 px-2 py-1">
                                             <svg class="h-3 w-3 text-danger" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" /></svg>
-                                            <span class="text-[10px] font-bold text-danger">Долг: {{ $appointment->formattedDebt }}</span>
+                                            <span class="text-[10px] font-bold text-danger">{{ __('common.debt') }}: {{ $appointment->formattedDebt }}</span>
                                         </div>
                                     @endif
                                 @endif
@@ -899,23 +899,23 @@ class extends Component
                                 <div class="flex items-center justify-end gap-1.5">
                                     @if ($appointment->status === AppointmentStatus::Pending)
                                         <button type="button" wire:click="markConfirmed({{ $appointment->id }})"
-                                                title="Подтвердить"
+                                                title="{{ __('common.confirm') }}"
                                                 class="flex h-8 w-8 items-center justify-center rounded-lg bg-info/10 text-info transition hover:bg-info hover:text-black">
                                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
                                         </button>
                                         <button type="button" wire:click="markCancelled({{ $appointment->id }})"
-                                                title="Отменить"
+                                                title="{{ __('appointments.cancel_action') }}"
                                                 class="flex h-8 w-8 items-center justify-center rounded-lg bg-danger/10 text-danger transition hover:bg-danger hover:text-black">
                                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
                                         </button>
                                     @elseif ($appointment->status === AppointmentStatus::Confirmed)
                                         <button type="button" wire:click="markCompleted({{ $appointment->id }})"
-                                                title="Завершить"
+                                                title="{{ __('appointments.complete') }}"
                                                 class="flex h-8 w-8 items-center justify-center rounded-lg bg-success/10 text-success transition hover:bg-success hover:text-black">
                                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
                                         </button>
                                         <button type="button" wire:click="markCancelled({{ $appointment->id }})"
-                                                title="Отменить"
+                                                title="{{ __('appointments.cancel_action') }}"
                                                 class="flex h-8 w-8 items-center justify-center rounded-lg bg-danger/10 text-danger transition hover:bg-danger hover:text-black">
                                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
                                         </button>
@@ -925,7 +925,7 @@ class extends Component
                                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" /></svg>
                                     </button>
                                     <button type="button" wire:click="delete({{ $appointment->id }})"
-                                            wire:confirm="Удалить запись?"
+                                            wire:confirm="{{ __('appointments.delete_confirm') }}"
                                             class="flex h-8 w-8 items-center justify-center rounded-lg border border-content/[0.06] text-content/20 transition hover:text-danger">
                                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" /></svg>
                                     </button>
@@ -935,7 +935,7 @@ class extends Component
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="{{ $isBarberView ? 5 : 6 }}" class="px-6 py-12 text-center text-content/20">На этот день записей нет</td>
+                            <td colspan="{{ $isBarberView ? 5 : 6 }}" class="px-6 py-12 text-center text-content/20">{{ __('appointments.empty') }}</td>
                         </tr>
                     @endforelse
                 </tbody>

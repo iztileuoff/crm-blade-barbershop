@@ -86,32 +86,32 @@ class extends Component
 <div class="animate-fade-in-up">
     <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>
-            <h1 class="font-display text-4xl font-semibold uppercase tracking-tight text-content">Специализации</h1>
-            <p class="mt-1 text-sm text-content/40">Категории и уровни мастерства барберов</p>
+            <h1 class="font-display text-4xl font-semibold uppercase tracking-tight text-content">{{ __('specializations.title') }}</h1>
+            <p class="mt-1 text-sm text-content/40">{{ __('specializations.subtitle') }}</p>
         </div>
         <button type="button" wire:click="openCreate"
                 class="flex items-center gap-2 rounded-xl bg-gradient-to-r from-brass to-brass px-5 py-2.5 text-sm font-bold text-black shadow-lg shadow-brass/20 transition-all hover:scale-[1.02] hover:shadow-brass/30 active:scale-[0.98]">
             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-            Добавить специализацию
+            {{ __('specializations.add') }}
         </button>
     </div>
 
     @if ($showForm)
         <div class="mb-8 overflow-hidden rounded-2xl border border-content/[0.06] bg-content/[0.03] shadow-xl backdrop-blur-md">
             <div class="border-b border-content/[0.06] bg-content/[0.03] px-6 py-4">
-                <h3 class="text-sm font-bold text-content">{{ $editingId ? 'Изменение специализации' : 'Новая специализация' }}</h3>
+                <h3 class="text-sm font-bold text-content">{{ $editingId ? __('specializations.edit_title') : __('specializations.create_title') }}</h3>
             </div>
             <form wire:submit="save" class="p-6">
                 <div class="grid gap-6 sm:grid-cols-2">
                     <div>
-                        <label class="mb-1.5 block text-xs font-semibold text-content/50">Название</label>
-                        <input type="text" wire:model="name" placeholder="Например: Топ-мастер"
+                        <label class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('common.title_field') }}</label>
+                        <input type="text" wire:model="name" placeholder="{{ __('specializations.placeholder_name') }}"
                                class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content placeholder-content/20 outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
                         @error('name') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                     </div>
                     <div>
-                        <label class="mb-1.5 block text-xs font-semibold text-content/50">Описание (необязательно)</label>
-                        <input type="text" wire:model="description" placeholder="Краткое описание..."
+                        <label class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('common.description') }} {{ __('common.optional') }}</label>
+                        <input type="text" wire:model="description" placeholder="{{ __('specializations.placeholder_description') }}"
                                class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content placeholder-content/20 outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
                         @error('description') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                     </div>
@@ -119,11 +119,11 @@ class extends Component
                 <div class="mt-8 flex items-center justify-end gap-3 border-t border-content/[0.06] pt-6">
                     <button type="button" wire:click="cancel"
                             class="rounded-xl border border-content/[0.08] px-5 py-2.5 text-sm font-bold text-content/60 transition hover:bg-content/[0.06] hover:text-content">
-                        Отмена
+                        {{ __('common.cancel') }}
                     </button>
                     <button type="submit"
                             class="rounded-xl bg-brass px-6 py-2.5 text-sm font-bold text-black transition-all hover:bg-brass-bright active:scale-[0.98]">
-                        {{ $editingId ? 'Сохранить изменения' : 'Создать специализацию' }}
+                        {{ $editingId ? __('common.save_changes') : __('specializations.create') }}
                     </button>
                 </div>
             </form>
@@ -135,10 +135,10 @@ class extends Component
             <table class="w-full text-left text-sm">
                 <thead>
                     <tr class="border-b border-content/[0.06] bg-content/[0.03] text-xs font-bold uppercase tracking-wider text-content/30">
-                        <th class="px-6 py-4">Название</th>
-                        <th class="px-6 py-4">Описание</th>
-                        <th class="px-6 py-4 text-center">Мастеров</th>
-                        <th class="px-6 py-4 text-right">Действия</th>
+                        <th class="px-6 py-4">{{ __('common.title_field') }}</th>
+                        <th class="px-6 py-4">{{ __('common.description') }}</th>
+                        <th class="px-6 py-4 text-center">{{ __('specializations.barbers_count') }}</th>
+                        <th class="px-6 py-4 text-right">{{ __('common.actions') }}</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-content/[0.04]">
@@ -158,7 +158,7 @@ class extends Component
                                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" /></svg>
                                     </button>
                                     <button type="button" wire:click="delete({{ $specialization->id }})"
-                                            wire:confirm="Удалить специализацию «{{ $specialization->name }}»?"
+                                            wire:confirm="{{ __('specializations.delete_confirm', ['name' => $specialization->name]) }}"
                                             class="flex h-9 w-9 items-center justify-center rounded-lg border border-content/[0.06] text-danger/50 transition hover:border-danger/20 hover:text-danger">
                                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" /></svg>
                                     </button>
@@ -167,7 +167,7 @@ class extends Component
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="4" class="px-6 py-12 text-center text-content/20">Специализаций пока нет</td>
+                            <td colspan="4" class="px-6 py-12 text-center text-content/20">{{ __('specializations.empty') }}</td>
                         </tr>
                     @endforelse
                 </tbody>

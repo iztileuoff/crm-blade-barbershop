@@ -12,10 +12,10 @@ enum AppointmentStatus: string
     public function label(): string
     {
         return match ($this) {
-            self::Pending => 'Ожидает',
-            self::Confirmed => 'Подтверждена',
-            self::Completed => 'Завершена',
-            self::Cancelled => 'Отменена',
+            self::Pending => __('enums.appointment_status.pending'),
+            self::Confirmed => __('enums.appointment_status.confirmed'),
+            self::Completed => __('enums.appointment_status.completed'),
+            self::Cancelled => __('enums.appointment_status.cancelled'),
         };
     }
 

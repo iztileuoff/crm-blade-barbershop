@@ -53,3 +53,24 @@ it('translates booking validation messages for the active locale', function () {
 
     expect(__('booking.validation.invalid_phone'))->toBe('Durıs nomer kiritiń: 998XXXXXXXXX');
 });
+
+it('renders the admin dashboard in the selected locale', function (string $locale, string $expected) {
+    $this->withSession(['locale' => $locale])
+        ->get(route('admin.dashboard'))
+        ->assertOk()
+        ->assertSee($expected);
+})->with([
+    'russian' => ['ru', 'Сводка за день'],
+    'uzbek' => ['uz', 'Kunlik hisobot'],
+    'karakalpak' => ['kaa', 'Kúnlik esabat'],
+]);
+
+it('translates enum labels for the active locale', function () {
+    app()->setLocale('uz');
+    expect(App\Enums\AppointmentStatus::Completed->label())->toBe('Yakunlangan');
+    expect(App\Enums\PaymentType::Cash->label())->toBe('Naqd');
+
+    app()->setLocale('kaa');
+    expect(App\Enums\AppointmentStatus::Completed->label())->toBe('Juwmaqlanǵan');
+    expect(App\Enums\Role::BARBER->label())->toBe('Barber');
+});

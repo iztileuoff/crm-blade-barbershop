@@ -11,9 +11,9 @@ enum PaymentType: string
     public function label(): string
     {
         return match ($this) {
-            self::Cash => 'Наличные',
-            self::Card => 'Карта',
-            self::Both => 'Нал + Карта',
+            self::Cash => __('enums.payment_type.cash'),
+            self::Card => __('enums.payment_type.card'),
+            self::Both => __('enums.payment_type.both'),
         };
     }
 

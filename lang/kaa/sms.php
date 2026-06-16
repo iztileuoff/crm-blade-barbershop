@@ -1,0 +1,49 @@
+<?php
+
+return [
+    // Settings page
+    'settings_title' => 'SMS · Eskiz sazlamaları',
+    'settings_subtitle' => 'Eskiz SMS menen integraciya',
+    'env_note' => 'Eskiz logini hám paroli .env faylında (ESKIZ_EMAIL, ESKIZ_PASSWORD) saqlanadı hám qáwipsizlik maqsetinde paneldan ózgertilmeydi.',
+    'integration_status' => 'Integraciya halatı',
+    'credentials' => 'Esap maǵlıwmatları',
+    'configured' => 'Sazlanǵan',
+    'not_configured' => 'Sazlanbaǵan',
+    'sender_name' => 'Jiberiwshi atı (from)',
+    'api_endpoint' => 'API endpoint',
+    'connection' => 'Baylanıs',
+    'success' => 'Tabıslı',
+    'error' => 'Qátelik',
+    'balance' => 'Balans',
+    'balance_unavailable' => 'qoljetimsiz',
+    'check_connection' => 'Baylanıstı tekseriw',
+    'checking' => 'Tekserilmekte…',
+
+    // History page
+    'history_title' => 'SMS · Tariyx',
+    'sent_label' => 'Jiberildi',
+    'errors_label' => 'Qátelikler',
+    'all_types' => 'Barlıq túrler',
+    'all_statuses' => 'Barlıq halatlar',
+    'sent' => 'Jiberildi',
+    'context_reminder' => 'Esletpe',
+    'context_retention' => 'Uslap qalıw',
+    'context_broadcast' => 'Tarqatıw',
+    'context_manual' => 'Qol menen',
+    'col_recipient' => 'Qabıl etiwshi',
+    'col_message' => 'Xabar',
+    'col_type' => 'Túr',
+    'empty_history' => 'Házirshe SMS jiberilmegen',
+
+    // Templates page
+    'templates_title' => 'SMS · Shablonlar',
+    'templates_subtitle' => 'Klientlerge SMS xabar tekstleri',
+    'templates_saved' => 'Shablonlar saqlandı',
+    'eskiz_note' => 'Eskiz tek aldınnan tastıyıqlanǵan tekstlerdi jiberedi. Shablondı ózgertkennen keyin onı Eskiz kabinetinde tastıyıqlań, bolmasa SMS jetip barmaydı.',
+    'variables' => 'Ózgeriwshiler:',
+    'save_templates' => 'Shablonlardı saqlaw',
+    'field_reminder_label' => 'Jazılıw haqqında esletpe (30 minut aldın)',
+    'field_reminder_hint' => 'Telegramsız klientke keliwden aldın jiberiledi.',
+    'field_retention_label' => 'Uslap qalıw xabarı',
+    'field_retention_hint' => 'Uzaq waqıt kelmegen klientke jiberiledi.',
+];

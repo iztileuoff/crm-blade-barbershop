@@ -29,37 +29,25 @@ class extends Component
     #[Computed]
     public function dateString(): string
     {
-        $months = [
-            1 => 'января', 2 => 'февраля', 3 => 'марта', 4 => 'апреля',
-            5 => 'мая', 6 => 'июня', 7 => 'июля', 8 => 'августа',
-            9 => 'сентября', 10 => 'октября', 11 => 'ноября', 12 => 'декабря',
-        ];
-
         try {
             $d = Carbon::parse($this->date);
         } catch (\Exception $e) {
             $d = Carbon::now('Asia/Tashkent');
         }
 
-        return "{$d->day} {$months[$d->month]} {$d->year}";
+        return $d->translatedFormat('j F Y');
     }
 
     #[Computed]
     public function monthString(): string
     {
-        $months = [
-            1 => 'Январь', 2 => 'Февраль', 3 => 'Март', 4 => 'Апрель',
-            5 => 'Май', 6 => 'Июнь', 7 => 'Июль', 8 => 'Август',
-            9 => 'Сентябрь', 10 => 'Октябрь', 11 => 'Ноябрь', 12 => 'Декабрь',
-        ];
-
         try {
             $d = Carbon::parse($this->month.'-01');
         } catch (\Exception $e) {
             $d = Carbon::now('Asia/Tashkent');
         }
 
-        return "{$months[$d->month]} {$d->year}";
+        return \Illuminate\Support\Str::ucfirst($d->translatedFormat('F Y'));
     }
 
     // ─── Daily computed ───────────────────────────────────────────────────────
@@ -171,8 +159,8 @@ class extends Component
                     'cardRevenue' => $cardRevenue,
                     'salary' => $salary,
                     'salaryPercent' => $barber->salary_percent,
-                    'formattedRevenue' => number_format($revenue, 0, '.', ' ').' сум',
-                    'formattedSalary' => number_format($salary, 0, '.', ' ').' сум',
+                    'formattedRevenue' => number_format($revenue, 0, '.', ' ').' '.__('common.currency'),
+                    'formattedSalary' => number_format($salary, 0, '.', ' ').' '.__('common.currency'),
                 ];
             });
     }
@@ -259,8 +247,8 @@ class extends Component
                     'cardRevenue' => $cardRevenue,
                     'salary' => $salary,
                     'salaryPercent' => $barber->salary_percent,
-                    'formattedRevenue' => number_format($revenue, 0, '.', ' ').' сум',
-                    'formattedSalary' => number_format($salary, 0, '.', ' ').' сум',
+                    'formattedRevenue' => number_format($revenue, 0, '.', ' ').' '.__('common.currency'),
+                    'formattedSalary' => number_format($salary, 0, '.', ' ').' '.__('common.currency'),
                 ];
             });
     }
@@ -318,7 +306,7 @@ class extends Component
 
     public function formatSum(int $value): string
     {
-        return number_format($value, 0, '.', ' ').' сум';
+        return number_format($value, 0, '.', ' ').' '.__('common.currency');
     }
 }; ?>
 
@@ -326,12 +314,12 @@ class extends Component
     {{-- Header --}}
     <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>
-            <h1 class="font-display text-4xl font-semibold uppercase tracking-tight text-content">Касса</h1>
+            <h1 class="font-display text-4xl font-semibold uppercase tracking-tight text-content">{{ __('dashboard.title') }}</h1>
             <p class="mt-1 text-sm text-content/40">
                 @if ($activeTab === 'day')
-                    Сводка за день — {{ $this->dateString }}
+                    {{ __('dashboard.summary_day') }} — {{ $this->dateString }}
                 @else
-                    Сводка за месяц — {{ $this->monthString }}
+                    {{ __('dashboard.summary_month') }} — {{ $this->monthString }}
                 @endif
             </p>
         </div>
@@ -347,7 +335,7 @@ class extends Component
                         'text-content/40 hover:text-content/70' => $activeTab !== 'day',
                     ])
                 >
-                    День
+                    {{ __('dashboard.tab_day') }}
                 </button>
                 <button
                     wire:click="$set('activeTab', 'month')"
@@ -357,7 +345,7 @@ class extends Component
                         'text-content/40 hover:text-content/70' => $activeTab !== 'month',
                     ])
                 >
-                    Месяц
+                    {{ __('dashboard.tab_month') }}
                 </button>
             </div>
 
@@ -381,7 +369,7 @@ class extends Component
                     <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75"></span>
                     <span class="relative inline-flex h-2 w-2 rounded-full bg-success"></span>
                 </span>
-                Обновление каждые 60 сек
+                {{ __('dashboard.auto_refresh') }}
             </div>
         </div>
     </div>
@@ -396,40 +384,40 @@ class extends Component
             {{-- Total revenue --}}
             <div class="sm:col-span-2 overflow-hidden rounded-2xl border border-royal/20 bg-gradient-to-br from-royal/10 to-royal/[0.02] p-6 shadow-xl backdrop-blur-md">
                 <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold uppercase tracking-widest text-royal/70">Общий оборот</span>
+                    <span class="text-xs font-bold uppercase tracking-widest text-royal/70">{{ __('dashboard.total_turnover') }}</span>
                     <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-royal/15 text-royal">
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" /></svg>
                     </div>
                 </div>
                 <div class="mt-4 font-display text-4xl font-bold tabular-nums text-content">{{ $this->formatSum($this->totalRevenue) }}</div>
                 <div class="mt-1 flex items-center gap-4 text-xs">
-                    <span class="text-success/70">Услуги: {{ $this->formatSum($this->confirmedAmount) }}</span>
-                    <span class="text-brass-ink/70">Товары: {{ $this->formatSum($this->productSalesAmount) }}</span>
+                    <span class="text-success/70">{{ __('dashboard.services') }}: {{ $this->formatSum($this->confirmedAmount) }}</span>
+                    <span class="text-brass-ink/70">{{ __('dashboard.products') }}: {{ $this->formatSum($this->productSalesAmount) }}</span>
                 </div>
             </div>
 
             {{-- Product sales --}}
             <div class="overflow-hidden rounded-2xl border border-brass/20 bg-gradient-to-br from-brass/10 to-brass/[0.02] p-6 shadow-xl backdrop-blur-md">
                 <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold uppercase tracking-widest text-brass-ink/70">Продажи товаров</span>
+                    <span class="text-xs font-bold uppercase tracking-widest text-brass-ink/70">{{ __('dashboard.product_sales') }}</span>
                     <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-brass/15 text-brass-ink">
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007Z" /></svg>
                     </div>
                 </div>
                 <div class="mt-4 font-display text-4xl font-bold tabular-nums text-content">{{ $this->formatSum($this->productSalesAmount) }}</div>
-                <div class="mt-1 text-xs text-brass-ink/60">{{ $this->productOrders->count() }} продаж за день</div>
+                <div class="mt-1 text-xs text-brass-ink/60">{{ __('dashboard.sales_per_day', ['count' => $this->productOrders->count()]) }}</div>
             </div>
 
             {{-- Appointments amount --}}
             <div class="overflow-hidden rounded-2xl border border-success/20 bg-gradient-to-br from-success/10 to-success/[0.02] p-6 shadow-xl backdrop-blur-md">
                 <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold uppercase tracking-widest text-success/70">Услуги в кассе</span>
+                    <span class="text-xs font-bold uppercase tracking-widest text-success/70">{{ __('dashboard.services_in_cash') }}</span>
                     <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-success/15 text-success">
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z" /></svg>
                     </div>
                 </div>
                 <div class="mt-4 font-display text-4xl font-bold tabular-nums text-content">{{ $this->formatSum($this->confirmedAmount) }}</div>
-                <div class="mt-1 text-xs text-success/60">Только завершённые</div>
+                <div class="mt-1 text-xs text-success/60">{{ __('dashboard.only_completed') }}</div>
             </div>
         </div>
 
@@ -438,49 +426,49 @@ class extends Component
             {{-- Total appointments --}}
             <div class="overflow-hidden rounded-2xl border border-content/[0.06] bg-gradient-to-br from-content/[0.04] to-content/[0.01] p-6 shadow-xl backdrop-blur-md">
                 <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold uppercase tracking-widest text-content/40">Записей за день</span>
+                    <span class="text-xs font-bold uppercase tracking-widest text-content/40">{{ __('dashboard.appointments_day') }}</span>
                     <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-brass/10 text-brass-ink">
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" /></svg>
                     </div>
                 </div>
                 <div class="mt-4 font-display text-4xl font-bold tabular-nums text-content">{{ $this->totalAppointments }}</div>
-                <div class="mt-1 text-xs text-content/30">Все записи на день</div>
+                <div class="mt-1 text-xs text-content/30">{{ __('dashboard.all_day_appointments') }}</div>
             </div>
 
             {{-- Pending --}}
             <div class="overflow-hidden rounded-2xl border border-brass/20 bg-gradient-to-br from-brass/10 to-brass/[0.02] p-6 shadow-xl backdrop-blur-md">
                 <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold uppercase tracking-widest text-brass-ink/70">Ожидают</span>
+                    <span class="text-xs font-bold uppercase tracking-widest text-brass-ink/70">{{ __('dashboard.pending') }}</span>
                     <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-brass/15 text-brass-ink">
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
                     </div>
                 </div>
                 <div class="mt-4 font-display text-4xl font-bold tabular-nums text-content">{{ $this->pendingCount }}</div>
-                <div class="mt-1 text-xs text-brass-ink/60">Требуют подтверждения</div>
+                <div class="mt-1 text-xs text-brass-ink/60">{{ __('dashboard.need_confirmation') }}</div>
             </div>
 
             {{-- Completed --}}
             <div class="overflow-hidden rounded-2xl border border-content/[0.06] bg-gradient-to-br from-content/[0.04] to-content/[0.01] p-6 shadow-xl backdrop-blur-md">
                 <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold uppercase tracking-widest text-content/40">Завершено</span>
+                    <span class="text-xs font-bold uppercase tracking-widest text-content/40">{{ __('dashboard.completed') }}</span>
                     <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-info/10 text-info">
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
                     </div>
                 </div>
                 <div class="mt-4 font-display text-4xl font-bold tabular-nums text-content">{{ $this->completedCount }}</div>
-                <div class="mt-1 text-xs text-content/30">Закрытые визиты</div>
+                <div class="mt-1 text-xs text-content/30">{{ __('dashboard.closed_visits') }}</div>
             </div>
 
             {{-- Cancelled --}}
             <div class="overflow-hidden rounded-2xl border border-danger/20 bg-gradient-to-br from-danger/10 to-danger/[0.02] p-6 shadow-xl backdrop-blur-md">
                 <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold uppercase tracking-widest text-danger/70">Отменено</span>
+                    <span class="text-xs font-bold uppercase tracking-widest text-danger/70">{{ __('dashboard.cancelled') }}</span>
                     <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-danger/15 text-danger">
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
                     </div>
                 </div>
                 <div class="mt-4 font-display text-4xl font-bold tabular-nums text-content">{{ $this->cancelledCount }}</div>
-                <div class="mt-1 text-xs text-danger/60">Отмененные записи</div>
+                <div class="mt-1 text-xs text-danger/60">{{ __('dashboard.cancelled_appointments') }}</div>
             </div>
         </div>
 
@@ -489,21 +477,21 @@ class extends Component
             <div class="mb-8 overflow-hidden rounded-2xl border border-content/[0.06] bg-content/[0.03] shadow-xl backdrop-blur-md">
                 <div class="flex items-center justify-between border-b border-content/[0.06] bg-content/[0.03] px-6 py-4">
                     <div>
-                        <h3 class="text-sm font-bold text-content">Продажи товаров за день</h3>
-                        <p class="mt-0.5 text-xs text-content/30">Розничные продажи из склада</p>
+                        <h3 class="text-sm font-bold text-content">{{ __('dashboard.product_sales_day') }}</h3>
+                        <p class="mt-0.5 text-xs text-content/30">{{ __('dashboard.retail_from_stock') }}</p>
                     </div>
                     <a href="{{ route('admin.orders') }}" class="text-xs font-bold text-brass-ink/70 transition hover:text-brass-ink">
-                        Все продажи →
+                        {{ __('dashboard.all_sales') }}
                     </a>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-sm">
                         <thead>
                             <tr class="border-b border-content/[0.06] bg-content/[0.03] text-xs font-bold uppercase tracking-wider text-content/30">
-                                <th class="px-6 py-4">Время</th>
-                                <th class="px-6 py-4">Клиент</th>
-                                <th class="px-6 py-4">Товары</th>
-                                <th class="px-6 py-4 text-right">Сумма</th>
+                                <th class="px-6 py-4">{{ __('common.time') }}</th>
+                                <th class="px-6 py-4">{{ __('common.client') }}</th>
+                                <th class="px-6 py-4">{{ __('dashboard.products') }}</th>
+                                <th class="px-6 py-4 text-right">{{ __('common.amount') }}</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-content/[0.04]">
@@ -533,7 +521,7 @@ class extends Component
                         </tbody>
                         <tfoot>
                             <tr class="border-t border-content/[0.06] bg-content/[0.03] text-xs font-bold uppercase tracking-wider text-content/40">
-                                <td class="px-6 py-4" colspan="3">Итого товары</td>
+                                <td class="px-6 py-4" colspan="3">{{ __('dashboard.total_products') }}</td>
                                 <td class="px-6 py-4 text-right text-brass-ink">{{ $this->formatSum($this->productSalesAmount) }}</td>
                             </tr>
                         </tfoot>
@@ -546,19 +534,19 @@ class extends Component
         <div class="overflow-hidden rounded-2xl border border-content/[0.06] bg-content/[0.03] shadow-xl backdrop-blur-md">
             <div class="flex items-center justify-between border-b border-content/[0.06] bg-content/[0.03] px-6 py-4">
                 <div>
-                    <h3 class="text-sm font-bold text-content">Производительность мастеров</h3>
-                    <p class="mt-0.5 text-xs text-content/30">Записи и выручка за день</p>
+                    <h3 class="text-sm font-bold text-content">{{ __('dashboard.barber_performance') }}</h3>
+                    <p class="mt-0.5 text-xs text-content/30">{{ __('dashboard.appointments_revenue_day') }}</p>
                 </div>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-sm">
                     <thead>
                         <tr class="border-b border-content/[0.06] bg-content/[0.03] text-xs font-bold uppercase tracking-wider text-content/30">
-                            <th class="px-6 py-4">Имя</th>
-                            <th class="px-6 py-4 text-center">Записей за день</th>
-                            <th class="px-6 py-4 text-center">Отменено</th>
-                            <th class="px-6 py-4 text-right">Выручка</th>
-                            <th class="px-6 py-4 text-right">ЗП</th>
+                            <th class="px-6 py-4">{{ __('common.name') }}</th>
+                            <th class="px-6 py-4 text-center">{{ __('dashboard.appointments_day') }}</th>
+                            <th class="px-6 py-4 text-center">{{ __('dashboard.cancelled') }}</th>
+                            <th class="px-6 py-4 text-right">{{ __('common.revenue') }}</th>
+                            <th class="px-6 py-4 text-right">{{ __('dashboard.salary_short') }}</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-content/[0.04]">
@@ -632,14 +620,14 @@ class extends Component
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="px-6 py-12 text-center text-content/20">Активные мастера не найдены</td>
+                                <td colspan="5" class="px-6 py-12 text-center text-content/20">{{ __('dashboard.no_active_barbers') }}</td>
                             </tr>
                         @endforelse
                     </tbody>
                     @if ($this->barberStats->isNotEmpty())
                         <tfoot>
                             <tr class="border-t border-content/[0.06] bg-content/[0.03] text-xs font-bold uppercase tracking-wider text-content/40">
-                                <td class="px-6 py-4">Итого</td>
+                                <td class="px-6 py-4">{{ __('common.total') }}</td>
                                 <td class="px-6 py-4 text-center text-content">{{ $this->barberStats->sum('count') }}</td>
                                 <td class="px-6 py-4 text-center text-content">{{ $this->barberStats->sum('cancelled_count') }}</td>
                                 <td class="px-6 py-4 text-right text-success">{{ $this->formatSum((int) $this->barberStats->sum('revenue')) }}</td>
@@ -663,40 +651,40 @@ class extends Component
             {{-- Total monthly revenue --}}
             <div class="overflow-hidden rounded-2xl border border-royal/20 bg-gradient-to-br from-royal/10 to-royal/[0.02] p-6 shadow-xl backdrop-blur-md">
                 <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold uppercase tracking-widest text-royal/70">Оборот за месяц</span>
+                    <span class="text-xs font-bold uppercase tracking-widest text-royal/70">{{ __('dashboard.turnover_month') }}</span>
                     <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-royal/15 text-royal">
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" /></svg>
                     </div>
                 </div>
                 <div class="mt-4 font-display text-4xl font-bold tabular-nums text-content">{{ $this->formatSum($this->monthlyTotalRevenue) }}</div>
                 <div class="mt-1 flex items-center gap-4 text-xs">
-                    <span class="text-success/70">Услуги: {{ $this->formatSum($this->monthlyServiceRevenue) }}</span>
-                    <span class="text-brass-ink/70">Товары: {{ $this->formatSum($this->monthlyProductRevenue) }}</span>
+                    <span class="text-success/70">{{ __('dashboard.services') }}: {{ $this->formatSum($this->monthlyServiceRevenue) }}</span>
+                    <span class="text-brass-ink/70">{{ __('dashboard.products') }}: {{ $this->formatSum($this->monthlyProductRevenue) }}</span>
                 </div>
             </div>
 
             {{-- Monthly service revenue --}}
             <div class="overflow-hidden rounded-2xl border border-success/20 bg-gradient-to-br from-success/10 to-success/[0.02] p-6 shadow-xl backdrop-blur-md">
                 <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold uppercase tracking-widest text-success/70">Услуги за месяц</span>
+                    <span class="text-xs font-bold uppercase tracking-widest text-success/70">{{ __('dashboard.services_month') }}</span>
                     <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-success/15 text-success">
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z" /></svg>
                     </div>
                 </div>
                 <div class="mt-4 font-display text-4xl font-bold tabular-nums text-content">{{ $this->formatSum($this->monthlyServiceRevenue) }}</div>
-                <div class="mt-1 text-xs text-success/60">{{ $this->monthlyAppointments->count() }} завершённых записей</div>
+                <div class="mt-1 text-xs text-success/60">{{ __('dashboard.completed_appointments', ['count' => $this->monthlyAppointments->count()]) }}</div>
             </div>
 
             {{-- Monthly product revenue --}}
             <div class="overflow-hidden rounded-2xl border border-brass/20 bg-gradient-to-br from-brass/10 to-brass/[0.02] p-6 shadow-xl backdrop-blur-md">
                 <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold uppercase tracking-widest text-brass-ink/70">Товары за месяц</span>
+                    <span class="text-xs font-bold uppercase tracking-widest text-brass-ink/70">{{ __('dashboard.products_month') }}</span>
                     <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-brass/15 text-brass-ink">
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007Z" /></svg>
                     </div>
                 </div>
                 <div class="mt-4 font-display text-4xl font-bold tabular-nums text-content">{{ $this->formatSum($this->monthlyProductRevenue) }}</div>
-                <div class="mt-1 text-xs text-brass-ink/60">{{ $this->monthlyOrders->count() }} продаж</div>
+                <div class="mt-1 text-xs text-brass-ink/60">{{ __('dashboard.sales_count', ['count' => $this->monthlyOrders->count()]) }}</div>
             </div>
         </div>
 
@@ -705,13 +693,13 @@ class extends Component
             {{-- Total salary --}}
             <div class="overflow-hidden rounded-2xl border border-info/20 bg-gradient-to-br from-info/10 to-info/[0.02] p-6 shadow-xl backdrop-blur-md">
                 <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold uppercase tracking-widest text-info/70">ЗП мастеров за месяц</span>
+                    <span class="text-xs font-bold uppercase tracking-widest text-info/70">{{ __('dashboard.salary_month') }}</span>
                     <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-info/15 text-info">
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" /></svg>
                     </div>
                 </div>
                 <div class="mt-4 font-display text-4xl font-bold tabular-nums text-content">{{ $this->formatSum($this->monthlyTotalSalary) }}</div>
-                <div class="mt-1 text-xs text-info/60">Выплаты всем активным мастерам</div>
+                <div class="mt-1 text-xs text-info/60">{{ __('dashboard.payouts_all') }}</div>
             </div>
 
             {{-- Company profit --}}
@@ -725,7 +713,7 @@ class extends Component
                         'text-xs font-bold uppercase tracking-widest',
                         'text-success/70' => $this->companyProfit >= 0,
                         'text-danger/70' => $this->companyProfit < 0,
-                    ])>Прибыль компании</span>
+                    ])>{{ __('dashboard.company_profit') }}</span>
                     <div @class([
                         'flex h-10 w-10 items-center justify-center rounded-xl',
                         'bg-success/15 text-success' => $this->companyProfit >= 0,
@@ -740,7 +728,7 @@ class extends Component
                     'text-success/60' => $this->companyProfit >= 0,
                     'text-danger/60' => $this->companyProfit < 0,
                 ])>
-                    {{ $this->companyProfit >= 0 ? 'Оборот минус зарплаты мастеров' : 'Расходы превышают доход' }}
+                    {{ $this->companyProfit >= 0 ? __('dashboard.profit_positive') : __('dashboard.profit_negative') }}
                 </div>
             </div>
         </div>
@@ -748,19 +736,19 @@ class extends Component
         {{-- Daily Revenue Chart --}}
         <div class="mb-8 overflow-hidden rounded-2xl border border-content/[0.06] bg-content/[0.03] shadow-xl backdrop-blur-md">
             <div class="border-b border-content/[0.06] bg-content/[0.03] px-6 py-4">
-                <h3 class="text-sm font-bold text-content">Выручка по дням</h3>
-                <p class="mt-0.5 text-xs text-content/30">{{ $this->monthString }} — динамика услуг и продаж товаров</p>
+                <h3 class="text-sm font-bold text-content">{{ __('dashboard.revenue_by_day') }}</h3>
+                <p class="mt-0.5 text-xs text-content/30">{{ $this->monthString }} — {{ __('dashboard.revenue_by_day_sub') }}</p>
             </div>
             <div class="px-6 py-5">
                 {{-- Legend --}}
                 <div class="mb-4 flex items-center gap-5 text-xs text-content/50">
                     <span class="flex items-center gap-1.5">
                         <span class="inline-block h-2.5 w-2.5 rounded-sm bg-success/70"></span>
-                        Услуги
+                        {{ __('dashboard.services') }}
                     </span>
                     <span class="flex items-center gap-1.5">
                         <span class="inline-block h-2.5 w-2.5 rounded-sm bg-brass/60"></span>
-                        Товары
+                        {{ __('dashboard.products') }}
                     </span>
                 </div>
 
@@ -805,7 +793,7 @@ class extends Component
                                 fill-opacity="0.65"
                                 rx="2"
                             >
-                                <title>{{ $d['date'] }}: Товары {{ number_format($d['product'], 0, '.', ' ') }} сум</title>
+                                <title>{{ $d['date'] }}: {{ __('dashboard.products') }} {{ number_format($d['product'], 0, '.', ' ') }} {{ __('common.currency') }}</title>
                             </rect>
                             {{-- Service overlay (emerald) from top --}}
                             @if ($serviceH > 0)
@@ -818,7 +806,7 @@ class extends Component
                                     fill-opacity="0.75"
                                     rx="2"
                                 >
-                                    <title>{{ $d['date'] }}: Услуги {{ number_format($d['service'], 0, '.', ' ') }} сум</title>
+                                    <title>{{ $d['date'] }}: {{ __('dashboard.services') }} {{ number_format($d['service'], 0, '.', ' ') }} {{ __('common.currency') }}</title>
                                 </rect>
                             @endif
                         @else
@@ -838,7 +826,7 @@ class extends Component
                 </svg>
 
                 <div class="mt-2 text-right text-[10px] text-content/20">
-                    Макс. за день: {{ $this->formatSum((int) collect($this->dailyChartData)->max('total')) }}
+                    {{ __('dashboard.max_per_day') }}: {{ $this->formatSum((int) collect($this->dailyChartData)->max('total')) }}
                 </div>
             </div>
         </div>
@@ -847,19 +835,19 @@ class extends Component
         <div class="overflow-hidden rounded-2xl border border-content/[0.06] bg-content/[0.03] shadow-xl backdrop-blur-md">
             <div class="flex items-center justify-between border-b border-content/[0.06] bg-content/[0.03] px-6 py-4">
                 <div>
-                    <h3 class="text-sm font-bold text-content">Зарплата мастеров за месяц</h3>
-                    <p class="mt-0.5 text-xs text-content/30">{{ $this->monthString }} — выручка и начисления</p>
+                    <h3 class="text-sm font-bold text-content">{{ __('dashboard.salary_month_title') }}</h3>
+                    <p class="mt-0.5 text-xs text-content/30">{{ $this->monthString }} — {{ __('dashboard.salary_month_sub') }}</p>
                 </div>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-sm">
                     <thead>
                         <tr class="border-b border-content/[0.06] bg-content/[0.03] text-xs font-bold uppercase tracking-wider text-content/30">
-                            <th class="px-6 py-4">Мастер</th>
-                            <th class="px-6 py-4 text-center">Записей</th>
-                            <th class="px-6 py-4 text-right">Выручка</th>
-                            <th class="px-6 py-4 text-right">% ЗП</th>
-                            <th class="px-6 py-4 text-right">ЗП к выплате</th>
+                            <th class="px-6 py-4">{{ __('common.barber') }}</th>
+                            <th class="px-6 py-4 text-center">{{ __('dashboard.col_appointments') }}</th>
+                            <th class="px-6 py-4 text-right">{{ __('common.revenue') }}</th>
+                            <th class="px-6 py-4 text-right">{{ __('dashboard.col_salary_percent') }}</th>
+                            <th class="px-6 py-4 text-right">{{ __('dashboard.col_salary_payable') }}</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-content/[0.04]">
@@ -926,21 +914,21 @@ class extends Component
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="px-6 py-12 text-center text-content/20">Активные мастера не найдены</td>
+                                <td colspan="5" class="px-6 py-12 text-center text-content/20">{{ __('dashboard.no_active_barbers') }}</td>
                             </tr>
                         @endforelse
                     </tbody>
                     @if ($this->monthlyBarberStats->isNotEmpty())
                         <tfoot>
                             <tr class="border-t border-content/[0.06] bg-content/[0.03] text-xs font-bold uppercase tracking-wider text-content/40">
-                                <td class="px-6 py-4">Итого</td>
+                                <td class="px-6 py-4">{{ __('common.total') }}</td>
                                 <td class="px-6 py-4 text-center text-content">{{ $this->monthlyBarberStats->sum('count') }}</td>
                                 <td class="px-6 py-4 text-right text-success">{{ $this->formatSum((int) $this->monthlyBarberStats->sum('revenue')) }}</td>
                                 <td class="px-6 py-4"></td>
                                 <td class="px-6 py-4 text-right text-info">{{ $this->formatSum($this->monthlyTotalSalary) }}</td>
                             </tr>
                             <tr class="border-t border-content/[0.06] bg-content/[0.02] text-xs font-bold uppercase tracking-wider">
-                                <td class="px-6 py-4 text-content/40" colspan="3">Прибыль компании (оборот − ЗП)</td>
+                                <td class="px-6 py-4 text-content/40" colspan="3">{{ __('dashboard.profit_row') }}</td>
                                 <td class="px-6 py-4"></td>
                                 <td @class([
                                     'px-6 py-4 text-right font-extrabold tabular-nums',
