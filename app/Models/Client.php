@@ -20,6 +20,7 @@ class Client extends Model
         'birth_date',
         'last_visit_at',
         'last_retention_sent_at',
+        'telegram_chat_id',
     ];
 
     protected function casts(): array
@@ -28,6 +29,7 @@ class Client extends Model
             'birth_date' => 'date',
             'last_visit_at' => 'datetime',
             'last_retention_sent_at' => 'datetime',
+            'telegram_chat_id' => 'integer',
         ];
     }
 

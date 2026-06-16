@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'phone', 'password', 'role'])]
+#[Fillable(['name', 'phone', 'password', 'role', 'telegram_chat_id'])]
 #[Hidden(['password'])]
 class User extends Authenticatable
 {
@@ -29,6 +29,7 @@ class User extends Authenticatable
         return [
             'password' => 'hashed',
             'role' => Role::class,
+            'telegram_chat_id' => 'integer',
         ];
     }
 

@@ -14,7 +14,12 @@
       "mcp__laravel-boost__database-query",
       "mcp__laravel-boost__get-absolute-url",
       "PowerShell(herd open 2>&1)",
-      "PowerShell(php artisan migrate --no-interaction 2>&1)"
+      "PowerShell(php artisan migrate --no-interaction 2>&1)",
+      "Read(//c/Users/Asus/.claude/plugins/cache/claude-plugins-official/frontend-design/**)",
+      "PowerShell(npm run *)"
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "laravel-boost"
+  ]
 }

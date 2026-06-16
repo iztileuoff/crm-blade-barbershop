@@ -1,9 +1,14 @@
 <?php
 
+use App\Http\Controllers\TelegramWebhookController;
 use App\Http\Middleware\RestrictBarberAccess;
 use Livewire\Volt\Volt;
 
 Volt::route('/', 'pages.booking')->name('booking')->middleware('auth');
+
+// Telegram-бот (webhook). Безопасность — secret_token (safe_mode) на стороне Nutgram.
+// Контроллер (не замыкание), чтобы работал route:cache на проде.
+Route::post('/telegram/webhook', TelegramWebhookController::class)->name('telegram.webhook');
 
 Volt::route('/login', 'pages.auth.login')->name('login')->middleware('guest');
 Route::get('/logout', function () {

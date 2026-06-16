@@ -4,7 +4,9 @@ namespace App\Models;
 
 use App\Enums\AppointmentStatus;
 use App\Enums\PaymentType;
+use App\Observers\AppointmentObserver;
 use Database\Factories\AppointmentFactory;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -12,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Carbon;
 
+#[ObservedBy(AppointmentObserver::class)]
 class Appointment extends Model
 {
     /** @use HasFactory<AppointmentFactory> */
