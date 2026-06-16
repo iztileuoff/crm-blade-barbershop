@@ -44,6 +44,16 @@ function colorMixRgbFallback() {
     // to the inner rgb() color.
     const shadowWrapper = /color-mix\(in oklab,\s*(rgb\((?:[^()]+|\([^()]*\))*\))\s+var\(--tw-(?:shadow|inset-shadow|drop-shadow)-alpha\),\s*transparent\)/gi;
 
+    // When targeting browsers without color-mix(), Lightning CSS keeps the modern
+    // value inside `@supports (color: color-mix(in lab, red, red))` and emits a
+    // bare (alpha-stripped) fallback outside it. Once we've rewritten that modern
+    // value to rgb() — which the old browsers DO support — the gate is exactly
+    // backwards: it hides our usable fallback behind the feature it replaces.
+    // Relax the probe to an always-true condition so old browsers apply the rgb()
+    // rules too. Declarations we left as color-mix (e.g. currentcolor) simply fail
+    // to parse there and harmlessly fall back to the bare value, as before.
+    const colorMixSupportsGate = /@supports \(color:\s*color-mix\(in lab, red, red\)\)/gi;
+
     return {
         name: 'color-mix-rgb-fallback',
         apply: 'build',
@@ -59,6 +69,8 @@ function colorMixRgbFallback() {
                     });
 
                     css = css.replace(shadowWrapper, (_match, color) => color);
+
+                    css = css.replace(colorMixSupportsGate, '@supports (color: red)');
 
                     file.source = css;
                 }
