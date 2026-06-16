@@ -299,7 +299,6 @@ class extends Component
                     <tr class="border-b border-content/[0.06] bg-content/[0.03] text-xs font-bold uppercase tracking-wider text-content/30">
                         <th class="px-6 py-4">Мастер</th>
                         <th class="hidden px-6 py-4 sm:table-cell">Специализация</th>
-                        <th class="px-6 py-4">Цена</th>
                         <th class="hidden px-6 py-4 sm:table-cell">ЗП %</th>
                         <th class="hidden px-6 py-4 sm:table-cell">Статус</th>
                         <th class="px-6 py-4 text-right">Действия</th>
@@ -325,13 +324,6 @@ class extends Component
                             </td>
                             <td class="hidden px-6 py-4 text-content/50 sm:table-cell">
                                 {{ $barber->specialization?->name ?: '—' }}
-                            </td>
-                            <td class="px-6 py-4">
-                                @if ($barber->price)
-                                    <div class="font-bold text-brass-ink">{{ $barber->formattedPrice }}</div>
-                                @else
-                                    <span class="text-content/30">—</span>
-                                @endif
                             </td>
                             <td class="hidden px-6 py-4 sm:table-cell">
                                 <span class="inline-flex items-center rounded-full bg-content/[0.06] px-2.5 py-1 text-xs font-bold text-content/60">
