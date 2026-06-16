@@ -22,7 +22,10 @@ it('shows the booking tab in the admin navigation', function () {
 });
 
 it('applies the stored theme before paint to avoid a flash', function () {
-    $this->get(route('booking'))
+    $user = User::factory()->create(['role' => Role::SUPER_ADMIN]);
+
+    $this->actingAs($user)
+        ->get(route('booking'))
         ->assertOk()
         ->assertSee("localStorage.getItem('theme')", escape: false)
         ->assertSee("document.documentElement.classList.add('dark')", escape: false);
@@ -31,7 +34,10 @@ it('applies the stored theme before paint to avoid a flash', function () {
 it('keeps every theme toggle in sync via a shared event', function () {
     // Both toggles must broadcast and react to the same `theme-changed` event,
     // otherwise one toggle goes stale and the UI shows a mixed light/dark state.
-    $this->get(route('booking'))
+    $user = User::factory()->create(['role' => Role::SUPER_ADMIN]);
+
+    $this->actingAs($user)
+        ->get(route('booking'))
         ->assertOk()
         ->assertSee('@theme-changed.window', escape: false)
         ->assertSee("\$dispatch('theme-changed'", escape: false);

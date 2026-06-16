@@ -1,8 +1,15 @@
 @props(['label' => null])
 
 <button type="button"
-        x-data="{ dark: document.documentElement.classList.contains('dark') }"
-        @click="dark = !dark; document.documentElement.classList.toggle('dark', dark); localStorage.setItem('theme', dark ? 'dark' : 'light')"
+        x-data="{
+            dark: document.documentElement.classList.contains('dark'),
+            apply() {
+                document.documentElement.classList.toggle('dark', this.dark);
+                localStorage.setItem('theme', this.dark ? 'dark' : 'light');
+            },
+        }"
+        @theme-changed.window="dark = $event.detail.dark"
+        @click="dark = !dark; apply(); $dispatch('theme-changed', { dark })"
         :title="dark ? 'Светлая тема' : 'Тёмная тема'"
         aria-label="Переключить тему"
         {{ $attributes->merge(['class' => 'group']) }}>
