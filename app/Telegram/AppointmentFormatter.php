@@ -4,6 +4,7 @@ namespace App\Telegram;
 
 use App\Models\Appointment;
 use App\Models\Client;
+use App\Support\NotificationTemplates;
 
 /**
  * Формирует тексты сообщений об записях для Telegram (HTML parse mode).
@@ -11,6 +12,24 @@ use App\Models\Client;
  */
 class AppointmentFormatter
 {
+    /**
+     * Экранированные значения для подстановки в шаблоны уведомлений.
+     *
+     * @return array<string, string>
+     */
+    private static function vars(Appointment $appointment): array
+    {
+        return [
+            'time' => e($appointment->starts_at->format('H:i')),
+            'date' => e(Client::formatRussianDate($appointment->starts_at)),
+            'client' => e($appointment->client?->name ?? 'Клиент'),
+            'barber' => e($appointment->barber?->name ?? 'Мастер'),
+            'services' => e(self::services($appointment)),
+            'price' => e($appointment->formattedPrice),
+            'status' => e($appointment->status->label()),
+        ];
+    }
+
     public static function services(Appointment $appointment): string
     {
         $names = $appointment->services->pluck('name')->filter()->implode(', ');
@@ -49,30 +68,26 @@ class AppointmentFormatter
 
     public static function newForBarber(Appointment $appointment): string
     {
-        return "✂️ <b>Новая запись</b>\n\n".self::barberLine($appointment);
+        return NotificationTemplates::render('tg_new_for_barber', self::vars($appointment));
     }
 
     public static function cancelledForBarber(Appointment $appointment): string
     {
-        return "❌ <b>Запись отменена</b>\n\n".self::barberLine($appointment);
+        return NotificationTemplates::render('tg_cancelled_for_barber', self::vars($appointment));
     }
 
     public static function cancelledForClient(Appointment $appointment): string
     {
-        return "❌ <b>Ваша запись отменена</b>\n\n".self::clientLine($appointment);
+        return NotificationTemplates::render('tg_cancelled_for_client', self::vars($appointment));
     }
 
     public static function reminderForClient(Appointment $appointment): string
     {
-        return sprintf(
-            "⏰ <b>Напоминание</b>\nВы записаны на <b>%s</b> к мастеру %s.\nЖдём вас в Blade Barbershop!",
-            e($appointment->starts_at->format('H:i')),
-            e($appointment->barber?->name ?? 'мастеру'),
-        );
+        return NotificationTemplates::render('tg_reminder_for_client', self::vars($appointment));
     }
 
     public static function reminderForBarber(Appointment $appointment): string
     {
-        return "⏰ <b>Через 30 минут запись</b>\n\n".self::barberLine($appointment);
+        return NotificationTemplates::render('tg_reminder_for_barber', self::vars($appointment));
     }
 }

@@ -21,6 +21,28 @@ it('shows the booking tab in the admin navigation', function () {
         ->assertSee('Новая запись');
 });
 
+it('applies the stored theme before paint to avoid a flash', function () {
+    $user = User::factory()->create(['role' => Role::SUPER_ADMIN]);
+
+    $this->actingAs($user)
+        ->get(route('booking'))
+        ->assertOk()
+        ->assertSee("localStorage.getItem('theme')", escape: false)
+        ->assertSee("document.documentElement.classList.add('dark')", escape: false);
+});
+
+it('keeps every theme toggle in sync via a shared event', function () {
+    // Both toggles must broadcast and react to the same `theme-changed` event,
+    // otherwise one toggle goes stale and the UI shows a mixed light/dark state.
+    $user = User::factory()->create(['role' => Role::SUPER_ADMIN]);
+
+    $this->actingAs($user)
+        ->get(route('booking'))
+        ->assertOk()
+        ->assertSee('@theme-changed.window', escape: false)
+        ->assertSee("\$dispatch('theme-changed'", escape: false);
+});
+
 it('renders every admin page for a super admin', function (string $route) {
     $user = User::factory()->create(['role' => Role::SUPER_ADMIN]);
 
@@ -37,6 +59,12 @@ it('renders every admin page for a super admin', function (string $route) {
     'admin.products',
     'admin.orders',
     'admin.debts',
+    'admin.sms.templates',
+    'admin.sms.history',
+    'admin.sms.settings',
+    'admin.telegram.templates',
+    'admin.telegram.broadcast',
+    'admin.telegram.linked',
     'admin.settings',
     'admin.users',
     'booking',

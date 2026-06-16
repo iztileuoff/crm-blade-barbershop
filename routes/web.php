@@ -29,6 +29,15 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', RestrictBarberAccess
     Volt::route('/products', 'pages.admin.products')->name('products');
     Volt::route('/orders', 'pages.admin.orders')->name('orders');
     Volt::route('/debts', 'pages.admin.debts')->name('debts');
+
+    Volt::route('/sms/templates', 'pages.admin.sms.templates')->name('sms.templates');
+    Volt::route('/sms/history', 'pages.admin.sms.history')->name('sms.history');
+    Volt::route('/sms/settings', 'pages.admin.sms.settings')->name('sms.settings');
+
+    Volt::route('/telegram/templates', 'pages.admin.telegram.templates')->name('telegram.templates');
+    Volt::route('/telegram/broadcast', 'pages.admin.telegram.broadcast')->name('telegram.broadcast');
+    Volt::route('/telegram/linked', 'pages.admin.telegram.linked')->name('telegram.linked');
+
     Volt::route('/settings', 'pages.admin.settings')->name('settings');
     Volt::route('/users', 'pages.admin.users')->name('users');
 });
