@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Service;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -21,19 +22,25 @@ return new class extends Migration
             $table->text('name')->change();
         });
 
-        // Convert any existing single-language name into the JSON shape, mirroring
-        // the legacy value across every locale so no name silently disappears.
+        // Convert each existing single-language name into the {ru,uz,kaa} JSON
+        // shape. A name known to the catalogue (in any language) is mapped to its
+        // full translation set; an unknown name is mirrored across every locale so
+        // nothing silently disappears. Durations and other columns are untouched.
         DB::table('services')->orderBy('id')->each(function (object $service) {
-            if (is_array(json_decode((string) $service->name, true))) {
+            $name = (string) $service->name;
+
+            if (is_array(json_decode($name, true))) {
                 return; // already migrated
             }
 
+            $translations = Service::matchCatalogue($name) ?? [
+                'ru' => $name,
+                'uz' => $name,
+                'kaa' => $name,
+            ];
+
             DB::table('services')->where('id', $service->id)->update([
-                'name' => json_encode([
-                    'ru' => $service->name,
-                    'uz' => $service->name,
-                    'kaa' => $service->name,
-                ], JSON_UNESCAPED_UNICODE),
+                'name' => Service::encodeTranslations($translations),
             ]);
         });
     }

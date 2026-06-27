@@ -165,3 +165,28 @@ it('seeds the base catalogue and upgrades a legacy single-name service', functio
     app()->setLocale('uz');
     expect(Service::find($legacy->id)->name)->toBe('Erkaklar soch olish');
 });
+
+it('backfills production single-language names with full translations', function () {
+    // Mirror real production rows: each name stored in a single language.
+    DB::table('services')->insert([
+        ['name' => 'Bet tazalaw', 'duration_minutes' => 60, 'is_active' => true],   // KAA
+        ['name' => 'Мужская стрижка', 'duration_minutes' => 60, 'is_active' => true], // RU
+        ['name' => 'Своя услуга', 'duration_minutes' => 20, 'is_active' => true],     // unknown
+    ]);
+
+    // Re-run the data backfill over the freshly inserted legacy rows (idempotent).
+    (require database_path('migrations/2026_06_27_155516_make_services_name_translatable.php'))->up();
+
+    $byKaa = Service::all()->keyBy(fn (Service $service) => $service->translations['kaa']);
+
+    expect($byKaa['Bet tazalaw']->translations)->toBe([
+        'ru' => 'Чистка лица', 'uz' => 'Yuz tozalash', 'kaa' => 'Bet tazalaw',
+    ])->and($byKaa['Erler shashın aldırıw']->translations)->toBe([
+        'ru' => 'Мужская стрижка', 'uz' => 'Erkaklar soch olish', 'kaa' => 'Erler shashın aldırıw',
+    ])->and($byKaa['Своя услуга']->translations)->toBe([
+        'ru' => 'Своя услуга', 'uz' => 'Своя услуга', 'kaa' => 'Своя услуга',
+    ]);
+
+    // Durations are preserved by the name-only backfill.
+    expect(Service::where('duration_minutes', 60)->count())->toBe(2);
+});

@@ -46,29 +46,27 @@ class DatabaseSeeder extends Seeder
      */
     private function seedServices(): void
     {
-        $baseServices = [
-            ['ru' => 'Чистка лица', 'uz' => 'Yuz tozalash', 'kaa' => 'Bet tazalaw', 'duration_minutes' => 45],
-            ['ru' => 'Шугаринг лица', 'uz' => 'Yuz shugaringi', 'kaa' => 'Betke shugaring', 'duration_minutes' => 30],
-            ['ru' => 'Окрашивание бороды', 'uz' => 'Soqol boʻyash', 'kaa' => 'Saqal boyaw', 'duration_minutes' => 30],
-            ['ru' => 'Коррекция бороды', 'uz' => 'Soqol tekislash', 'kaa' => 'Saqal tegislew', 'duration_minutes' => 30],
-            ['ru' => 'Окрашивание волос', 'uz' => 'Soch boʻyash', 'kaa' => 'Shash boyaw', 'duration_minutes' => 60],
-            ['ru' => 'Укладка', 'uz' => 'Soch turmagi', 'kaa' => 'Ukladka', 'duration_minutes' => 30],
-            ['ru' => 'Мужская стрижка', 'uz' => 'Erkaklar soch olish', 'kaa' => 'Erler shashın aldırıw', 'duration_minutes' => 45],
+        $durations = [
+            'Чистка лица' => 45,
+            'Шугаринг лица' => 30,
+            'Окрашивание бороды' => 30,
+            'Коррекция бороды' => 30,
+            'Окрашивание волос' => 60,
+            'Укладка' => 30,
+            'Мужская стрижка' => 45,
         ];
 
-        $existing = Service::all()->keyBy(fn (Service $service) => $service->translations['ru'] ?? '');
+        $existing = Service::all()->keyBy(
+            fn (Service $service) => mb_strtolower($service->translations['ru'] ?? '')
+        );
 
-        foreach ($baseServices as $base) {
+        foreach (Service::baseCatalogue() as $entry) {
             $payload = [
-                'name' => Service::encodeTranslations([
-                    'ru' => $base['ru'],
-                    'uz' => $base['uz'],
-                    'kaa' => $base['kaa'],
-                ]),
-                'duration_minutes' => $base['duration_minutes'],
+                'name' => Service::encodeTranslations($entry),
+                'duration_minutes' => $durations[$entry['ru']] ?? 30,
             ];
 
-            if ($service = $existing->get($base['ru'])) {
+            if ($service = $existing->get(mb_strtolower($entry['ru']))) {
                 $service->update($payload);
             } else {
                 Service::create($payload + ['is_active' => true]);

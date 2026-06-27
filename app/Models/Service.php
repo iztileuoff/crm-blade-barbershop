@@ -105,6 +105,47 @@ class Service extends Model
         return array_fill_keys(self::LOCALES, $value);
     }
 
+    /**
+     * Canonical RU/UZ/KAA names for the base service catalogue. Single source of
+     * truth shared by the seeder and the data-backfill migration.
+     *
+     * @return list<array{ru: string, uz: string, kaa: string}>
+     */
+    public static function baseCatalogue(): array
+    {
+        return [
+            ['ru' => 'Чистка лица', 'uz' => 'Yuz tozalash', 'kaa' => 'Bet tazalaw'],
+            ['ru' => 'Шугаринг лица', 'uz' => 'Yuz shugaringi', 'kaa' => 'Betke shugaring'],
+            ['ru' => 'Окрашивание бороды', 'uz' => 'Soqol boʻyash', 'kaa' => 'Saqal boyaw'],
+            ['ru' => 'Коррекция бороды', 'uz' => 'Soqol tekislash', 'kaa' => 'Saqal tegislew'],
+            ['ru' => 'Окрашивание волос', 'uz' => 'Soch boʻyash', 'kaa' => 'Shash boyaw'],
+            ['ru' => 'Укладка', 'uz' => 'Soch turmagi', 'kaa' => 'Ukladka'],
+            ['ru' => 'Мужская стрижка', 'uz' => 'Erkaklar soch olish', 'kaa' => 'Erler shashın aldırıw'],
+        ];
+    }
+
+    /**
+     * Resolve a legacy single-language name (in any locale) to its full
+     * RU/UZ/KAA translation set. Returns null when the name is not in the
+     * known catalogue.
+     *
+     * @return array{ru: string, uz: string, kaa: string}|null
+     */
+    public static function matchCatalogue(string $name): ?array
+    {
+        $needle = mb_strtolower(trim($name));
+
+        foreach (self::baseCatalogue() as $entry) {
+            foreach ($entry as $alias) {
+                if (mb_strtolower(trim($alias)) === $needle) {
+                    return $entry;
+                }
+            }
+        }
+
+        return null;
+    }
+
     public function barbers(): BelongsToMany
     {
         return $this->belongsToMany(Barber::class)->withPivot('price');
