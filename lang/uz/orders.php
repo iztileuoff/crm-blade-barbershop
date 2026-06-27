@@ -18,6 +18,10 @@ return [
     'debt_hint' => 'Agar mijoz hozir toʻlamasa',
     'note_placeholder' => 'Ixtiyoriy...',
     'submit' => 'Savdoni amalga oshirish',
+    'payment_method' => 'Toʻlov usuli',
+    'both_hint' => 'Naqd + karta toʻlangan summaga teng boʻlishi kerak (qarzsiz)',
+    'cash_short' => 'naqd',
+    'card_short' => 'karta',
 
     'composition' => 'Tarkibi',
     'delete_confirm' => 'Savdo bekor qilinsinmi? Qoldiq omborga qaytadi.',

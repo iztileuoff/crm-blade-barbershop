@@ -18,6 +18,10 @@ return [
     'debt_hint' => 'Eger klient házir tólemese',
     'note_placeholder' => 'Májbúriy emes...',
     'submit' => 'Satıwdı ámelge asırıw',
+    'payment_method' => 'Tólew usılı',
+    'both_hint' => 'Naqd + karta tólengen summaǵa teń bolıwı kerek (qarızsız)',
+    'cash_short' => 'naqd',
+    'card_short' => 'karta',
 
     'composition' => 'Quramı',
     'delete_confirm' => 'Satıw biykarlansınba? Qaldıq ombarǵa qaytadı.',
