@@ -2,6 +2,8 @@
 
 return [
     'admin_panel' => 'Admin Panel',
+    'open_menu' => 'Открыть меню',
+    'close_menu' => 'Закрыть меню',
 
     'dashboard' => 'Касса',
     'appointments' => 'Записи',

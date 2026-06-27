@@ -2,6 +2,8 @@
 
 return [
     'admin_panel' => 'Admin Panel',
+    'open_menu' => 'Menyuni ochish',
+    'close_menu' => 'Menyuni yopish',
 
     'dashboard' => 'Kassa',
     'appointments' => 'Yozuvlar',

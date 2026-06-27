@@ -85,6 +85,7 @@ class extends Component
 
         if ($pay <= 0) {
             $this->addError('payAmount', __('debts.err_enter_amount'));
+
             return;
         }
 
@@ -102,6 +103,7 @@ class extends Component
 
         if ($pay <= 0) {
             $this->addError('payAmount', __('debts.err_enter_amount'));
+
             return;
         }
 
@@ -151,7 +153,7 @@ class extends Component
         <div class="fixed inset-0 z-50 flex items-center justify-center p-4"
              x-data
              x-on:keydown.escape.window="$wire.cancelPay()">
-            <div class="absolute inset-0 bg-surface/80" wire:click="cancelPay"></div>
+            <div class="absolute inset-0 bg-surface/80 backdrop-blur-sm" wire:click="cancelPay"></div>
             <div class="relative z-10 w-full max-w-sm overflow-hidden rounded-2xl border border-content/[0.12] bg-surface-raised shadow-[0_32px_64px_rgba(0,0,0,0.8)]">
                 <div class="flex items-center justify-between border-b border-content/[0.06] px-6 py-4">
                     <h3 class="text-sm font-bold text-content">{{ __('debts.pay_debt') }}</h3>
@@ -189,7 +191,7 @@ class extends Component
                         </button>
                         <button type="button"
                                 wire:click="{{ $payingAppointmentId ? 'payAppointmentDebt' : 'payOrderDebt' }}"
-                                class="flex-1 rounded-xl bg-success px-6 py-2.5 text-sm font-bold text-black transition-all hover:bg-success active:scale-[0.98]">
+                                class="flex-1 rounded-xl bg-success px-6 py-2.5 text-sm font-bold text-black transition-all hover:brightness-110 active:scale-[0.98]">
                             {{ __('debts.accept_payment') }}
                         </button>
                     </div>

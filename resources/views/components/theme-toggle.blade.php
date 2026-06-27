@@ -3,6 +3,8 @@
 <button type="button"
         x-data="{
             dark: document.documentElement.classList.contains('dark'),
+            titleLight: @js(__('common.theme_light')),
+            titleDark: @js(__('common.theme_dark')),
             apply() {
                 document.documentElement.classList.toggle('dark', this.dark);
                 localStorage.setItem('theme', this.dark ? 'dark' : 'light');
@@ -10,7 +12,7 @@
         }"
         @theme-changed.window="dark = $event.detail.dark"
         @click="dark = !dark; apply(); $dispatch('theme-changed', { dark })"
-        :title="dark ? '{{ __('common.theme_light') }}' : '{{ __('common.theme_dark') }}'"
+        :title="dark ? titleLight : titleDark"
         aria-label="{{ __('common.theme_toggle') }}"
         {{ $attributes->merge(['class' => 'group']) }}>
     {{-- Sun: shown in dark mode (click for light) --}}

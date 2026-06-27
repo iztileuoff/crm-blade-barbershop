@@ -22,7 +22,7 @@ Route::get('/locale/{locale}', function (string $locale) {
 })->name('locale.switch');
 
 Volt::route('/login', 'pages.auth.login')->name('login')->middleware('guest');
-Route::get('/logout', function () {
+Route::post('/logout', function () {
     auth()->logout();
     session()->invalidate();
     session()->regenerateToken();

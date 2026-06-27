@@ -42,13 +42,28 @@ class Client extends Model
     }
 
     public string $formattedBirthDate {
-        get => $this->birth_date ? self::formatRussianDate($this->birth_date) : '—';
+        get => $this->birth_date ? self::formatLocalizedDate($this->birth_date) : '—';
     }
 
     public string $formattedLastVisit {
-        get => $this->last_visit_at ? self::formatRussianDate($this->last_visit_at) : '—';
+        get => $this->last_visit_at ? self::formatLocalizedDate($this->last_visit_at) : '—';
     }
 
+    /**
+     * Дата в формате «16 июня 2026» с названием месяца на активном языке интерфейса.
+     */
+    public static function formatLocalizedDate(Carbon $date): string
+    {
+        /** @var array<int, string> $months */
+        $months = (array) __('common.month');
+        $month = $months[$date->month] ?? $date->month;
+
+        return "{$date->day} {$month} {$date->year}";
+    }
+
+    /**
+     * Дата с русскими названиями месяцев — для Telegram-уведомлений (русскоязычных).
+     */
     public static function formatRussianDate(Carbon $date): string
     {
         static $months = [

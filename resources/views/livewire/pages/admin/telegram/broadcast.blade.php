@@ -97,7 +97,7 @@ class extends Component
             {{ __('telegram.queued', ['count' => $sentTo]) }}
         </div>
 
-        <form wire:submit="send" class="overflow-hidden rounded-2xl border border-content/[0.06] bg-content/[0.03] shadow-xl backdrop-blur-md">
+        <form wire:submit="send" wire:confirm="{{ __('telegram.broadcast_confirm') }}" class="overflow-hidden rounded-2xl border border-content/[0.06] bg-content/[0.03] shadow-xl backdrop-blur-md">
             <div class="space-y-6 p-6">
                 <div>
                     <label class="mb-2 block text-xs font-semibold text-content/50">{{ __('telegram.audience_label') }}</label>
@@ -133,9 +133,10 @@ class extends Component
             </div>
 
             <div class="flex items-center justify-end border-t border-content/[0.06] px-6 py-4">
-                <button type="submit" wire:loading.attr="disabled" wire:target="send"
+                <button type="submit" @disabled(! $configured) wire:loading.attr="disabled" wire:target="send"
                         class="flex items-center gap-2 rounded-xl bg-gradient-to-r from-brass to-brass px-6 py-2.5 text-sm font-bold text-black shadow-lg shadow-brass/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50">
-                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" /></svg>
+                    <svg wire:loading.remove wire:target="send" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" /></svg>
+                    <svg wire:loading wire:target="send" class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" /><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
                     {{ __('telegram.send') }}
                 </button>
             </div>

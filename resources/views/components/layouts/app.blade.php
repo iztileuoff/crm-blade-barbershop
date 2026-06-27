@@ -59,11 +59,14 @@
                              x-transition:enter-start="opacity-0 -translate-y-1"
                              x-transition:enter-end="opacity-100 translate-y-0"
                              class="absolute right-0 z-50 mt-2 w-48 rounded-xl border border-content/[0.06] bg-surface-raised p-1.5 shadow-xl">
-                            <a href="{{ route('logout') }}"
-                               class="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-danger/70 transition hover:bg-danger/10 hover:text-danger">
-                                <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 9V5.25A2.25 2.25 0 0 1 10.5 3h6a2.25 2.25 0 0 1 2.25 2.25v13.5A2.25 2.25 0 0 1 16.5 21h-6a2.25 2.25 0 0 1-2.25-2.25V15M12 9l3 3m0 0-3 3m3-3H2.25" /></svg>
-                                {{ __('common.logout') }}
-                            </a>
+                            <form method="POST" action="{{ route('logout') }}">
+                                @csrf
+                                <button type="submit"
+                                        class="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-danger/70 transition hover:bg-danger/10 hover:text-danger">
+                                    <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 9V5.25A2.25 2.25 0 0 1 10.5 3h6a2.25 2.25 0 0 1 2.25 2.25v13.5A2.25 2.25 0 0 1 16.5 21h-6a2.25 2.25 0 0 1-2.25-2.25V15M12 9l3 3m0 0-3 3m3-3H2.25" /></svg>
+                                    {{ __('common.logout') }}
+                                </button>
+                            </form>
                         </div>
                     </div>
                 @endauth

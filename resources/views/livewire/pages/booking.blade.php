@@ -265,7 +265,7 @@ class extends Component
             <p class="mb-5 text-sm text-content/40">{{ __('booking.service.subtitle') }}</p>
             <div class="space-y-2.5">
                 @forelse ($this->services as $service)
-                    <button type="button"
+                    <button type="button" wire:key="bk-service-{{ $service->id }}"
                             wire:click="selectService({{ $service->id }})"
                             class="group flex w-full items-center justify-between rounded-2xl border border-content/[0.06] bg-content/[0.03] p-4 text-left transition-all duration-200 hover:border-brass/30 hover:bg-content/[0.06] active:scale-[0.98]">
                         <div class="flex items-center gap-3.5">
@@ -304,7 +304,7 @@ class extends Component
             <div class="grid grid-cols-2 gap-3">
                 @forelse ($this->barbers as $barber)
                     @php($photo = $barber->photoUrl)
-                    <button type="button"
+                    <button type="button" wire:key="bk-barber-{{ $barber->id }}"
                             wire:click="selectBarber({{ $barber->id }})"
                             class="group flex flex-col items-center rounded-2xl border border-content/[0.06] bg-content/[0.03] p-4 pb-3.5 text-center transition-all duration-200 hover:border-brass/30 hover:bg-content/[0.06] active:scale-[0.97]">
                         @if ($photo)
@@ -378,7 +378,7 @@ class extends Component
                 <div class="grid grid-cols-3 gap-2 sm:grid-cols-4">
                     @foreach ($this->availableSlots as $slot)
                         @php($isTaken = in_array($slot['value'], $takenSlots, true))
-                        <button type="button"
+                        <button type="button" wire:key="bk-slot-{{ $slot['value'] }}"
                                 wire:click="selectTime('{{ $slot['value'] }}')"
                                 @if ($isTaken) title="{{ __('booking.datetime.taken') }}" @endif
                                 @class([
@@ -445,7 +445,7 @@ class extends Component
                 </div>
                 <div>
                     <label for="phone" class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('booking.confirm.phone') }}</label>
-                    <input id="phone" type="tel" wire:model="phone" placeholder="998 90 123 45 67"
+                    <input id="phone" type="tel" inputmode="tel" autocomplete="tel" wire:model="phone" placeholder="998 90 123 45 67"
                            class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content placeholder-content/20 outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
                     @error('phone') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                 </div>

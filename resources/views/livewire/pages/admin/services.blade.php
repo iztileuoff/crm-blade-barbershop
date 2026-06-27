@@ -179,7 +179,7 @@ class extends Component
                     <div class="flex items-center pt-4">
                         <label class="relative inline-flex cursor-pointer items-center">
                             <input type="checkbox" wire:model="is_active" class="peer sr-only">
-                            <div class="h-6 w-11 rounded-full bg-content/10 transition-colors peer-checked:bg-brass after:absolute after:left-[2px] after:top-[2px] after:h-5 after:after:w-5 after:rounded-full after:bg-content after:transition-all peer-checked:after:translate-x-full"></div>
+                            <div class="h-6 w-11 rounded-full bg-content/10 transition-colors peer-checked:bg-brass after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-content after:transition-all peer-checked:after:translate-x-full"></div>
                             <span class="ml-3 text-sm font-medium text-content/70">{{ __('services.active') }}</span>
                         </label>
                     </div>
@@ -257,7 +257,7 @@ class extends Component
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="px-6 py-12 text-center text-content/20">{{ __('services.empty') }}</td>
+                            <td colspan="5" class="px-6 py-12 text-center text-content/20">{{ __('services.empty') }}</td>
                         </tr>
                     @endforelse
                 </tbody>

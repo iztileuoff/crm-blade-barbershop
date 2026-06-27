@@ -59,7 +59,7 @@ class extends Component
             ->when($this->clientSearch, function ($q) {
                 $q->where(function ($q) {
                     $q->where('name', 'like', "%{$this->clientSearch}%")
-                      ->orWhere('phone', 'like', "%{$this->clientSearch}%");
+                        ->orWhere('phone', 'like', "%{$this->clientSearch}%");
                 });
             })
             ->limit(20)
@@ -295,7 +295,7 @@ class extends Component
             <div class="border-b border-content/[0.06] bg-content/[0.03] px-6 py-4">
                 <h3 class="text-sm font-bold text-content">{{ __('orders.new') }}</h3>
             </div>
-            <div class="grid gap-0 lg:grid-cols-2">
+            <form wire:submit="save" class="grid gap-0 lg:grid-cols-2">
                 {{-- Left: product selector --}}
                 <div class="border-b border-content/[0.06] p-6 lg:border-b-0 lg:border-r">
                     <p class="mb-4 text-xs font-semibold uppercase tracking-wider text-content/40">{{ __('orders.select_products') }}</p>
@@ -339,7 +339,7 @@ class extends Component
                     @else
                         <div class="mb-6 space-y-2">
                             @foreach ($cartItems as $index => $item)
-                                <div class="flex items-center gap-3 rounded-xl border border-content/[0.06] bg-content/[0.02] px-4 py-3">
+                                <div wire:key="cart-{{ $item['product_id'] }}" class="flex items-center gap-3 rounded-xl border border-content/[0.06] bg-content/[0.02] px-4 py-3">
                                     <div class="min-w-0 flex-1">
                                         <div class="truncate text-sm font-bold text-content">{{ $item['name'] }}</div>
                                         <div class="text-xs text-content/40">{{ number_format($item['price'], 0, '.', ' ') }} {{ __('common.currency') }} × {{ $item['quantity'] }} = <span class="font-bold text-brass-ink">{{ number_format($item['price'] * $item['quantity'], 0, '.', ' ') }} {{ __('common.currency') }}</span></div>
@@ -372,10 +372,10 @@ class extends Component
                         <label class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('orders.payment_method') }}</label>
                         <div class="relative">
                             <select wire:model.live="payment_type"
-                                    class="block w-full appearance-none rounded-xl border border-content/[0.08] bg-surface-sunken py-3 pl-4 pr-10 text-sm text-content outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
-                                <option value="cash" style="color: #fff; background-color: #1a1a1a;">{{ __('enums.payment_type.cash') }}</option>
-                                <option value="card" style="color: #fff; background-color: #1a1a1a;">{{ __('enums.payment_type.card') }}</option>
-                                <option value="both" style="color: #fff; background-color: #1a1a1a;">{{ __('enums.payment_type.both') }}</option>
+                                    class="block w-full appearance-none rounded-xl border border-content/[0.08] bg-surface-sunken py-3 pl-4 pr-10 text-sm text-content outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20 [&>option]:bg-surface-raised">
+                                <option value="cash">{{ __('enums.payment_type.cash') }}</option>
+                                <option value="card">{{ __('enums.payment_type.card') }}</option>
+                                <option value="both">{{ __('enums.payment_type.both') }}</option>
                             </select>
                             <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-content/30">
                                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
@@ -481,13 +481,14 @@ class extends Component
                                 class="rounded-xl border border-content/[0.08] px-5 py-2.5 text-sm font-bold text-content/60 transition hover:bg-content/[0.06] hover:text-content">
                             {{ __('common.cancel') }}
                         </button>
-                        <button type="button" wire:click="save"
-                                class="flex-1 rounded-xl bg-brass px-6 py-2.5 text-sm font-bold text-black transition-all hover:bg-brass-bright active:scale-[0.98]">
+                        <button type="submit" wire:loading.attr="disabled" wire:target="save"
+                                class="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brass px-6 py-2.5 text-sm font-bold text-black transition-all hover:bg-brass-bright active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50">
+                            <svg wire:loading wire:target="save" class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" /><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
                             {{ __('orders.submit') }}
                         </button>
                     </div>
                 </div>
-            </div>
+            </form>
         </div>
     @endif
 

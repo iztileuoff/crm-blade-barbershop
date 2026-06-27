@@ -1,6 +1,9 @@
 <?php
 
+use App\Enums\AppointmentStatus;
+use App\Enums\PaymentType;
 use App\Enums\Role;
+use App\Models\Client;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -67,10 +70,20 @@ it('renders the admin dashboard in the selected locale', function (string $local
 
 it('translates enum labels for the active locale', function () {
     app()->setLocale('uz');
-    expect(App\Enums\AppointmentStatus::Completed->label())->toBe('Yakunlangan');
-    expect(App\Enums\PaymentType::Cash->label())->toBe('Naqd');
+    expect(AppointmentStatus::Completed->label())->toBe('Yakunlangan');
+    expect(PaymentType::Cash->label())->toBe('Naqd');
 
     app()->setLocale('kaa');
-    expect(App\Enums\AppointmentStatus::Completed->label())->toBe('Juwmaqlanǵan');
-    expect(App\Enums\Role::BARBER->label())->toBe('Barber');
+    expect(AppointmentStatus::Completed->label())->toBe('Juwmaqlanǵan');
+    expect(Role::BARBER->label())->toBe('Barber');
 });
+
+it('formats a date with month names in the active locale', function (string $locale, string $expected) {
+    app()->setLocale($locale);
+
+    expect(Client::formatLocalizedDate(Carbon\Carbon::create(2026, 6, 16)))->toBe($expected);
+})->with([
+    'russian' => ['ru', '16 июня 2026'],
+    'uzbek' => ['uz', '16 iyun 2026'],
+    'karakalpak' => ['kaa', '16 iyun 2026'],
+]);

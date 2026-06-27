@@ -311,7 +311,7 @@ class extends Component
                             <td class="px-6 py-4">
                                 <div class="flex items-center gap-3">
                                     @if ($barber->photoUrl)
-                                        <img src="{{ $barber->photoUrl }}" class="h-10 w-10 rounded-full object-cover ring-1 ring-content/10">
+                                        <img src="{{ $barber->photoUrl }}" alt="{{ $barber->name }}" class="h-10 w-10 rounded-full object-cover ring-1 ring-content/10">
                                     @else
                                         <div class="flex h-10 w-10 items-center justify-center rounded-full bg-brass/15 text-xs font-bold text-brass-ink ring-1 ring-content/10">
                                             {{ mb_substr($barber->name, 0, 1) }}
@@ -360,7 +360,7 @@ class extends Component
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="4" class="px-6 py-12 text-center text-content/20">{{ __('barbers.empty') }}</td>
+                            <td colspan="5" class="px-6 py-12 text-center text-content/20">{{ __('barbers.empty') }}</td>
                         </tr>
                     @endforelse
                 </tbody>

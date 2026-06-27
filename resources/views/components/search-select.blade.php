@@ -1,13 +1,22 @@
+@props([
+    'searchModel',
+    'options',
+    'onSelect',
+    'labelField',
+    'subLabelField' => null,
+    'placeholder' => null,
+])
+
 <div x-data="{ open: false }" @click.outside="open = false" class="relative">
-    <input type="text" x-on:focus="open = true" wire:model.live.debounce.300ms="{{ $searchModel }}"
+    <input type="text" x-on:focus="open = true" x-on:keydown.enter.prevent wire:model.live.debounce.300ms="{{ $searchModel }}"
         placeholder="{{ $placeholder ?? __('common.search').'...' }}"
+        aria-label="{{ $placeholder ?? __('common.search') }}"
         class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content placeholder-content/20 outline-none">
 
     <div x-show="open" x-transition
-        class="absolute z-100 mt-2 w-full rounded-xl border border-content/[0.08] bg-surface-raised shadow-xl max-h-60 overflow-y-auto"
-        style="background-color:#121212;">
+        class="absolute z-100 mt-2 w-full rounded-xl border border-content/[0.08] bg-surface-raised shadow-xl max-h-60 overflow-y-auto">
         @forelse($options as $option)
-            <button type="button"
+            <button type="button" wire:key="opt-{{ $option->id }}"
                 wire:click="{{ $onSelect }}({{ $option->id }}, '{{ addslashes($option->{$labelField}) }}{{ $subLabelField && $option->{$subLabelField} ? ' (' . addslashes($option->{$subLabelField}) . ')' : '' }}')"
                 @click="open = false" class="w-full text-left px-4 py-2 text-sm text-content hover:bg-content/10">
                 {{ $option->{$labelField} }}
