@@ -146,7 +146,9 @@ class extends Component
                     ->sum(fn ($a) => (int) ($a->card_amount ?? 0));
 
                 $cancelledCount = $items->where('status', AppointmentStatus::Cancelled)->count();
-                $salary = (int) round($revenue * $barber->salary_percent / 100);
+                $salary = (int) round($confirmedItems->sum(
+                    fn ($a) => (int) ($a->price ?? $barber->price ?? 0) * ($a->salary_percent ?? $barber->salary_percent) / 100
+                ));
 
                 return (object) [
                     'id' => $barber->id,
@@ -235,7 +237,9 @@ class extends Component
                     ->filter(fn ($a) => $a->payment_type === PaymentType::Both)
                     ->sum('card_amount');
 
-                $salary = (int) round($revenue * $barber->salary_percent / 100);
+                $salary = (int) round($items->sum(
+                    fn ($a) => (int) ($a->price ?? 0) * ($a->salary_percent ?? $barber->salary_percent) / 100
+                ));
 
                 return (object) [
                     'id' => $barber->id,

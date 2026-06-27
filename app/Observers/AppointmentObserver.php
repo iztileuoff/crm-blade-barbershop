@@ -10,6 +10,17 @@ use App\Telegram\AppointmentNotice;
 class AppointmentObserver
 {
     /**
+     * Фиксируем процент мастера в момент завершения записи, чтобы изменение
+     * процента в будущем не пересчитывало уже завершённые записи.
+     */
+    public function saving(Appointment $appointment): void
+    {
+        if ($appointment->status === AppointmentStatus::Completed && $appointment->salary_percent === null) {
+            $appointment->salary_percent = $appointment->barber?->salary_percent;
+        }
+    }
+
+    /**
      * Новая запись — уведомляем мастера в Telegram.
      */
     public function created(Appointment $appointment): void
