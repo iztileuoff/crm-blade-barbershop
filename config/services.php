@@ -40,6 +40,20 @@ return [
         'password' => env('ESKIZ_PASSWORD'),
         'base_url' => env('ESKIZ_BASE_URL', 'https://notify.eskiz.uz/api'),
         'from' => env('ESKIZ_FROM', '4546'),
+
+        // Ориентировочные тарифы (сум за одну часть SMS) для оценки расходов.
+        // prefixes — по 2-значному коду оператора после 998; default — для прочих.
+        'tariffs' => [
+            'default' => 130,
+            'prefixes' => [
+                '90' => 115, '91' => 115, // Beeline
+                '93' => 160, '94' => 160, // Ucell
+                '88' => 95,               // Humans
+                '97' => 110, '95' => 110, // Mobiuz / UMS
+                '99' => 145, '33' => 145, // Uzmobile
+                '98' => 95,               // Perfectum
+            ],
+        ],
     ],
 
     'barbershop' => [

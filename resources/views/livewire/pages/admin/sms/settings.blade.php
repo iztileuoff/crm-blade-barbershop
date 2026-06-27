@@ -2,6 +2,7 @@
 
 use App\Models\Setting;
 use App\Services\SmsService;
+use App\Support\NotificationTemplates;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
 
@@ -25,6 +26,22 @@ class extends Component
 
     public bool $retentionEnabled = true;
 
+    public string $smsLocale = 'ru';
+
+    /**
+     * Поддерживаемые языки SMS и их названия для селектора.
+     *
+     * @return array<string, string>
+     */
+    public function locales(): array
+    {
+        return [
+            'ru' => 'Русский',
+            'uz' => 'Oʻzbekcha',
+            'kaa' => 'Qaraqalpaqsha',
+        ];
+    }
+
     public function mount(SmsService $sms): void
     {
         $this->configured = $sms->isConfigured();
@@ -32,6 +49,18 @@ class extends Component
         $this->baseUrl = $sms->baseUrl();
         $this->remindersEnabled = $sms->isEnabledFor('reminder');
         $this->retentionEnabled = $sms->isEnabledFor('retention');
+        $this->smsLocale = NotificationTemplates::smsLocale();
+    }
+
+    public function updatedSmsLocale(string $value): void
+    {
+        if (! array_key_exists($value, $this->locales())) {
+            $value = NotificationTemplates::SMS_DEFAULT_LOCALE;
+            $this->smsLocale = $value;
+        }
+
+        Setting::set('sms_locale', $value);
+        $this->dispatch('toggle-saved');
     }
 
     public function updatedRemindersEnabled(bool $value): void
@@ -129,6 +158,18 @@ class extends Component
             </span>
         </div>
         <div class="divide-y divide-content/[0.04]">
+            <div class="flex items-center justify-between gap-4 px-6 py-4">
+                <div>
+                    <p class="text-sm font-medium text-content">{{ __('sms.locale_label') }}</p>
+                    <p class="mt-0.5 text-xs text-content/40">{{ __('sms.locale_hint') }}</p>
+                </div>
+                <select wire:model.live="smsLocale"
+                        class="shrink-0 rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-2.5 text-sm text-content outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20 dark:[color-scheme:dark]">
+                    @foreach($this->locales() as $value => $label)
+                        <option value="{{ $value }}">{{ $label }}</option>
+                    @endforeach
+                </select>
+            </div>
             <div class="flex items-center justify-between gap-4 px-6 py-4">
                 <div>
                     <p class="text-sm font-medium text-content">{{ __('sms.toggle_reminder_label') }}</p>

@@ -122,7 +122,9 @@ class SmsService
                 return false;
             }
 
-            $this->record($phone, $message, 'sent', $clientId, $context);
+            $eskizMessageId = $response->json('id') ?? $response->json('data.id') ?? $response->json('message_id');
+
+            $this->record($phone, $message, 'sent', $clientId, $context, is_scalar($eskizMessageId) ? (string) $eskizMessageId : null);
 
             return true;
         } catch (\Throwable $e) {
@@ -183,7 +185,91 @@ class SmsService
         }
     }
 
-    private function record(string $phone, string $message, string $status, ?int $clientId, string $context): void
+    /**
+     * Запросить у Eskiz статус доставки сообщения по его id.
+     * Возвращает нормализованный статус (delivered | undelivered | rejected | waiting)
+     * либо null, если получить не удалось.
+     */
+    public function fetchStatus(string $messageId): ?string
+    {
+        if (! $this->isConfigured()) {
+            return null;
+        }
+
+        try {
+            $response = $this->client()->get('/message/sms/status_by_id/'.$messageId);
+
+            if ($response->status() === 401) {
+                Cache::forget(self::TOKEN_CACHE_KEY);
+                $response = $this->client()->get('/message/sms/status_by_id/'.$messageId);
+            }
+
+            if (! $response->successful()) {
+                return null;
+            }
+
+            $raw = $response->json('data.status') ?? $response->json('data.0.status');
+
+            return $this->normalizeDeliveryStatus(is_string($raw) ? $raw : null);
+        } catch (\Throwable $e) {
+            Log::warning('Не удалось получить статус SMS Eskiz', ['id' => $messageId, 'error' => $e->getMessage()]);
+
+            return null;
+        }
+    }
+
+    /**
+     * Привести SMPP-статус Eskiz к одному из наших значений delivery_status.
+     */
+    private function normalizeDeliveryStatus(?string $raw): ?string
+    {
+        $raw = strtoupper(trim((string) $raw));
+
+        if ($raw === '') {
+            return null;
+        }
+
+        return match (true) {
+            in_array($raw, ['DELIVRD', 'DELIVERED'], true) => 'delivered',
+            in_array($raw, ['REJECTD', 'REJECTED'], true) => 'rejected',
+            in_array($raw, ['UNDELIV', 'UNDELIVERABLE', 'UNDELIVERED', 'EXPIRED', 'DELETED', 'FAILED'], true) => 'undelivered',
+            default => 'waiting', // ACCEPTD, ENROUTE, TRANSMTD, waiting и т.п.
+        };
+    }
+
+    /**
+     * Сколько частей (сегментов) займёт SMS: любой многобайтовый символ переводит
+     * сообщение в UCS-2 (70/67 символов на часть), иначе GSM-7 (160/153).
+     */
+    public static function segments(string $message): int
+    {
+        $length = mb_strlen($message);
+        $isUnicode = strlen($message) !== $length;
+
+        if ($isUnicode) {
+            return $length <= 70 ? 1 : (int) ceil($length / 67);
+        }
+
+        return $length <= 160 ? 1 : (int) ceil($length / 153);
+    }
+
+    /**
+     * Ориентировочный тариф оператора (сум за одну часть) по префиксу номера.
+     */
+    public static function tariffForPhone(string $phone): int
+    {
+        /** @var array{default?: int, prefixes?: array<string, int>} $tariffs */
+        $tariffs = config('services.eskiz.tariffs', []);
+        $prefixes = $tariffs['prefixes'] ?? [];
+        $default = (int) ($tariffs['default'] ?? 0);
+
+        $digits = preg_replace('/\D+/', '', $phone) ?? '';
+        $code = strlen($digits) >= 5 ? substr($digits, 3, 2) : '';
+
+        return (int) ($prefixes[$code] ?? $default);
+    }
+
+    private function record(string $phone, string $message, string $status, ?int $clientId, string $context, ?string $eskizMessageId = null): void
     {
         SmsMessage::create([
             'client_id' => $clientId,
@@ -191,6 +277,8 @@ class SmsService
             'message' => $message,
             'status' => $status,
             'context' => $context,
+            'eskiz_message_id' => $eskizMessageId,
+            'parts' => self::segments($message),
         ]);
     }
 

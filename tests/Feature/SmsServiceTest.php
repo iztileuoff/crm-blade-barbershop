@@ -143,14 +143,24 @@ it('persists the dispatch toggles from the settings page', function () {
     expect(Setting::get('sms_enabled_reminder'))->toBe('0');
 });
 
-it('uses the editable template and logs context for retention SMS', function () {
+it('persists the SMS language from the settings page', function () {
+    configuredSms();
+
+    Livewire::actingAs(User::factory()->create(['role' => Role::ADMIN]))
+        ->test('pages.admin.sms.settings')
+        ->assertSet('smsLocale', 'ru')
+        ->set('smsLocale', 'uz');
+
+    expect(Setting::get('sms_locale'))->toBe('uz');
+});
+
+it('uses the fixed retention template and logs context for retention SMS', function () {
     Http::fake([
         '*auth/login' => Http::response(['data' => ['token' => 'tok']], 200),
-        '*message/sms/send' => Http::response(['status' => 'success'], 200),
+        '*message/sms/send' => Http::response(['id' => '777', 'status' => 'waiting'], 200),
     ]);
 
     configuredSms();
-    NotificationTemplates::set('sms_retention', 'Прошло {days} дней — ждём вас!');
 
     Client::factory()->create([
         'phone' => '998901234567',
@@ -162,5 +172,61 @@ it('uses the editable template and logs context for retention SMS', function () 
 
     $message = SmsMessage::firstOrFail();
     expect($message->context)->toBe('retention')
-        ->and($message->message)->toBe('Прошло 21 дней — ждём вас!');
+        ->and($message->message)->toBe('Давно вас не видели! Время обновить стрижку. Blade Barbershop.')
+        ->and($message->eskiz_message_id)->toBe('777');
+});
+
+it('stores the Eskiz message id and SMS parts on send', function () {
+    Http::fake([
+        '*auth/login' => Http::response(['data' => ['token' => 'tok']], 200),
+        '*message/sms/send' => Http::response(['id' => '12345', 'status' => 'waiting'], 200),
+    ]);
+
+    configuredSms()->sendSms('998901234567', 'Salom', null, 'manual');
+
+    $message = SmsMessage::firstOrFail();
+    expect($message->eskiz_message_id)->toBe('12345')
+        ->and($message->parts)->toBe(1);
+});
+
+it('renders SMS templates in the language chosen in settings', function () {
+    expect(NotificationTemplates::renderSms('reminder', ['time' => '18:00']))
+        ->toBe('Напоминаем, вы записаны на 18:00. Ждем вас в Blade Barbershop!');
+
+    Setting::set('sms_locale', 'uz');
+
+    expect(NotificationTemplates::renderSms('reminder', ['time' => '18:00']))
+        ->toBe("Eslatma: Blade Barbershop'da soat 18:00 ga yozilgansiz. Sizni kutamiz!");
+
+    Setting::set('sms_locale', 'kaa');
+
+    expect(NotificationTemplates::renderSms('retention'))
+        ->toBe('Uzaq waqıt kelmedińiz! Shash aldırıw waqtı keldi. Blade Barbershop.');
+});
+
+it('falls back to the default language for an unknown sms_locale', function () {
+    Setting::set('sms_locale', 'xx');
+
+    expect(NotificationTemplates::smsLocale())->toBe('ru')
+        ->and(NotificationTemplates::renderSms('retention'))
+        ->toBe('Давно вас не видели! Время обновить стрижку. Blade Barbershop.');
+});
+
+it('updates the delivery status from Eskiz', function () {
+    Http::fake([
+        '*auth/login' => Http::response(['data' => ['token' => 'tok']], 200),
+        '*message/sms/status_by_id/*' => Http::response(['data' => ['status' => 'DELIVRD']], 200),
+    ]);
+
+    configuredSms();
+
+    $message = SmsMessage::factory()->create([
+        'status' => 'sent',
+        'eskiz_message_id' => '999',
+        'delivery_status' => null,
+    ]);
+
+    $this->artisan('app:sync-sms-statuses')->assertSuccessful();
+
+    expect($message->fresh()->delivery_status)->toBe('delivered');
 });

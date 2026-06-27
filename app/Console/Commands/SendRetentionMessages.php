@@ -28,7 +28,7 @@ class SendRetentionMessages extends Command
             })
             ->get();
 
-        $message = NotificationTemplates::render('sms_retention', ['days' => $days]);
+        $message = NotificationTemplates::renderSms('retention');
 
         foreach ($clients as $client) {
             if ($sms->sendSms($client->phone, $message, $client->id, 'retention')) {
