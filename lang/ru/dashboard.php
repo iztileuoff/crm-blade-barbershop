@@ -35,6 +35,7 @@ return [
     'barber_performance' => 'Производительность мастеров',
     'appointments_revenue_day' => 'Записи и выручка за день',
     'salary_short' => 'ЗП',
+    'remainder' => 'Остаток',
     'no_active_barbers' => 'Активные мастера не найдены',
 
     // Month tab
