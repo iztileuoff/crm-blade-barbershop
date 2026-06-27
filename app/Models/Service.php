@@ -20,8 +20,22 @@ class Service extends Model
      */
     public const LOCALES = ['ru', 'uz', 'kaa'];
 
+    /**
+     * Selectable icon keys. The admin picks one of these for each service and
+     * the `<x-service-icon>` component renders the matching SVG.
+     *
+     * @var list<string>
+     */
+    public const ICONS = ['scissors', 'sparkles', 'paint-brush', 'face-smile', 'swatch', 'beaker'];
+
+    /**
+     * Icon used when a service has no icon set or an unknown key.
+     */
+    public const DEFAULT_ICON = 'scissors';
+
     protected $fillable = [
         'name',
+        'icon',
         'duration_minutes',
         'is_active',
     ];
@@ -125,6 +139,26 @@ class Service extends Model
     }
 
     /**
+     * Default icon key for each base-catalogue service, keyed by canonical RU
+     * name. Shared by the seeder and the icon backfill migration; an unlisted
+     * name falls back to {@see self::DEFAULT_ICON}.
+     *
+     * @return array<string, string>
+     */
+    public static function catalogueIcons(): array
+    {
+        return [
+            'Чистка лица' => 'face-smile',
+            'Шугаринг лица' => 'sparkles',
+            'Окрашивание бороды' => 'paint-brush',
+            'Коррекция бороды' => 'scissors',
+            'Окрашивание волос' => 'sparkles',
+            'Укладка' => 'swatch',
+            'Мужская стрижка' => 'scissors',
+        ];
+    }
+
+    /**
      * Resolve a legacy single-language name (in any locale) to its full
      * RU/UZ/KAA translation set. Returns null when the name is not in the
      * known catalogue.
@@ -159,5 +193,15 @@ class Service extends Model
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
+    }
+
+    /**
+     * Stable display order for service lists: oldest first (by id ascending),
+     * independent of the active locale. Names are stored as a JSON translation
+     * map, so ordering by `name` would sort by raw JSON and be meaningless.
+     */
+    public function scopeOrdered($query)
+    {
+        return $query->orderBy('id');
     }
 }

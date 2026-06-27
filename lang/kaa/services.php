@@ -9,6 +9,7 @@ return [
     'name_ru' => 'Atı (rus)',
     'name_uz' => 'Atı (ózbek)',
     'name_kaa' => 'Atı (qaraqalpaq)',
+    'icon' => 'Belgi',
     'duration' => 'Dawamlılıǵı (min)',
     'duration_short' => 'Dawamlılıǵı',
     'active' => 'Aktiv',
