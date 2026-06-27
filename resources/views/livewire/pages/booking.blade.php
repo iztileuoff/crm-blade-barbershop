@@ -14,6 +14,9 @@ new
 #[Layout('components.layouts.booking')]
 class extends Component
 {
+    /** Max booking submissions accepted per client IP within the decay window. */
+    private const MAX_BOOKINGS_PER_MINUTE = 5;
+
     public int $step = 1;
 
     public ?int $serviceId = null;
@@ -140,6 +143,14 @@ class extends Component
 
     public function confirm(): void
     {
+        $throttleKey = 'booking:'.request()->ip();
+
+        if (RateLimiter::tooManyAttempts($throttleKey, self::MAX_BOOKINGS_PER_MINUTE)) {
+            $this->addError('phone', __('booking.validation.too_many'));
+
+            return;
+        }
+
         $this->validate([
             'name' => ['required', 'string', 'min:2', 'max:120'],
             'phone' => ['required', 'string'],
@@ -204,6 +215,8 @@ class extends Component
         ]);
 
         $appointment->services()->sync([$service->id => ['amount' => $servicePrice]]);
+
+        RateLimiter::hit($throttleKey, 60);
 
         $this->confirmedAppointmentId = $appointment->id;
         $this->step = 5;

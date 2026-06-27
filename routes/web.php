@@ -4,7 +4,9 @@ use App\Http\Controllers\TelegramWebhookController;
 use App\Http\Middleware\RestrictBarberAccess;
 use Livewire\Volt\Volt;
 
-Volt::route('/', 'pages.booking')->name('booking')->middleware('auth');
+// Public online booking — no auth required. Logged-in admins still see the
+// admin chrome via the booking layout's @auth branch.
+Volt::route('/', 'pages.booking')->name('booking');
 
 // Telegram-бот (webhook). Безопасность — secret_token (safe_mode) на стороне Nutgram.
 // Контроллер (не замыкание), чтобы работал route:cache на проде.

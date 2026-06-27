@@ -3,7 +3,6 @@
 use App\Models\Service;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
-use Livewire\Attributes\Validate;
 use Livewire\Volt\Component;
 
 new
@@ -12,13 +11,14 @@ class extends Component
 {
     public ?int $editingId = null;
 
-    #[Validate('required|string|max:255')]
-    public string $name = '';
+    public string $name_ru = '';
 
-    #[Validate('required|integer|min:5')]
+    public string $name_uz = '';
+
+    public string $name_kaa = '';
+
     public int $duration_minutes = 30;
 
-    #[Validate('boolean')]
     public bool $is_active = true;
 
     public bool $showForm = false;
@@ -41,8 +41,12 @@ class extends Component
     public function edit(int $id): void
     {
         $service = Service::findOrFail($id);
+        $translations = $service->translations;
+
         $this->editingId = $service->id;
-        $this->name = $service->name;
+        $this->name_ru = $translations['ru'] ?? '';
+        $this->name_uz = $translations['uz'] ?? '';
+        $this->name_kaa = $translations['kaa'] ?? '';
         $this->duration_minutes = (int) $service->duration_minutes;
         $this->is_active = (bool) $service->is_active;
         $this->showForm = true;
@@ -50,10 +54,25 @@ class extends Component
 
     public function save(): void
     {
-        $data = $this->validate();
+        $data = $this->validate([
+            'name_ru' => ['required', 'string', 'max:255'],
+            'name_uz' => ['required', 'string', 'max:255'],
+            'name_kaa' => ['required', 'string', 'max:255'],
+            'duration_minutes' => ['required', 'integer', 'min:5'],
+            'is_active' => ['boolean'],
+        ], attributes: [
+            'name_ru' => __('services.name_ru'),
+            'name_uz' => __('services.name_uz'),
+            'name_kaa' => __('services.name_kaa'),
+            'duration_minutes' => __('services.duration'),
+        ]);
 
         $payload = [
-            'name' => $data['name'],
+            'name' => Service::encodeTranslations([
+                'ru' => $data['name_ru'],
+                'uz' => $data['name_uz'],
+                'kaa' => $data['name_kaa'],
+            ]),
             'duration_minutes' => $data['duration_minutes'],
             'is_active' => $data['is_active'],
         ];
@@ -83,7 +102,7 @@ class extends Component
 
     private function resetForm(): void
     {
-        $this->reset(['editingId', 'name', 'duration_minutes', 'is_active']);
+        $this->reset(['editingId', 'name_ru', 'name_uz', 'name_kaa', 'duration_minutes', 'is_active']);
         $this->duration_minutes = 30;
         $this->is_active = true;
         $this->resetErrorBag();
@@ -111,10 +130,22 @@ class extends Component
             <form wire:submit="save" class="p-6">
                 <div class="grid gap-6 sm:grid-cols-2">
                     <div class="sm:col-span-2">
-                        <label class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('common.title_field') }}</label>
-                        <input type="text" wire:model="name" placeholder="{{ __('services.name_placeholder') }}"
+                        <label class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('services.name_ru') }}</label>
+                        <input type="text" wire:model="name_ru" placeholder="{{ __('services.name_placeholder') }}"
                                class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content placeholder-content/20 outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
-                        @error('name') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
+                        @error('name_ru') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('services.name_uz') }}</label>
+                        <input type="text" wire:model="name_uz" placeholder="{{ __('services.name_placeholder') }}"
+                               class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content placeholder-content/20 outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
+                        @error('name_uz') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('services.name_kaa') }}</label>
+                        <input type="text" wire:model="name_kaa" placeholder="{{ __('services.name_placeholder') }}"
+                               class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content placeholder-content/20 outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
+                        @error('name_kaa') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                     </div>
                     <div>
                         <label class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('services.duration') }}</label>
