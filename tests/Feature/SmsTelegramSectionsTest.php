@@ -8,7 +8,6 @@ use App\Models\Barber;
 use App\Models\Client;
 use App\Models\SmsMessage;
 use App\Models\User;
-use App\Support\NotificationTemplates;
 use App\Telegram\AppointmentFormatter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
@@ -29,24 +28,15 @@ it('shows the SMS and Telegram groups in the navigation', function () {
         ->assertSee('Telegram');
 });
 
-it('saves SMS templates', function () {
+it('shows the fixed SMS templates read-only in every language', function () {
     Livewire::actingAs(admin())
         ->test('pages.admin.sms.templates')
-        ->set('values.sms_reminder', 'Ваша запись в {time}')
-        ->set('values.sms_retention', 'Прошло {days} дней')
-        ->call('save')
-        ->assertHasNoErrors();
-
-    expect(NotificationTemplates::get('sms_reminder'))->toBe('Ваша запись в {time}')
-        ->and(NotificationTemplates::get('sms_retention'))->toBe('Прошло {days} дней');
-});
-
-it('rejects empty SMS templates', function () {
-    Livewire::actingAs(admin())
-        ->test('pages.admin.sms.templates')
-        ->set('values.sms_reminder', '')
-        ->call('save')
-        ->assertHasErrors('values.sms_reminder');
+        ->assertOk()
+        ->assertSee('Напоминаем, вы записаны на {time}')
+        ->assertSee('soat {time} ga yozilgansiz')
+        ->assertSee('Shash aldırıw waqtı keldi')
+        ->assertSee('редактирование отключено')
+        ->assertDontSee('wire:model="values', false);
 });
 
 it('saves Telegram templates and the formatter uses them', function () {

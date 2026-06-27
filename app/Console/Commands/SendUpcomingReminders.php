@@ -65,7 +65,7 @@ class SendUpcomingReminders extends Command
             );
         }
 
-        $message = NotificationTemplates::render('sms_reminder', [
+        $message = NotificationTemplates::renderSms('reminder', [
             'time' => $appointment->starts_at->format('H:i'),
         ]);
 

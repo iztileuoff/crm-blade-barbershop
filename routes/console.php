@@ -2,6 +2,7 @@
 
 use App\Console\Commands\SendRetentionMessages;
 use App\Console\Commands\SendUpcomingReminders;
+use App\Console\Commands\SyncSmsStatuses;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -12,6 +13,11 @@ Artisan::command('inspire', function () {
 
 Schedule::command(SendUpcomingReminders::class)
     ->everyMinute()
+    ->withoutOverlapping()
+    ->onOneServer();
+
+Schedule::command(SyncSmsStatuses::class)
+    ->everyFifteenMinutes()
     ->withoutOverlapping()
     ->onOneServer();
 
