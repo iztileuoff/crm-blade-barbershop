@@ -64,5 +64,6 @@ return [
         'date' => 'sana',
         'invalid_phone' => 'Toʻgʻri raqam kiriting: 998XXXXXXXXX',
         'reselect' => 'Xizmat va ustani qaytadan tanlang.',
+        'too_many' => 'Juda koʻp soʻrov. Bir daqiqadan soʻng urinib koʻring.',
     ],
 ];

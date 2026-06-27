@@ -17,11 +17,16 @@ class ServiceFactory extends Factory
      */
     public function definition(): array
     {
+        $names = [
+            ['ru' => 'Мужская стрижка', 'uz' => 'Soch olish (Erkaklar)', 'kaa' => 'Shash alıw (Er adamlar)'],
+            ['ru' => 'Окрашивание бороды', 'uz' => 'Soqol boʻyash', 'kaa' => 'Saqal boyaw'],
+            ['ru' => 'Коррекция бороды', 'uz' => 'Soqol tekislash', 'kaa' => 'Saqal tegislew'],
+            ['ru' => 'Окрашивание волос', 'uz' => 'Soch boʻyash', 'kaa' => 'Shash boyaw'],
+            ['ru' => 'Укладка', 'uz' => 'Soch turmagi', 'kaa' => 'Ukladka'],
+        ];
+
         return [
-            'name' => fake()->randomElement([
-                'Мужская стрижка', 'Стрижка бороды', 'Камуфляж седины',
-                'Королевское бритьё', 'Детская стрижка',
-            ]),
+            'name' => Service::encodeTranslations(fake()->randomElement($names)),
             'duration_minutes' => fake()->randomElement([30, 45, 60]),
             'is_active' => true,
         ];

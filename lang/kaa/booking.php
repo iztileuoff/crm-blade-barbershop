@@ -64,5 +64,6 @@ return [
         'date' => 'sáne',
         'invalid_phone' => 'Durıs nomer kiritiń: 998XXXXXXXXX',
         'reselect' => 'Xızmet hám ustanı qaytadan saylań.',
+        'too_many' => 'Júdá kóp arza. Bir minuttan keyin qaytadan urınıp kóriń.',
     ],
 ];
