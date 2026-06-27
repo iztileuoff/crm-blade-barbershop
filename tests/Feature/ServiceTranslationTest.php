@@ -163,7 +163,7 @@ it('seeds the base catalogue and upgrades a legacy single-name service', functio
     expect(Service::count())->toBe(7); // 1 upgraded + 6 created, no duplicate
 
     app()->setLocale('uz');
-    expect(Service::find($legacy->id)->name)->toBe('Erkaklar soch olish');
+    expect(Service::find($legacy->id)->name)->toBe('Soch olish (Erkaklar)');
 });
 
 it('backfills production single-language names with full translations', function () {
@@ -181,8 +181,8 @@ it('backfills production single-language names with full translations', function
 
     expect($byKaa['Bet tazalaw']->translations)->toBe([
         'ru' => 'Чистка лица', 'uz' => 'Yuz tozalash', 'kaa' => 'Bet tazalaw',
-    ])->and($byKaa['Erler shashın aldırıw']->translations)->toBe([
-        'ru' => 'Мужская стрижка', 'uz' => 'Erkaklar soch olish', 'kaa' => 'Erler shashın aldırıw',
+    ])->and($byKaa['Shash alıw (Er adamlar)']->translations)->toBe([
+        'ru' => 'Мужская стрижка', 'uz' => 'Soch olish (Erkaklar)', 'kaa' => 'Shash alıw (Er adamlar)',
     ])->and($byKaa['Своя услуга']->translations)->toBe([
         'ru' => 'Своя услуга', 'uz' => 'Своя услуга', 'kaa' => 'Своя услуга',
     ]);

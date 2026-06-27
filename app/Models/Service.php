@@ -120,7 +120,7 @@ class Service extends Model
             ['ru' => 'Коррекция бороды', 'uz' => 'Soqol tekislash', 'kaa' => 'Saqal tegislew'],
             ['ru' => 'Окрашивание волос', 'uz' => 'Soch boʻyash', 'kaa' => 'Shash boyaw'],
             ['ru' => 'Укладка', 'uz' => 'Soch turmagi', 'kaa' => 'Ukladka'],
-            ['ru' => 'Мужская стрижка', 'uz' => 'Erkaklar soch olish', 'kaa' => 'Erler shashın aldırıw'],
+            ['ru' => 'Мужская стрижка', 'uz' => 'Soch olish (Erkaklar)', 'kaa' => 'Shash alıw (Er adamlar)'],
         ];
     }
 
