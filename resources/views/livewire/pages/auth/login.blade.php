@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Client;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Layout;
@@ -8,35 +9,36 @@ use Livewire\Volt\Component;
 
 new
     #[Layout('components.layouts.auth')]
-    class extends Component {
-    #[Validate('required|string')]
-    public string $phone = '';
-
-    #[Validate('required|string')]
-    public string $password = '';
-
-    public bool $remember = false;
-
-    public function login()
+    class extends Component
     {
-        $this->validate();
+        #[Validate('required|string')]
+        public string $phone = '';
 
-        $credentials = [
-            'phone' => \App\Models\Client::normalizePhone($this->phone) ?? $this->phone,
-            'password' => $this->password,
-        ];
+        #[Validate('required|string')]
+        public string $password = '';
 
-        if (Auth::attempt($credentials, $this->remember)) {
-            session()->regenerate();
+        public bool $remember = false;
 
-            return redirect()->route('admin.appointments');
+        public function login()
+        {
+            $this->validate();
+
+            $credentials = [
+                'phone' => Client::normalizePhone($this->phone) ?? $this->phone,
+                'password' => $this->password,
+            ];
+
+            if (Auth::attempt($credentials, $this->remember)) {
+                session()->regenerate();
+
+                return redirect()->route('admin.appointments');
+            }
+
+            throw ValidationException::withMessages([
+                'phone' => trans('auth.failed'),
+            ]);
         }
-
-        throw ValidationException::withMessages([
-            'phone' => trans('auth.failed'),
-        ]);
-    }
-}; ?>
+    }; ?>
 
 @php
     $scissors = '<path stroke-linecap="round" stroke-linejoin="round" d="M7.848 8.25l1.536.887M7.848 8.25a3 3 0 1 1-5.196-3 3 3 0 0 1 5.196 3zm1.536.887a2.165 2.165 0 0 1 1.083 1.839c.005.351.054.695.14 1.024M9.384 9.137l10.062 5.808M9.708 6.075 6.684 11.27m12.348 5.872-7.371-4.255-.715-.41m0 0a3 3 0 1 0-3.522 4.84 3 3 0 0 0 3.522-4.84zm.715-.41-3.024-5.193m6.043 1.385L11.97 12.43m7.371-4.255a3 3 0 1 0 5.196-3 3 3 0 0 0-5.196 3z" />';
@@ -77,7 +79,7 @@ new
                         <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-content/35">
                             <svg class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z" /></svg>
                         </span>
-                        <input id="phone" type="tel" inputmode="tel" wire:model.defer="phone" placeholder="998 90 123 45 67"
+                        <input id="phone" type="tel" inputmode="tel" autocomplete="tel" wire:model.defer="phone" placeholder="998 90 123 45 67"
                             class="w-full rounded-lg border border-line bg-surface-sunken py-3 pl-11 pr-4 text-sm text-content placeholder-content/30 outline-none transition focus:border-brass focus:ring-2 focus:ring-brass/25">
                     </div>
                     @error('phone') <p class="mt-2 text-xs text-danger">{{ $message }}</p> @enderror
@@ -89,7 +91,7 @@ new
                         <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-content/35">
                             <svg class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" /></svg>
                         </span>
-                        <input id="password" type="password" wire:model.defer="password" placeholder="••••••••"
+                        <input id="password" type="password" autocomplete="current-password" wire:model.defer="password" placeholder="••••••••"
                             class="w-full rounded-lg border border-line bg-surface-sunken py-3 pl-11 pr-4 text-sm text-content placeholder-content/30 outline-none transition focus:border-brass focus:ring-2 focus:ring-brass/25">
                     </div>
                     @error('password') <p class="mt-2 text-xs text-danger">{{ $message }}</p> @enderror

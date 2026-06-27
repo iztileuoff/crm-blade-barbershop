@@ -21,6 +21,7 @@ return [
     'message_label' => 'Xabar teksti',
     'message_placeholder' => 'Mısalı: Erteń 10:00 den islaymiz. Kútemiz!',
     'send' => 'Tarqatıwdı jiberiw',
+    'broadcast_confirm' => 'Tarqatıw barlıq saylanǵan qabıl etiwshilerge jiberilsinbe? Bul ámeldi biykarlaw múmkin emes.',
     'err_no_recipients' => 'Telegram baylanısqan qabıl etiwshiler joq.',
 
     // Templates page

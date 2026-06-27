@@ -2,6 +2,8 @@
 
 return [
     'admin_panel' => 'Admin Panel',
+    'open_menu' => 'Menyudı ashıw',
+    'close_menu' => 'Menyudı jabıw',
 
     'dashboard' => 'Kassa',
     'appointments' => 'Jazılıwlar',

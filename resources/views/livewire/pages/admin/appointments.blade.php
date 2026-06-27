@@ -457,10 +457,10 @@ class extends Component
             <div class="flex items-center gap-3">
                 <div class="relative">
                     <select wire:model.live="barberFilter"
-                            class="appearance-none rounded-xl border border-content/[0.08] bg-surface-sunken py-2.5 pl-4 pr-10 text-sm text-content outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
-                        <option value="" style="color: #fff; background-color: #1a1a1a;">{{ __('appointments.all_barbers') }}</option>
+                            class="appearance-none rounded-xl border border-content/[0.08] bg-surface-sunken py-2.5 pl-4 pr-10 text-sm text-content outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20 [&>option]:bg-surface-raised">
+                        <option value="">{{ __('appointments.all_barbers') }}</option>
                         @foreach ($this->barbers as $barber)
-                            <option value="{{ $barber->id }}" style="color: #fff; background-color: #1a1a1a;">{{ $barber->name }}</option>
+                            <option value="{{ $barber->id }}">{{ $barber->name }}</option>
                         @endforeach
                     </select>
                     <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-content/30">
@@ -507,7 +507,7 @@ class extends Component
                     </button>
                 </div>
                 <form wire:submit="save" class="flex min-h-0 flex-1 flex-col">
-                    <div class="flex-1 max-h-[60vh] overflow-y-auto px-6 py-6" style="max-height: 70vh;overflow-y: auto;">
+                    <div class="flex-1 max-h-[70vh] overflow-y-auto px-6 py-6">
                         <div class="grid gap-6 sm:grid-cols-2">
                             <div>
                                 <label class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('common.client') }}</label>
@@ -525,10 +525,10 @@ class extends Component
                                 <label class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('common.barber') }}</label>
                                 <div class="relative">
                                     <select wire:model.live="barber_id"
-                                            class="block w-full appearance-none rounded-xl border border-content/[0.08] bg-surface-sunken py-3 pl-4 pr-10 text-sm text-content outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
-                                        <option value="" style="color: #fff; background-color: #1a1a1a;">{{ __('appointments.select_barber') }}</option>
+                                            class="block w-full appearance-none rounded-xl border border-content/[0.08] bg-surface-sunken py-3 pl-4 pr-10 text-sm text-content outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20 [&>option]:bg-surface-raised">
+                                        <option value="">{{ __('appointments.select_barber') }}</option>
                                         @foreach ($this->barbers as $barber)
-                                            <option value="{{ $barber->id }}" style="color: #fff; background-color: #1a1a1a;" @if($barber->price)
+                                            <option value="{{ $barber->id }}" @if($barber->price)
                                                 data-price="{{ $barber->price }}"
                                             @endif>
                                                 {{ $barber->name }}
@@ -551,10 +551,10 @@ class extends Component
                                 <label class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('appointments.payment_method') }}</label>
                                 <div class="relative">
                                     <select wire:model.live="payment_type"
-                                            class="block w-full appearance-none rounded-xl border border-content/[0.08] bg-surface-sunken py-3 pl-4 pr-10 text-sm text-content outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
-                                        <option value="cash" style="color: #fff; background-color: #1a1a1a;">{{ __('enums.payment_type.cash') }}</option>
-                                        <option value="card" style="color: #fff; background-color: #1a1a1a;">{{ __('enums.payment_type.card') }}</option>
-                                        <option value="both" style="color: #fff; background-color: #1a1a1a;">{{ __('enums.payment_type.both') }}</option>
+                                            class="block w-full appearance-none rounded-xl border border-content/[0.08] bg-surface-sunken py-3 pl-4 pr-10 text-sm text-content outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20 [&>option]:bg-surface-raised">
+                                        <option value="cash">{{ __('enums.payment_type.cash') }}</option>
+                                        <option value="card">{{ __('enums.payment_type.card') }}</option>
+                                        <option value="both">{{ __('enums.payment_type.both') }}</option>
                                     </select>
                                     <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-content/30">
                                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
@@ -665,7 +665,7 @@ class extends Component
                                             $isDuplicate = isset($row['service_id']) && $row['service_id'] !== null &&
                                                 collect($usedServiceIds)->filter(fn ($id) => $id === (int) $row['service_id'])->count() > 1;
                                         @endphp
-                                        <div @class([
+                                        <div wire:key="svc-row-{{ $i }}" @class([
                                             'flex items-center gap-3 px-4 py-3',
                                             'border-b border-content/[0.04]' => ! $loop->last,
                                             'bg-danger/5' => $isDuplicate,
@@ -678,10 +678,9 @@ class extends Component
                                                         'border-danger/40 focus:border-danger/60' => $isDuplicate,
                                                         'border-content/[0.08] focus:border-brass/40 focus:ring-1 focus:ring-brass/20' => ! $isDuplicate,
                                                     ])>
-                                                <option value="" style="color: #fff; background-color: #1a1a1a;">{{ __('appointments.select_service') }}</option>
+                                                <option value="">{{ __('appointments.select_service') }}</option>
                                                 @foreach ($this->services as $service)
                                                     <option value="{{ $service->id }}"
-                                                            style="color: #fff; background-color: #1a1a1a;"
                                                             @disabled(in_array($service->id, $otherUsed))>
                                                         {{ $service->name }} ({{ $service->duration_minutes }} {{ __('common.minutes_short') }})
                                                     </option>
@@ -739,9 +738,9 @@ class extends Component
                                         <label class="mb-1.5 block text-xs font-semibold text-content/40">{{ __('appointments.start') }}</label>
                                         <select wire:model.live="form_start_time"
                                                 class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20 [&>option]:bg-surface">
-                                            <option value="" style="color: #fff; background-color: #1a1a1a;">{{ __('appointments.select_placeholder') }}</option>
+                                            <option value="">{{ __('appointments.select_placeholder') }}</option>
                                             @foreach ($this->timeSlots as $slot)
-                                                <option value="{{ $slot }}" style="color: #fff; background-color: #1a1a1a;">{{ $slot }}</option>
+                                                <option value="{{ $slot }}">{{ $slot }}</option>
                                             @endforeach
                                         </select>
                                         @error('form_start_time') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
@@ -750,9 +749,9 @@ class extends Component
                                         <label class="mb-1.5 block text-xs font-semibold text-content/40">{{ __('appointments.end') }}</label>
                                         <select wire:model.live="form_end_time"
                                                 class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20 [&>option]:bg-surface">
-                                            <option value="" style="color: #fff; background-color: #1a1a1a;">{{ __('appointments.select_placeholder') }}</option>
+                                            <option value="">{{ __('appointments.select_placeholder') }}</option>
                                             @foreach ($this->timeSlots as $slot)
-                                                <option value="{{ $slot }}" style="color: #fff; background-color: #1a1a1a;">{{ $slot }}</option>
+                                                <option value="{{ $slot }}">{{ $slot }}</option>
                                             @endforeach
                                         </select>
                                         @error('form_end_time') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
@@ -831,7 +830,7 @@ class extends Component
                             <td class="hidden px-6 py-4 md:table-cell">
                                 <div class="flex items-center gap-2">
                                     @if ($appointment->barber?->photoUrl)
-                                        <img src="{{ $appointment->barber->photoUrl }}" class="h-6 w-6 rounded-full object-cover">
+                                        <img src="{{ $appointment->barber->photoUrl }}" alt="{{ $appointment->barber->name }}" class="h-6 w-6 rounded-full object-cover">
                                     @endif
                                     <span class="font-medium text-content/60">{{ $appointment->barber?->name }}</span>
                                 </div>

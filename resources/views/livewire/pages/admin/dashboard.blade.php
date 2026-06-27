@@ -6,6 +6,7 @@ use App\Models\Barber;
 use App\Models\Order;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
@@ -15,7 +16,9 @@ new
 class extends Component
 {
     public string $date = '';
+
     public string $month = '';
+
     public string $activeTab = 'day';
 
     public function mount(): void
@@ -30,7 +33,7 @@ class extends Component
     {
         try {
             $d = Carbon::parse($this->date);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $d = Carbon::now('Asia/Tashkent');
         }
 
@@ -42,11 +45,11 @@ class extends Component
     {
         try {
             $d = Carbon::parse($this->month.'-01');
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $d = Carbon::now('Asia/Tashkent');
         }
 
-        return \Illuminate\Support\Str::ucfirst($d->translatedFormat('F Y'));
+        return Str::ucfirst($d->translatedFormat('F Y'));
     }
 
     // ─── Daily computed ───────────────────────────────────────────────────────
@@ -630,7 +633,7 @@ class extends Component
                                 <td class="px-6 py-4">
                                     <div class="flex items-center gap-3">
                                         @if ($stat->photoUrl)
-                                            <img src="{{ $stat->photoUrl }}" class="h-9 w-9 rounded-full object-cover ring-1 ring-content/10">
+                                            <img src="{{ $stat->photoUrl }}" alt="{{ $stat->name }}" class="h-9 w-9 rounded-full object-cover ring-1 ring-content/10">
                                         @else
                                             <div class="flex h-9 w-9 items-center justify-center rounded-full bg-content/[0.06] text-xs font-bold text-content/40">
                                                 {{ mb_substr($stat->name, 0, 1) }}
@@ -987,7 +990,7 @@ class extends Component
                                 <td class="px-6 py-4">
                                     <div class="flex items-center gap-3">
                                         @if ($stat->photoUrl)
-                                            <img src="{{ $stat->photoUrl }}" class="h-9 w-9 rounded-full object-cover ring-1 ring-content/10">
+                                            <img src="{{ $stat->photoUrl }}" alt="{{ $stat->name }}" class="h-9 w-9 rounded-full object-cover ring-1 ring-content/10">
                                         @else
                                             <div class="flex h-9 w-9 items-center justify-center rounded-full bg-content/[0.06] text-xs font-bold text-content/40">
                                                 {{ mb_substr($stat->name, 0, 1) }}

@@ -21,6 +21,7 @@ return [
     'message_label' => 'Xabar matni',
     'message_placeholder' => 'Masalan: Ertaga 10:00 dan ishlaymiz. Kutamiz!',
     'send' => 'Tarqatmani yuborish',
+    'broadcast_confirm' => 'Tarqatma barcha tanlangan qabul qiluvchilarga yuborilsinmi? Bu amalni bekor qilib boʻlmaydi.',
     'err_no_recipients' => 'Telegram bogʻlangan qabul qiluvchilar yoʻq.',
 
     // Templates page

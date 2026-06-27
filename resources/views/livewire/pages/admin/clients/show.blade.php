@@ -185,7 +185,7 @@ class extends Component
         </div>
         <div>
             <p class="text-xs font-semibold uppercase tracking-wider text-content/30">{{ __('clients.client_since') }}</p>
-            <p class="mt-1 text-sm text-content/80">{{ $client->created_at ? \App\Models\Client::formatRussianDate($client->created_at) : '—' }}</p>
+            <p class="mt-1 text-sm text-content/80">{{ $client->created_at ? \App\Models\Client::formatLocalizedDate($client->created_at) : '—' }}</p>
         </div>
         <div>
             <p class="text-xs font-semibold uppercase tracking-wider text-content/30">{{ __('clients.last_visit') }}</p>
