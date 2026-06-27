@@ -35,6 +35,7 @@ return [
     'barber_performance' => 'Barberler ónimdarlıǵı',
     'appointments_revenue_day' => 'Kúnlik jazılıwlar hám túsim',
     'salary_short' => 'Aylıq',
+    'remainder' => 'Qaldıq',
     'no_active_barbers' => 'Aktiv barberler tabılmadı',
 
     // Month tab

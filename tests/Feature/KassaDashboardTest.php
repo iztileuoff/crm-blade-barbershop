@@ -144,3 +144,73 @@ it('aggregates the cash register totals for the month', function () {
 
     Carbon::setTestNow();
 });
+
+it('computes the cash register remainder (revenue − salary) per barber for the day', function () {
+    Carbon::setTestNow(Carbon::parse('2026-06-27 12:00:00', 'Asia/Tashkent'));
+
+    $admin = kassaAdmin();
+    $barber = Barber::factory()->create(['salary_percent' => 60, 'price' => 100000]);
+    $client = Client::factory()->create();
+
+    foreach ([100000, 100000] as $price) {
+        Appointment::create([
+            'client_id' => $client->id,
+            'barber_id' => $barber->id,
+            'starts_at' => now()->setTime(12, 0),
+            'ends_at' => now()->setTime(13, 0),
+            'status' => AppointmentStatus::Completed,
+            'price' => $price,
+            'payment_type' => 'cash',
+        ]);
+    }
+
+    $instance = Livewire::actingAs($admin)
+        ->test('pages.admin.dashboard')
+        ->set('activeTab', 'day')
+        ->set('date', '2026-06-27')
+        ->instance();
+
+    $stat = $instance->barberStats()->firstWhere('id', $barber->id);
+
+    // выручка 200000, ЗП 60% = 120000, остаток в кассе = 80000
+    expect($stat->revenue)->toBe(200000)
+        ->and($stat->salary)->toBe(120000)
+        ->and($stat->remainder)->toBe(80000)
+        ->and((int) $instance->barberStats()->sum('remainder'))->toBe(80000);
+
+    Carbon::setTestNow();
+});
+
+it('computes the cash register remainder per barber for the month', function () {
+    Carbon::setTestNow(Carbon::parse('2026-06-15 12:00:00', 'Asia/Tashkent'));
+
+    $admin = kassaAdmin();
+    $barber = Barber::factory()->create(['salary_percent' => 40, 'price' => 100000]);
+    $client = Client::factory()->create();
+
+    Appointment::create([
+        'client_id' => $client->id,
+        'barber_id' => $barber->id,
+        'starts_at' => now()->setTime(12, 0),
+        'ends_at' => now()->setTime(13, 0),
+        'status' => AppointmentStatus::Completed,
+        'price' => 150000,
+        'payment_type' => 'card',
+    ]);
+
+    $instance = Livewire::actingAs($admin)
+        ->test('pages.admin.dashboard')
+        ->set('activeTab', 'month')
+        ->set('month', '2026-06')
+        ->instance();
+
+    $stat = $instance->monthlyBarberStats()->firstWhere('id', $barber->id);
+
+    // выручка 150000, ЗП 40% = 60000, остаток = 90000
+    expect($stat->revenue)->toBe(150000)
+        ->and($stat->salary)->toBe(60000)
+        ->and($stat->remainder)->toBe(90000)
+        ->and((int) $instance->monthlyBarberStats()->sum('remainder'))->toBe(90000);
+
+    Carbon::setTestNow();
+});

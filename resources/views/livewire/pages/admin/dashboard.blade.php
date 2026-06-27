@@ -199,8 +199,10 @@ class extends Component
                     'debt' => $debt,
                     'salary' => $salary,
                     'salaryPercent' => $barber->salary_percent,
+                    'remainder' => $revenue - $salary,
                     'formattedRevenue' => number_format($revenue, 0, '.', ' ').' '.__('common.currency'),
                     'formattedSalary' => number_format($salary, 0, '.', ' ').' '.__('common.currency'),
+                    'formattedRemainder' => number_format($revenue - $salary, 0, '.', ' ').' '.__('common.currency'),
                 ];
             });
     }
@@ -307,8 +309,10 @@ class extends Component
                     'debt' => $debt,
                     'salary' => $salary,
                     'salaryPercent' => $barber->salary_percent,
+                    'remainder' => $revenue - $salary,
                     'formattedRevenue' => number_format($revenue, 0, '.', ' ').' '.__('common.currency'),
                     'formattedSalary' => number_format($salary, 0, '.', ' ').' '.__('common.currency'),
+                    'formattedRemainder' => number_format($revenue - $salary, 0, '.', ' ').' '.__('common.currency'),
                 ];
             });
     }
@@ -625,6 +629,7 @@ class extends Component
                             <th class="px-6 py-4 text-center">{{ __('dashboard.cancelled') }}</th>
                             <th class="px-6 py-4 text-right">{{ __('common.revenue') }}</th>
                             <th class="px-6 py-4 text-right">{{ __('dashboard.salary_short') }}</th>
+                            <th class="px-6 py-4 text-right">{{ __('dashboard.remainder') }}</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-content/[0.04]">
@@ -700,10 +705,19 @@ class extends Component
                                     </span>
                                     <div class="mt-0.5 text-[10px] text-content/25">{{ $stat->salaryPercent }}%</div>
                                 </td>
+                                <td class="px-6 py-4 text-right">
+                                    <span @class([
+                                        'font-extrabold tabular-nums',
+                                        'text-royal' => $stat->remainder > 0,
+                                        'text-content/30' => $stat->remainder === 0,
+                                    ])>
+                                        {{ $stat->formattedRemainder }}
+                                    </span>
+                                </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="px-6 py-12 text-center text-content/20">{{ __('dashboard.no_active_barbers') }}</td>
+                                <td colspan="6" class="px-6 py-12 text-center text-content/20">{{ __('dashboard.no_active_barbers') }}</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -715,6 +729,7 @@ class extends Component
                                 <td class="px-6 py-4 text-center text-content">{{ $this->barberStats->sum('cancelled_count') }}</td>
                                 <td class="px-6 py-4 text-right text-success">{{ $this->formatSum((int) $this->barberStats->sum('revenue')) }}</td>
                                 <td class="px-6 py-4 text-right text-brass-ink">{{ $this->formatSum((int) $this->barberStats->sum('salary')) }}</td>
+                                <td class="px-6 py-4 text-right text-royal">{{ $this->formatSum((int) $this->barberStats->sum('remainder')) }}</td>
                             </tr>
                         </tfoot>
                     @endif
@@ -982,6 +997,7 @@ class extends Component
                             <th class="px-6 py-4 text-right">{{ __('common.revenue') }}</th>
                             <th class="px-6 py-4 text-right">{{ __('dashboard.col_salary_percent') }}</th>
                             <th class="px-6 py-4 text-right">{{ __('dashboard.col_salary_payable') }}</th>
+                            <th class="px-6 py-4 text-right">{{ __('dashboard.remainder') }}</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-content/[0.04]">
@@ -1050,10 +1066,19 @@ class extends Component
                                         {{ $stat->formattedSalary }}
                                     </span>
                                 </td>
+                                <td class="px-6 py-4 text-right">
+                                    <span @class([
+                                        'font-extrabold tabular-nums',
+                                        'text-royal' => $stat->remainder > 0,
+                                        'text-content/30' => $stat->remainder === 0,
+                                    ])>
+                                        {{ $stat->formattedRemainder }}
+                                    </span>
+                                </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="px-6 py-12 text-center text-content/20">{{ __('dashboard.no_active_barbers') }}</td>
+                                <td colspan="6" class="px-6 py-12 text-center text-content/20">{{ __('dashboard.no_active_barbers') }}</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -1065,6 +1090,7 @@ class extends Component
                                 <td class="px-6 py-4 text-right text-success">{{ $this->formatSum((int) $this->monthlyBarberStats->sum('revenue')) }}</td>
                                 <td class="px-6 py-4"></td>
                                 <td class="px-6 py-4 text-right text-info">{{ $this->formatSum($this->monthlyTotalSalary) }}</td>
+                                <td class="px-6 py-4 text-right text-royal">{{ $this->formatSum((int) $this->monthlyBarberStats->sum('remainder')) }}</td>
                             </tr>
                             <tr class="border-t border-content/[0.06] bg-content/[0.02] text-xs font-bold uppercase tracking-wider">
                                 <td class="px-6 py-4 text-content/40" colspan="3">{{ __('dashboard.profit_row') }}</td>
@@ -1076,6 +1102,7 @@ class extends Component
                                 ])>
                                     {{ $this->companyProfit < 0 ? '−' : '' }}{{ $this->formatSum(abs($this->companyProfit)) }}
                                 </td>
+                                <td class="px-6 py-4"></td>
                             </tr>
                         </tfoot>
                     @endif

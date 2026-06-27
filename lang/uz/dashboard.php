@@ -35,6 +35,7 @@ return [
     'barber_performance' => 'Barberlar samaradorligi',
     'appointments_revenue_day' => 'Kunlik yozuvlar va tushum',
     'salary_short' => 'Maosh',
+    'remainder' => 'Qoldiq',
     'no_active_barbers' => 'Faol barberlar topilmadi',
 
     // Month tab
