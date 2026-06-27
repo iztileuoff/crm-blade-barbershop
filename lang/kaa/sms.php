@@ -19,6 +19,14 @@ return [
     'check_connection' => 'Baylanıstı tekseriw',
     'checking' => 'Tekserilmekte…',
 
+    // Dispatch toggles
+    'dispatch_title' => 'SMS jiberiw',
+    'dispatch_saved' => 'Saqlandı',
+    'toggle_reminder_label' => 'Jazılıw haqqında esletpeler',
+    'toggle_reminder_hint' => 'Telegramsız klientke keliwden 30 minut aldın SMS.',
+    'toggle_retention_label' => 'Uslap qalıw xabarları',
+    'toggle_retention_hint' => 'Uzaq waqıt kelmegen klientke SMS.',
+
     // History page
     'history_title' => 'SMS · Tariyx',
     'sent_label' => 'Jiberildi',

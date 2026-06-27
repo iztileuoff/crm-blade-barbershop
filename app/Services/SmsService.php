@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Setting;
 use App\Models\SmsMessage;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Cache;
@@ -14,6 +15,17 @@ class SmsService
     private const TOKEN_CACHE_KEY = 'eskiz.token';
 
     private const TOKEN_TTL_MINUTES = 60 * 24 * 25; // ~25 дней (токен живёт 30)
+
+    /**
+     * Контексты, отправку которых можно отключать в настройках, и ключ-флаг в settings.
+     * Контексты без записи (manual, broadcast) отключить нельзя — они всегда разрешены.
+     *
+     * @var array<string, string>
+     */
+    private const TOGGLEABLE_CONTEXTS = [
+        'reminder' => 'sms_enabled_reminder',
+        'retention' => 'sms_enabled_retention',
+    ];
 
     public function __construct(
         private readonly string $baseUrl,
@@ -28,6 +40,21 @@ class SmsService
     public function isConfigured(): bool
     {
         return $this->email !== '' && $this->password !== '';
+    }
+
+    /**
+     * Включена ли отправка SMS для указанного контекста.
+     * По умолчанию (флаг не сохранён) — включено. Контексты без переключателя всегда включены.
+     */
+    public function isEnabledFor(string $context): bool
+    {
+        $key = self::TOGGLEABLE_CONTEXTS[$context] ?? null;
+
+        if ($key === null) {
+            return true;
+        }
+
+        return Setting::get($key, '1') !== '0';
     }
 
     public function from(): string
@@ -50,6 +77,15 @@ class SmsService
      */
     public function sendSms(string $phone, string $message, ?int $clientId = null, string $context = 'manual'): bool
     {
+        if (! $this->isEnabledFor($context)) {
+            Log::info('SMS не отправлено: тип уведомления отключён в настройках.', [
+                'phone' => $phone,
+                'context' => $context,
+            ]);
+
+            return false;
+        }
+
         if (! $this->isConfigured()) {
             Log::warning('SMS не отправлено: учётные данные Eskiz не настроены.', [
                 'phone' => $phone,

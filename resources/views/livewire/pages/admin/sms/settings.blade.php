@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Setting;
 use App\Services\SmsService;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
@@ -20,11 +21,29 @@ class extends Component
 
     public ?string $balance = null;
 
+    public bool $remindersEnabled = true;
+
+    public bool $retentionEnabled = true;
+
     public function mount(SmsService $sms): void
     {
         $this->configured = $sms->isConfigured();
         $this->from = $sms->from();
         $this->baseUrl = $sms->baseUrl();
+        $this->remindersEnabled = $sms->isEnabledFor('reminder');
+        $this->retentionEnabled = $sms->isEnabledFor('retention');
+    }
+
+    public function updatedRemindersEnabled(bool $value): void
+    {
+        Setting::set('sms_enabled_reminder', $value ? '1' : '0');
+        $this->dispatch('toggle-saved');
+    }
+
+    public function updatedRetentionEnabled(bool $value): void
+    {
+        Setting::set('sms_enabled_retention', $value ? '1' : '0');
+        $this->dispatch('toggle-saved');
     }
 
     public function check(SmsService $sms): void
@@ -95,6 +114,41 @@ class extends Component
                 <span wire:loading.remove wire:target="check">{{ __('sms.check_connection') }}</span>
                 <span wire:loading wire:target="check">{{ __('sms.checking') }}</span>
             </button>
+        </div>
+    </div>
+
+    <div class="mt-6 overflow-hidden rounded-2xl border border-content/[0.06] bg-content/[0.03] shadow-xl backdrop-blur-md"
+         x-data="{ saved: false }"
+         x-on:toggle-saved.window="saved = true; clearTimeout($el._t); $el._t = setTimeout(() => saved = false, 2500)">
+        <div class="flex items-center justify-between border-b border-content/[0.06] bg-content/[0.03] px-6 py-4">
+            <h3 class="text-sm font-bold text-content">{{ __('sms.dispatch_title') }}</h3>
+            <span x-show="saved" x-cloak x-transition
+                  class="inline-flex items-center gap-1.5 rounded-full bg-success/10 px-3 py-1 text-xs font-bold text-success">
+                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+                {{ __('sms.dispatch_saved') }}
+            </span>
+        </div>
+        <div class="divide-y divide-content/[0.04]">
+            <div class="flex items-center justify-between gap-4 px-6 py-4">
+                <div>
+                    <p class="text-sm font-medium text-content">{{ __('sms.toggle_reminder_label') }}</p>
+                    <p class="mt-0.5 text-xs text-content/40">{{ __('sms.toggle_reminder_hint') }}</p>
+                </div>
+                <label class="relative inline-flex shrink-0 cursor-pointer items-center">
+                    <input type="checkbox" wire:model.live="remindersEnabled" class="peer sr-only">
+                    <div class="h-6 w-11 rounded-full bg-content/10 transition-colors peer-checked:bg-brass after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-content after:transition-all peer-checked:after:translate-x-full"></div>
+                </label>
+            </div>
+            <div class="flex items-center justify-between gap-4 px-6 py-4">
+                <div>
+                    <p class="text-sm font-medium text-content">{{ __('sms.toggle_retention_label') }}</p>
+                    <p class="mt-0.5 text-xs text-content/40">{{ __('sms.toggle_retention_hint') }}</p>
+                </div>
+                <label class="relative inline-flex shrink-0 cursor-pointer items-center">
+                    <input type="checkbox" wire:model.live="retentionEnabled" class="peer sr-only">
+                    <div class="h-6 w-11 rounded-full bg-content/10 transition-colors peer-checked:bg-brass after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-content after:transition-all peer-checked:after:translate-x-full"></div>
+                </label>
+            </div>
         </div>
     </div>
 </div>

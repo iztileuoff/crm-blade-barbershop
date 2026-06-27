@@ -2,6 +2,7 @@
 
 use App\Enums\Role;
 use App\Models\Client;
+use App\Models\Setting;
 use App\Models\SmsMessage;
 use App\Models\User;
 use App\Services\SmsService;
@@ -76,6 +77,70 @@ it('checks the Eskiz connection and reports the balance', function () {
         ->call('check')
         ->assertSet('connectionOk', true)
         ->assertSet('balance', '12345');
+});
+
+it('does not send or log when the SMS type is disabled in settings', function () {
+    Http::fake([
+        '*auth/login' => Http::response(['data' => ['token' => 'tok']], 200),
+        '*message/sms/send' => Http::response(['status' => 'success'], 200),
+    ]);
+
+    Setting::set('sms_enabled_reminder', '0');
+
+    $result = configuredSms()->sendSms('998901234567', 'Привет', null, 'reminder');
+
+    expect($result)->toBeFalse()
+        ->and(SmsMessage::count())->toBe(0);
+
+    Http::assertNothingSent();
+});
+
+it('still sends contexts that have no toggle when others are disabled', function () {
+    Http::fake([
+        '*auth/login' => Http::response(['data' => ['token' => 'tok']], 200),
+        '*message/sms/send' => Http::response(['status' => 'success'], 200),
+    ]);
+
+    Setting::set('sms_enabled_reminder', '0');
+    Setting::set('sms_enabled_retention', '0');
+
+    $result = configuredSms()->sendSms('998901234567', 'Привет', null, 'manual');
+
+    expect($result)->toBeTrue()
+        ->and(SmsMessage::where('context', 'manual')->count())->toBe(1);
+});
+
+it('skips retention SMS when retention is disabled', function () {
+    Http::fake([
+        '*auth/login' => Http::response(['data' => ['token' => 'tok']], 200),
+        '*message/sms/send' => Http::response(['status' => 'success'], 200),
+    ]);
+
+    configuredSms();
+    Setting::set('sms_enabled_retention', '0');
+
+    Client::factory()->create([
+        'phone' => '998901234567',
+        'last_visit_at' => now()->subDays(21),
+        'last_retention_sent_at' => null,
+    ]);
+
+    $this->artisan('app:send-retention-messages')->assertSuccessful();
+
+    expect(SmsMessage::count())->toBe(0);
+    Http::assertNothingSent();
+});
+
+it('persists the dispatch toggles from the settings page', function () {
+    configuredSms();
+
+    Livewire::actingAs(User::factory()->create(['role' => Role::ADMIN]))
+        ->test('pages.admin.sms.settings')
+        ->assertSet('remindersEnabled', true)
+        ->assertSet('retentionEnabled', true)
+        ->set('remindersEnabled', false);
+
+    expect(Setting::get('sms_enabled_reminder'))->toBe('0');
 });
 
 it('uses the editable template and logs context for retention SMS', function () {
