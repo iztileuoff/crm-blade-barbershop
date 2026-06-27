@@ -28,6 +28,12 @@ class extends Component
 
     public bool $debtEnabled = false;
 
+    public string $payment_type = 'cash';
+
+    public ?int $cash_amount = null;
+
+    public ?int $card_amount = null;
+
     /** @var array<int, array{product_id: int, quantity: int, price: int, name: string}> */
     public array $cartItems = [];
 
@@ -174,6 +180,9 @@ class extends Component
             'total_price' => $total,
             'note' => $this->note ?: null,
             'debt_amount' => $debtAmount,
+            'payment_type' => $this->payment_type,
+            'cash_amount' => $this->payment_type === 'both' ? $this->cash_amount : null,
+            'card_amount' => $this->payment_type === 'both' ? $this->card_amount : null,
         ]);
 
         foreach ($this->cartItems as $item) {
@@ -218,7 +227,8 @@ class extends Component
 
     private function resetForm(): void
     {
-        $this->reset(['client_id', 'clientSearch', 'note', 'cartItems', 'debt_amount', 'debtEnabled']);
+        $this->reset(['client_id', 'clientSearch', 'note', 'cartItems', 'debt_amount', 'debtEnabled', 'cash_amount', 'card_amount']);
+        $this->payment_type = 'cash';
         $this->resetErrorBag();
     }
 }; ?>
@@ -357,6 +367,46 @@ class extends Component
                         </div>
                     @endif
 
+                    {{-- Payment method --}}
+                    <div class="mb-4">
+                        <label class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('orders.payment_method') }}</label>
+                        <div class="relative">
+                            <select wire:model.live="payment_type"
+                                    class="block w-full appearance-none rounded-xl border border-content/[0.08] bg-surface-sunken py-3 pl-4 pr-10 text-sm text-content outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
+                                <option value="cash" style="color: #fff; background-color: #1a1a1a;">{{ __('enums.payment_type.cash') }}</option>
+                                <option value="card" style="color: #fff; background-color: #1a1a1a;">{{ __('enums.payment_type.card') }}</option>
+                                <option value="both" style="color: #fff; background-color: #1a1a1a;">{{ __('enums.payment_type.both') }}</option>
+                            </select>
+                            <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-content/30">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
+                            </div>
+                        </div>
+
+                        @if ($payment_type === 'both')
+                            <div class="mt-3 grid grid-cols-2 gap-4 rounded-xl border border-royal/20 bg-royal/5 p-4">
+                                <div>
+                                    <label class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('enums.payment_type.cash') }} ({{ __('common.currency') }})</label>
+                                    <div class="relative">
+                                        <input type="number" wire:model.live="cash_amount"
+                                               placeholder="0" min="0"
+                                               class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] py-3 pl-4 pr-12 text-sm text-content outline-none transition focus:border-success/40 focus:ring-1 focus:ring-success/20">
+                                        <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-medium text-content/25">{{ __('common.currency') }}</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('enums.payment_type.card') }} ({{ __('common.currency') }})</label>
+                                    <div class="relative">
+                                        <input type="number" wire:model.live="card_amount"
+                                               placeholder="0" min="0"
+                                               class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] py-3 pl-4 pr-12 text-sm text-content outline-none transition focus:border-info/40 focus:ring-1 focus:ring-info/20">
+                                        <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-medium text-content/25">{{ __('common.currency') }}</span>
+                                    </div>
+                                </div>
+                                <p class="col-span-2 text-[10px] text-content/30">{{ __('orders.both_hint') }}</p>
+                            </div>
+                        @endif
+                    </div>
+
                     {{-- Client --}}
                     <div class="mb-4">
                         <label class="mb-1.5 block text-xs font-semibold text-content/50">
@@ -484,6 +534,18 @@ class extends Component
                             </td>
                             <td class="whitespace-nowrap px-6 py-4 text-right">
                                 <span class="font-extrabold text-success tabular-nums">{{ $order->formattedTotal }}</span>
+                                <div class="mt-1 flex flex-wrap items-center justify-end gap-1.5">
+                                    @if ($order->payment_type === \App\Enums\PaymentType::Both)
+                                        <span class="inline-flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-[9px] font-bold text-success">{{ __('orders.cash_short') }}: {{ number_format($order->cashReceived, 0, '.', ' ') }}</span>
+                                        <span class="inline-flex items-center gap-1 rounded-full bg-info/10 px-2 py-0.5 text-[9px] font-bold text-info">{{ __('orders.card_short') }}: {{ number_format($order->cardReceived, 0, '.', ' ') }}</span>
+                                    @else
+                                        <span @class([
+                                            'inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-bold',
+                                            'bg-success/10 text-success' => $order->payment_type === \App\Enums\PaymentType::Cash,
+                                            'bg-info/10 text-info' => $order->payment_type === \App\Enums\PaymentType::Card,
+                                        ])>{{ ($order->payment_type ?? \App\Enums\PaymentType::Cash)->label() }}</span>
+                                    @endif
+                                </div>
                                 @if ($order->hasDebt)
                                     <div class="mt-1 flex items-center justify-end gap-1 text-[10px] font-bold text-danger">
                                         <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" /></svg>

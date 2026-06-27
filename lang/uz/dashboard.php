@@ -11,12 +11,15 @@ return [
     'services' => 'Xizmatlar',
     'products' => 'Mahsulotlar',
 
-    // Day tab
-    'total_turnover' => 'Umumiy aylanma',
-    'product_sales' => 'Mahsulot savdosi',
-    'sales_per_day' => 'Kuniga :count savdo',
-    'services_in_cash' => 'Kassadagi xizmatlar',
-    'only_completed' => 'Faqat yakunlanganlar',
+    // Day tab — cash register
+    'received_total' => 'Kunlik tushum',
+    'cash_total' => 'Naqd',
+    'card_total' => 'Karta',
+    'in_cash_drawer' => 'Kassada naqd',
+    'on_card_terminal' => 'Kartaga / terminal',
+    'debt_issued_today' => 'Kunlik qarzga berilgan',
+    'not_in_register' => 'Kassaga kirmaydi',
+    'all_debts' => 'Barcha qarzlar →',
     'appointments_day' => 'Kunlik yozuvlar',
     'all_day_appointments' => 'Kun uchun barcha yozuvlar',
     'pending' => 'Kutilmoqda',
@@ -36,6 +39,7 @@ return [
 
     // Month tab
     'turnover_month' => 'Oylik aylanma',
+    'debt_month' => 'Oyda qarzga berilgan',
     'services_month' => 'Oylik xizmatlar',
     'completed_appointments' => ':count yakunlangan yozuv',
     'products_month' => 'Oylik mahsulotlar',

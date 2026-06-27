@@ -11,12 +11,15 @@ return [
     'services' => 'Услуги',
     'products' => 'Товары',
 
-    // Day tab
-    'total_turnover' => 'Общий оборот',
-    'product_sales' => 'Продажи товаров',
-    'sales_per_day' => ':count продаж за день',
-    'services_in_cash' => 'Услуги в кассе',
-    'only_completed' => 'Только завершённые',
+    // Day tab — cash register
+    'received_total' => 'Получено за день',
+    'cash_total' => 'Наличными',
+    'card_total' => 'Картой',
+    'in_cash_drawer' => 'В кассе наличными',
+    'on_card_terminal' => 'На карту / терминал',
+    'debt_issued_today' => 'Выдано в долг за день',
+    'not_in_register' => 'Не входит в кассу',
+    'all_debts' => 'Все долги →',
     'appointments_day' => 'Записей за день',
     'all_day_appointments' => 'Все записи на день',
     'pending' => 'Ожидают',
@@ -36,6 +39,7 @@ return [
 
     // Month tab
     'turnover_month' => 'Оборот за месяц',
+    'debt_month' => 'Выдано в долг за месяц',
     'services_month' => 'Услуги за месяц',
     'completed_appointments' => ':count завершённых записей',
     'products_month' => 'Товары за месяц',

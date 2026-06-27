@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\AppointmentStatus;
 use App\Enums\PaymentType;
+use App\Models\Concerns\HasCashRegisterAmounts;
 use App\Observers\AppointmentObserver;
 use Database\Factories\AppointmentFactory;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
@@ -17,6 +18,8 @@ use Illuminate\Support\Carbon;
 #[ObservedBy(AppointmentObserver::class)]
 class Appointment extends Model
 {
+    use HasCashRegisterAmounts;
+
     /** @use HasFactory<AppointmentFactory> */
     use HasFactory;
 
@@ -62,6 +65,11 @@ class Appointment extends Model
 
     public bool $hasDebt {
         get => ($this->debt_amount ?? 0) > 0;
+    }
+
+    public function kassaTotalAmount(): int
+    {
+        return (int) ($this->price ?? 0);
     }
 
     public function client(): BelongsTo

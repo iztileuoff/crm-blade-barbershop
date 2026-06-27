@@ -11,12 +11,15 @@ return [
     'services' => 'Xızmetler',
     'products' => 'Tovarlar',
 
-    // Day tab
-    'total_turnover' => 'Ulıwma aylanba',
-    'product_sales' => 'Tovar satıwı',
-    'sales_per_day' => 'Kúnine :count satıw',
-    'services_in_cash' => 'Kassadaǵı xızmetler',
-    'only_completed' => 'Tek juwmaqlanǵanlar',
+    // Day tab — cash register
+    'received_total' => 'Kúnlik túsim',
+    'cash_total' => 'Naqd',
+    'card_total' => 'Karta',
+    'in_cash_drawer' => 'Kassada naqd',
+    'on_card_terminal' => 'Kartaǵa / terminal',
+    'debt_issued_today' => 'Kúnlik qarızǵa berilgen',
+    'not_in_register' => 'Kassaǵa kirmeydi',
+    'all_debts' => 'Barlıq qarızlar →',
     'appointments_day' => 'Kúnlik jazılıwlar',
     'all_day_appointments' => 'Kún ushın barlıq jazılıwlar',
     'pending' => 'Kútilmekte',
@@ -36,6 +39,7 @@ return [
 
     // Month tab
     'turnover_month' => 'Aylıq aylanba',
+    'debt_month' => 'Ayda qarızǵa berilgen',
     'services_month' => 'Aylıq xızmetler',
     'completed_appointments' => ':count juwmaqlanǵan jazılıw',
     'products_month' => 'Aylıq tovarlar',
