@@ -15,4 +15,31 @@ return [
 
     'err_phone_format' => 'Telefon 998XXXXXXXXX formatida boʻlishi kerak.',
     'err_duplicate' => 'Bunday raqamli mijoz allaqachon mavjud.',
+
+    // Profile page
+    'age' => ':age yosh',
+    'client_since' => 'Mijoz boʻlgan sana',
+    'last_visit' => 'Oxirgi tashrif',
+    'telegram' => 'Telegram',
+    'linked' => 'Ulangan',
+    'not_linked' => 'Ulanmagan',
+
+    'metric_visits' => 'Tashriflar',
+    'metric_cancelled' => 'Bekor qilingan: :count',
+    'metric_spent' => 'Sarflangan',
+    'metric_avg_check' => 'Oʻrtacha chek',
+    'metric_debt' => 'Qarzdorlik',
+    'metric_favorite_barber' => 'Sevimli usta',
+
+    'notes_title' => 'Mijoz haqida eslatmalar',
+    'notes_saved' => 'Saqlandi',
+    'notes_placeholder' => 'Afzalliklar, xususiyatlar, kelishuvlar…',
+
+    'tab_appointments' => 'Yozuvlar',
+    'tab_orders' => 'Xaridlar',
+    'tab_sms' => 'SMS',
+    'order_items' => 'Tovarlar',
+    'empty_appointments' => 'Hozircha yozuvlar yoʻq',
+    'empty_orders' => 'Hozircha xaridlar yoʻq',
+    'empty_sms' => 'Hozircha SMS yuborilmagan',
 ];

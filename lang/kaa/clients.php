@@ -15,4 +15,31 @@ return [
 
     'err_phone_format' => 'Telefon 998XXXXXXXXX formatında bolıwı kerek.',
     'err_duplicate' => 'Bunday nomerli klient álleqashan bar.',
+
+    // Profile page
+    'age' => ':age jas',
+    'client_since' => 'Klient bolǵan sáne',
+    'last_visit' => 'Aqırǵı keliw',
+    'telegram' => 'Telegram',
+    'linked' => 'Jalǵanǵan',
+    'not_linked' => 'Jalǵanbaǵan',
+
+    'metric_visits' => 'Keliwler',
+    'metric_cancelled' => 'Biykarlanǵan: :count',
+    'metric_spent' => 'Sarplanǵan',
+    'metric_avg_check' => 'Ortasha chek',
+    'metric_debt' => 'Qarızdarlıq',
+    'metric_favorite_barber' => 'Súygen usta',
+
+    'notes_title' => 'Klient haqqında belgiler',
+    'notes_saved' => 'Saqlandı',
+    'notes_placeholder' => 'Tańlawlar, ózgeshelikler, kelisimler…',
+
+    'tab_appointments' => 'Jazılıwlar',
+    'tab_orders' => 'Satıp alıwlar',
+    'tab_sms' => 'SMS',
+    'order_items' => 'Tovarlar',
+    'empty_appointments' => 'Házirshe jazılıwlar joq',
+    'empty_orders' => 'Házirshe satıp alıwlar joq',
+    'empty_sms' => 'Házirshe SMS jiberilmegen',
 ];

@@ -18,6 +18,7 @@ class Client extends Model
         'name',
         'phone',
         'birth_date',
+        'notes',
         'last_visit_at',
         'last_retention_sent_at',
         'telegram_chat_id',
@@ -103,5 +104,15 @@ class Client extends Model
     public function latestAppointment(): HasOne
     {
         return $this->hasOne(Appointment::class)->latestOfMany('starts_at');
+    }
+
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class);
+    }
+
+    public function smsMessages(): HasMany
+    {
+        return $this->hasMany(SmsMessage::class);
     }
 }

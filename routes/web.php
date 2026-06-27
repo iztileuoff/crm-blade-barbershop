@@ -35,6 +35,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', RestrictBarberAccess
     Volt::route('/barbers', 'pages.admin.barbers')->name('barbers');
     Volt::route('/services', 'pages.admin.services')->name('services');
     Volt::route('/clients', 'pages.admin.clients')->name('clients');
+    Volt::route('/clients/{client}', 'pages.admin.clients.show')->name('clients.show');
     Volt::route('/products', 'pages.admin.products')->name('products');
     Volt::route('/orders', 'pages.admin.orders')->name('orders');
     Volt::route('/debts', 'pages.admin.debts')->name('debts');

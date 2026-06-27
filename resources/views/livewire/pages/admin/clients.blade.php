@@ -198,7 +198,8 @@ class extends Component
                     @forelse ($this->clients as $client)
                         <tr class="transition-colors hover:bg-content/[0.02]">
                             <td class="px-6 py-4">
-                                <div class="font-bold text-content">{{ $client->name }}</div>
+                                <a href="{{ route('admin.clients.show', $client) }}" wire:navigate
+                                   class="font-bold text-content transition hover:text-brass-ink">{{ $client->name }}</a>
                             </td>
                             <td class="whitespace-nowrap px-6 py-4 font-medium text-brass-ink/60">{{ $client->formattedPhone }}</td>
                             <td class="hidden px-6 py-4 text-content/40 sm:table-cell">
