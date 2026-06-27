@@ -35,13 +35,14 @@ class BarberMenuHandler
         $percent = $barber->salary_percent ?? 100;
 
         $share = function (Carbon $from, Carbon $to) use ($barber, $percent): int {
-            $gross = (int) Appointment::query()
-                ->where('barber_id', $barber->id)
-                ->where('status', AppointmentStatus::Completed->value)
-                ->whereBetween('starts_at', [$from, $to])
-                ->sum('price');
-
-            return (int) round($gross * $percent / 100);
+            return (int) round(
+                Appointment::query()
+                    ->where('barber_id', $barber->id)
+                    ->where('status', AppointmentStatus::Completed->value)
+                    ->whereBetween('starts_at', [$from, $to])
+                    ->get(['price', 'salary_percent'])
+                    ->sum(fn ($a) => (int) ($a->price ?? 0) * ($a->salary_percent ?? $percent) / 100)
+            );
         };
 
         $now = Carbon::now();
