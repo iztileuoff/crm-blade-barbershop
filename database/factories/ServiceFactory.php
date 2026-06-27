@@ -27,6 +27,7 @@ class ServiceFactory extends Factory
 
         return [
             'name' => Service::encodeTranslations(fake()->randomElement($names)),
+            'icon' => fake()->randomElement(Service::ICONS),
             'duration_minutes' => fake()->randomElement([30, 45, 60]),
             'is_active' => true,
         ];

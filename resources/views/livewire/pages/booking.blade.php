@@ -43,7 +43,7 @@ class extends Component
     #[Computed]
     public function services()
     {
-        return Service::active()->orderBy('name')->get();
+        return Service::active()->ordered()->get();
     }
 
     #[Computed]
@@ -270,9 +270,7 @@ class extends Component
                             class="group flex w-full items-center justify-between rounded-2xl border border-content/[0.06] bg-content/[0.03] p-4 text-left transition-all duration-200 hover:border-brass/30 hover:bg-content/[0.06] active:scale-[0.98]">
                         <div class="flex items-center gap-3.5">
                             <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brass/10">
-                                <svg class="h-5 w-5 text-brass-ink" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 0 1-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.3 24.3 0 0 1 4.5 0m0 0v5.714a2.25 2.25 0 0 0 .659 1.591L19 14.5M14.25 3.104c.251.023.501.05.75.082M19 14.5l-1.47 4.42a2.25 2.25 0 0 1-2.136 1.53H8.607a2.25 2.25 0 0 1-2.137-1.53L5 14.5m14 0H5" />
-                                </svg>
+                                <x-service-icon :name="$service->icon" class="h-5 w-5 text-brass-ink" />
                             </div>
                             <div>
                                 <div class="text-sm font-semibold">{{ $service->name }}</div>

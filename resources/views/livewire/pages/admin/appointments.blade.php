@@ -1,7 +1,6 @@
 <?php
 
 use App\Enums\AppointmentStatus;
-use App\Enums\PaymentType;
 use App\Models\Appointment;
 use App\Models\Barber;
 use App\Models\Client;
@@ -99,7 +98,7 @@ class extends Component
             ->when($this->clientSearch, function ($q) {
                 $q->where(function ($q) {
                     $q->where('name', 'like', "%{$this->clientSearch}%")
-                    ->orWhere('phone', 'like', "%{$this->clientSearch}%");
+                        ->orWhere('phone', 'like', "%{$this->clientSearch}%");
                 });
             })
             ->limit(20)
@@ -139,7 +138,7 @@ class extends Component
     #[Computed]
     public function services()
     {
-        return Service::active()->orderBy('name')->get();
+        return Service::active()->ordered()->get();
     }
 
     #[Computed]
@@ -855,7 +854,7 @@ class extends Component
                                         ])>
                                             {{ __('common.total') }}: {{ $appointment->formattedPrice }}
                                         </span>
-                                        @if ($appointment->payment_type === PaymentType::Both && ($appointment->cash_amount || $appointment->card_amount))
+                                        @if ($appointment->payment_type === \App\Enums\PaymentType::Both && ($appointment->cash_amount || $appointment->card_amount))
                                             <div class="flex flex-col items-end gap-0.5">
                                                 <span class="inline-flex items-center rounded-full bg-royal/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-royal">
                                                     {{ $appointment->payment_type->label() }}
@@ -866,7 +865,7 @@ class extends Component
                                         @else
                                             <span @class([
                                                 'inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider',
-                                                $appointment->payment_type?->badgeClasses() ?? PaymentType::Cash->badgeClasses(),
+                                                $appointment->payment_type?->badgeClasses() ?? \App\Enums\PaymentType::Cash->badgeClasses(),
                                             ])>
                                                 {{ $appointment->payment_type?->label() ?? __('enums.payment_type.cash') }}
                                             </span>

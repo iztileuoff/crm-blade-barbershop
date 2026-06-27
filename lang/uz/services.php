@@ -9,6 +9,7 @@ return [
     'name_ru' => 'Nomi (rus)',
     'name_uz' => 'Nomi (oʻzbek)',
     'name_kaa' => 'Nomi (qoraqalpoq)',
+    'icon' => 'Belgi',
     'duration' => 'Davomiyligi (daq)',
     'duration_short' => 'Davomiyligi',
     'active' => 'Faol',

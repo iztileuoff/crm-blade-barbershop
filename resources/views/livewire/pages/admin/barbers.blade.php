@@ -69,7 +69,7 @@ class extends Component
     #[Computed]
     public function allServices()
     {
-        return Service::active()->orderBy('name')->get();
+        return Service::active()->ordered()->get();
     }
 
     public function openCreate(): void

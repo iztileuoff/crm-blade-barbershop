@@ -17,6 +17,8 @@ class extends Component
 
     public string $name_kaa = '';
 
+    public string $icon = Service::DEFAULT_ICON;
+
     public int $duration_minutes = 30;
 
     public bool $is_active = true;
@@ -28,7 +30,7 @@ class extends Component
     {
         return Service::query()
             ->withCount('appointments')
-            ->orderBy('name')
+            ->ordered()
             ->get();
     }
 
@@ -47,6 +49,7 @@ class extends Component
         $this->name_ru = $translations['ru'] ?? '';
         $this->name_uz = $translations['uz'] ?? '';
         $this->name_kaa = $translations['kaa'] ?? '';
+        $this->icon = in_array($service->icon, Service::ICONS, true) ? $service->icon : Service::DEFAULT_ICON;
         $this->duration_minutes = (int) $service->duration_minutes;
         $this->is_active = (bool) $service->is_active;
         $this->showForm = true;
@@ -58,12 +61,14 @@ class extends Component
             'name_ru' => ['required', 'string', 'max:255'],
             'name_uz' => ['required', 'string', 'max:255'],
             'name_kaa' => ['required', 'string', 'max:255'],
+            'icon' => ['required', 'in:'.implode(',', Service::ICONS)],
             'duration_minutes' => ['required', 'integer', 'min:5'],
             'is_active' => ['boolean'],
         ], attributes: [
             'name_ru' => __('services.name_ru'),
             'name_uz' => __('services.name_uz'),
             'name_kaa' => __('services.name_kaa'),
+            'icon' => __('services.icon'),
             'duration_minutes' => __('services.duration'),
         ]);
 
@@ -73,6 +78,7 @@ class extends Component
                 'uz' => $data['name_uz'],
                 'kaa' => $data['name_kaa'],
             ]),
+            'icon' => $data['icon'],
             'duration_minutes' => $data['duration_minutes'],
             'is_active' => $data['is_active'],
         ];
@@ -102,7 +108,8 @@ class extends Component
 
     private function resetForm(): void
     {
-        $this->reset(['editingId', 'name_ru', 'name_uz', 'name_kaa', 'duration_minutes', 'is_active']);
+        $this->reset(['editingId', 'name_ru', 'name_uz', 'name_kaa', 'icon', 'duration_minutes', 'is_active']);
+        $this->icon = Service::DEFAULT_ICON;
         $this->duration_minutes = 30;
         $this->is_active = true;
         $this->resetErrorBag();
@@ -146,6 +153,22 @@ class extends Component
                         <input type="text" wire:model="name_kaa" placeholder="{{ __('services.name_placeholder') }}"
                                class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content placeholder-content/20 outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
                         @error('name_kaa') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('services.icon') }}</label>
+                        <div class="flex flex-wrap gap-2.5">
+                            @foreach (\App\Models\Service::ICONS as $iconKey)
+                                <button type="button" wire:click="$set('icon', '{{ $iconKey }}')"
+                                        @class([
+                                            'flex h-12 w-12 items-center justify-center rounded-xl border transition',
+                                            'border-brass bg-brass/15 text-brass-ink' => $icon === $iconKey,
+                                            'border-content/[0.08] bg-content/[0.04] text-content/40 hover:border-content/20 hover:text-content/70' => $icon !== $iconKey,
+                                        ])>
+                                    <x-service-icon :name="$iconKey" class="h-5 w-5" />
+                                </button>
+                            @endforeach
+                        </div>
+                        @error('icon') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                     </div>
                     <div>
                         <label class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('services.duration') }}</label>
@@ -191,10 +214,17 @@ class extends Component
                     @forelse ($this->services as $service)
                         <tr class="transition-colors hover:bg-content/[0.02]">
                             <td class="px-6 py-4">
-                                <div class="font-bold text-content">{{ $service->name }}</div>
-                                @if (! $service->is_active)
-                                    <span class="mt-1 inline-flex rounded-full bg-content/10 px-2 py-0.5 text-[10px] font-bold text-content/40 sm:hidden">{{ __('services.inactive') }}</span>
-                                @endif
+                                <div class="flex items-center gap-3">
+                                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brass/10">
+                                        <x-service-icon :name="$service->icon" class="h-5 w-5 text-brass-ink" />
+                                    </div>
+                                    <div>
+                                        <div class="font-bold text-content">{{ $service->name }}</div>
+                                        @if (! $service->is_active)
+                                            <span class="mt-1 inline-flex rounded-full bg-content/10 px-2 py-0.5 text-[10px] font-bold text-content/40 sm:hidden">{{ __('services.inactive') }}</span>
+                                        @endif
+                                    </div>
+                                </div>
                             </td>
                             <td class="px-6 py-4 text-content/50">{{ $service->duration_minutes }} {{ __('common.minutes_short') }}</td>
                             <td class="hidden px-6 py-4 sm:table-cell">

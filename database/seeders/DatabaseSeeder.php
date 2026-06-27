@@ -60,9 +60,12 @@ class DatabaseSeeder extends Seeder
             fn (Service $service) => mb_strtolower($service->translations['ru'] ?? '')
         );
 
+        $icons = Service::catalogueIcons();
+
         foreach (Service::baseCatalogue() as $entry) {
             $payload = [
                 'name' => Service::encodeTranslations($entry),
+                'icon' => $icons[$entry['ru']] ?? Service::DEFAULT_ICON,
                 'duration_minutes' => $durations[$entry['ru']] ?? 30,
             ];
 
