@@ -23,14 +23,18 @@ class SendRetentionMessages extends Command
 
         $dryRun = (bool) $this->option('dry-run');
         $days = (int) config('services.barbershop.retention_days', 14);
-        $target = Carbon::now()->subDays($days)->startOfDay();
-        $end = Carbon::now()->subDays($days)->endOfDay();
+
+        // Все, кто не был $days и более дней. Повторно напоминаем не чаще, чем
+        // раз в $days дней (тумблер last_retention_sent_at).
+        $lastVisitBefore = Carbon::now()->subDays($days)->endOfDay();
+        $notMessagedSince = Carbon::now()->subDays($days)->startOfDay();
 
         $clients = Client::query()
-            ->whereBetween('last_visit_at', [$target, $end])
-            ->where(function ($q) use ($target) {
+            ->whereNotNull('last_visit_at')
+            ->where('last_visit_at', '<=', $lastVisitBefore)
+            ->where(function ($q) use ($notMessagedSince) {
                 $q->whereNull('last_retention_sent_at')
-                    ->orWhere('last_retention_sent_at', '<', $target);
+                    ->orWhere('last_retention_sent_at', '<', $notMessagedSince);
             })
             ->get();
 
@@ -38,7 +42,7 @@ class SendRetentionMessages extends Command
 
         if ($dryRun) {
             $this->info('Пробный запуск (--dry-run): SMS НЕ отправляются.');
-            $this->info("Клиентов под условие ({$days} дн. назад): {$clients->count()}");
+            $this->info("Клиентов под условие ({$days}+ дн. назад): {$clients->count()}");
             foreach ($clients as $client) {
                 $this->line("  • {$client->phone} (последний визит: {$client->last_visit_at?->toDateString()})");
             }
