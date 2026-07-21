@@ -35,6 +35,41 @@ it('lets a guest create an appointment', function () {
         ->and(Client::where('phone', '998901112233')->exists())->toBeTrue();
 });
 
+it('pre-fills name and birth date from an existing client when the phone is typed', function () {
+    $client = Client::factory()->create([
+        'name' => 'Старый Клиент',
+        'phone' => '998901112233',
+        'birth_date' => '1990-05-15',
+    ]);
+
+    Volt::test('pages.booking')
+        ->set('phone', '998 90 111 22 33')
+        ->assertSet('name', 'Старый Клиент')
+        ->assertSet('birth_date', '1990-05-15');
+});
+
+it('does not overwrite name or birth date the user already entered', function () {
+    Client::factory()->create([
+        'name' => 'Старый Клиент',
+        'phone' => '998901112233',
+        'birth_date' => '1990-05-15',
+    ]);
+
+    Volt::test('pages.booking')
+        ->set('name', 'Новое Имя')
+        ->set('birth_date', '2000-01-01')
+        ->set('phone', '998901112233')
+        ->assertSet('name', 'Новое Имя')
+        ->assertSet('birth_date', '2000-01-01');
+});
+
+it('leaves fields empty for an unknown phone', function () {
+    Volt::test('pages.booking')
+        ->set('phone', '998909998877')
+        ->assertSet('name', '')
+        ->assertSet('birth_date', '');
+});
+
 it('shows the service name in the selected locale on the booking page', function () {
     Service::factory()->create([
         'name' => Service::encodeTranslations([

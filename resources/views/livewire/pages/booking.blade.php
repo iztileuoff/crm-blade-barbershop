@@ -40,6 +40,31 @@ class extends Component
         $this->date = Carbon::now()->toDateString();
     }
 
+    /**
+     * When a recognizable phone is typed, pre-fill name and birth date from an
+     * existing client. Only empty fields are filled — never overwrite the user's
+     * own input.
+     */
+    public function updatedPhone(): void
+    {
+        $normalized = Client::normalizePhone($this->phone);
+        if ($normalized === null) {
+            return;
+        }
+
+        $client = Client::where('phone', $normalized)->first();
+        if (! $client) {
+            return;
+        }
+
+        if ($this->name === '') {
+            $this->name = (string) $client->name;
+        }
+        if ($this->birth_date === '' && $client->birth_date !== null) {
+            $this->birth_date = $client->birth_date->toDateString();
+        }
+    }
+
     #[Computed]
     public function services()
     {
@@ -445,7 +470,7 @@ class extends Component
                 </div>
                 <div>
                     <label for="phone" class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('booking.confirm.phone') }}</label>
-                    <input id="phone" type="tel" inputmode="tel" autocomplete="tel" wire:model="phone" placeholder="998 90 123 45 67"
+                    <input id="phone" type="tel" inputmode="tel" autocomplete="tel" wire:model.blur="phone" placeholder="998 90 123 45 67"
                            class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content placeholder-content/20 outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
                     @error('phone') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                 </div>
