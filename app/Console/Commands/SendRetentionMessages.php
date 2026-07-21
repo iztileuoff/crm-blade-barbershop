@@ -10,7 +10,7 @@ use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 
-#[Signature('app:send-retention-messages {--dry-run : Показать получателей без реальной отправки} {--phone= : Отправить тестовое SMS на один номер (998XXXXXXXXX)}')]
+#[Signature('app:send-retention-messages {--dry-run : Показать получателей без реальной отправки} {--phone= : Отправить тестовое SMS на один номер (998XXXXXXXXX)} {--backlog : Разовый догоняющий прогон — все, кто не был N и более дней (по умолчанию только ровно N дней назад)}')]
 #[Description('SMS-удержание: отправка клиентам, чей последний визит был N дней назад')]
 class SendRetentionMessages extends Command
 {
@@ -22,27 +22,38 @@ class SendRetentionMessages extends Command
         }
 
         $dryRun = (bool) $this->option('dry-run');
+        $backlog = (bool) $this->option('backlog');
         $days = (int) config('services.barbershop.retention_days', 14);
 
-        // Все, кто не был $days и более дней. Повторно напоминаем не чаще, чем
-        // раз в $days дней (тумблер last_retention_sent_at).
-        $lastVisitBefore = Carbon::now()->subDays($days)->endOfDay();
+        // Повторно напоминаем не чаще, чем раз в $days дней (тумблер last_retention_sent_at).
         $notMessagedSince = Carbon::now()->subDays($days)->startOfDay();
 
-        $clients = Client::query()
+        $query = Client::query()
             ->whereNotNull('last_visit_at')
-            ->where('last_visit_at', '<=', $lastVisitBefore)
             ->where(function ($q) use ($notMessagedSince) {
                 $q->whereNull('last_retention_sent_at')
                     ->orWhere('last_retention_sent_at', '<', $notMessagedSince);
-            })
-            ->get();
+            });
+
+        if ($backlog) {
+            // Разовый догоняющий прогон: все, кто не был $days и более дней.
+            $query->where('last_visit_at', '<=', Carbon::now()->subDays($days)->endOfDay());
+        } else {
+            // Ежедневная когорта: ровно $days дней назад.
+            $query->whereBetween('last_visit_at', [
+                Carbon::now()->subDays($days)->startOfDay(),
+                Carbon::now()->subDays($days)->endOfDay(),
+            ]);
+        }
+
+        $clients = $query->get();
 
         $message = NotificationTemplates::renderSms('retention');
 
         if ($dryRun) {
+            $window = $backlog ? "{$days}+ дн. назад (backlog)" : "ровно {$days} дн. назад";
             $this->info('Пробный запуск (--dry-run): SMS НЕ отправляются.');
-            $this->info("Клиентов под условие ({$days}+ дн. назад): {$clients->count()}");
+            $this->info("Клиентов под условие ({$window}): {$clients->count()}");
             foreach ($clients as $client) {
                 $this->line("  • {$client->phone} (последний визит: {$client->last_visit_at?->toDateString()})");
             }

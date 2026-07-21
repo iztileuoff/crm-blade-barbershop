@@ -9,8 +9,9 @@ use Illuminate\Support\Carbon;
 uses(RefreshDatabase::class);
 
 it('does not send or stamp anything on a dry run', function () {
+    config(['services.barbershop.retention_days' => 14]);
     $client = Client::factory()->create([
-        'last_visit_at' => Carbon::now()->subDays(21),
+        'last_visit_at' => Carbon::now()->subDays(14),
         'last_retention_sent_at' => null,
     ]);
 
@@ -50,7 +51,36 @@ it('rejects an invalid test number', function () {
         ->assertFailed();
 });
 
-it('targets clients absent the retention window OR longer, but not more recent ones', function () {
+it('by default targets only the exact N-day cohort, not the older backlog', function () {
+    config(['services.barbershop.retention_days' => 14]);
+
+    $exactly = Client::factory()->create([
+        'last_visit_at' => Carbon::now()->subDays(14)->setTime(12, 0),
+        'last_retention_sent_at' => null,
+    ]);
+    $older = Client::factory()->create([
+        'last_visit_at' => Carbon::now()->subDays(40)->setTime(12, 0),
+        'last_retention_sent_at' => null,
+    ]);
+    $tooRecent = Client::factory()->create([
+        'last_visit_at' => Carbon::now()->subDays(13)->setTime(12, 0),
+        'last_retention_sent_at' => null,
+    ]);
+
+    $this->mock(SmsService::class)
+        ->shouldReceive('sendSms')
+        ->once()
+        ->with($exactly->phone, NotificationTemplates::renderSms('retention'), $exactly->id, 'retention')
+        ->andReturnTrue();
+
+    $this->artisan('app:send-retention-messages')->assertSuccessful();
+
+    expect($exactly->fresh()->last_retention_sent_at)->not->toBeNull()
+        ->and($older->fresh()->last_retention_sent_at)->toBeNull()
+        ->and($tooRecent->fresh()->last_retention_sent_at)->toBeNull();
+});
+
+it('with --backlog targets everyone absent N or more days', function () {
     config(['services.barbershop.retention_days' => 14]);
 
     $exactly = Client::factory()->create([
@@ -67,10 +97,10 @@ it('targets clients absent the retention window OR longer, but not more recent o
     ]);
     $neverVisited = Client::factory()->create(['last_visit_at' => null]);
 
-    $sms = $this->mock(SmsService::class);
-    $sms->shouldReceive('sendSms')->twice()->andReturnTrue();
+    $this->mock(SmsService::class)
+        ->shouldReceive('sendSms')->twice()->andReturnTrue();
 
-    $this->artisan('app:send-retention-messages')->assertSuccessful();
+    $this->artisan('app:send-retention-messages', ['--backlog' => true])->assertSuccessful();
 
     expect($exactly->fresh()->last_retention_sent_at)->not->toBeNull()
         ->and($older->fresh()->last_retention_sent_at)->not->toBeNull()
@@ -96,26 +126,9 @@ it('does not re-nudge a client messaged within the retention window', function (
         ->with($dueAgain->phone, NotificationTemplates::renderSms('retention'), $dueAgain->id, 'retention')
         ->andReturnTrue();
 
-    $this->artisan('app:send-retention-messages')->assertSuccessful();
+    $this->artisan('app:send-retention-messages', ['--backlog' => true])->assertSuccessful();
 
     expect($dueAgain->fresh()->last_retention_sent_at->isToday())->toBeTrue()
         ->and($recentlyMessaged->fresh()->last_retention_sent_at->toDateString())
         ->toBe(Carbon::now()->subDays(5)->toDateString());
-});
-
-it('sends and stamps eligible clients on a real run', function () {
-    $client = Client::factory()->create([
-        'last_visit_at' => Carbon::now()->subDays(21),
-        'last_retention_sent_at' => null,
-    ]);
-
-    $this->mock(SmsService::class)
-        ->shouldReceive('sendSms')
-        ->once()
-        ->with($client->phone, NotificationTemplates::renderSms('retention'), $client->id, 'retention')
-        ->andReturnTrue();
-
-    $this->artisan('app:send-retention-messages')->assertSuccessful();
-
-    expect($client->fresh()->last_retention_sent_at)->not->toBeNull();
 });
