@@ -6,7 +6,6 @@ use App\Enums\AppointmentStatus;
 use App\Models\Appointment;
 use App\Models\Barber;
 use App\Models\Client;
-use App\Models\Service;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Carbon;
 
@@ -26,7 +25,6 @@ class AppointmentFactory extends Factory
         return [
             'client_id' => Client::factory(),
             'barber_id' => Barber::factory(),
-            'service_id' => Service::factory(),
             'starts_at' => $startsAt,
             'ends_at' => (clone $startsAt)->addMinutes($duration),
             'status' => AppointmentStatus::Pending,

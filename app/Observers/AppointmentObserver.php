@@ -25,6 +25,10 @@ class AppointmentObserver
      */
     public function created(Appointment $appointment): void
     {
+        if ($appointment->status === AppointmentStatus::Completed) {
+            $this->touchClientLastVisit($appointment);
+        }
+
         $barberChatId = $appointment->barber?->user?->telegram_chat_id;
 
         if ($barberChatId !== null) {
@@ -37,11 +41,18 @@ class AppointmentObserver
     }
 
     /**
-     * Запись отменена — уведомляем мастера и клиента.
+     * Смена статуса: завершение — обновляем «последний визит» клиента (нужно для
+     * SMS-удержания); отмена — уведомляем мастера и клиента.
      */
     public function updated(Appointment $appointment): void
     {
         if (! $appointment->wasChanged('status')) {
+            return;
+        }
+
+        if ($appointment->status === AppointmentStatus::Completed) {
+            $this->touchClientLastVisit($appointment);
+
             return;
         }
 
@@ -67,6 +78,24 @@ class AppointmentObserver
                 $appointment->id,
                 AppointmentNotice::CancelledForClient,
             );
+        }
+    }
+
+    /**
+     * Отметить дату визита клиента по завершённой записи. Двигаем только вперёд,
+     * чтобы правка старой записи не откатывала более свежий визит.
+     */
+    private function touchClientLastVisit(Appointment $appointment): void
+    {
+        $client = $appointment->client;
+        $visitedAt = $appointment->starts_at;
+
+        if ($client === null || $visitedAt === null) {
+            return;
+        }
+
+        if ($client->last_visit_at === null || $client->last_visit_at->lt($visitedAt)) {
+            $client->forceFill(['last_visit_at' => $visitedAt])->save();
         }
     }
 }
