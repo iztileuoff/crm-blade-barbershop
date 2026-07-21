@@ -41,6 +41,8 @@ return [
         'name' => 'Ism',
         'name_placeholder' => 'Ismingiz nima?',
         'phone' => 'Telefon',
+        'phone_hint' => 'Avval telefon raqamini kiriting',
+        'client_found' => 'Mijoz topildi — maʼlumotlar bazadan olindi',
         'birth_date' => 'Tugʻilgan sana',
         'optional' => '(ixtiyoriy)',
         'submit' => 'Yozuvni tasdiqlash',

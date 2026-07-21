@@ -33,6 +33,12 @@ class extends Component
 
     public string $birth_date = '';
 
+    /** True when the last phone lookup matched an existing client. */
+    public bool $clientFound = false;
+
+    /** True when name/birth currently hold values we pulled from the database. */
+    public bool $autofilled = false;
+
     public ?int $confirmedAppointmentId = null;
 
     public function mount(): void
@@ -41,27 +47,52 @@ class extends Component
     }
 
     /**
-     * When a recognizable phone is typed, pre-fill name and birth date from an
-     * existing client. Only empty fields are filled — never overwrite the user's
-     * own input.
+     * The name/birth fields only become editable once a valid phone is entered.
+     */
+    #[Computed]
+    public function phoneReady(): bool
+    {
+        return Client::normalizePhone($this->phone) !== null;
+    }
+
+    /**
+     * Look up the client by phone and (de)activate the name/birth fields. When the
+     * client exists its stored details are pulled in; when the phone points to
+     * nobody, any values we previously auto-filled are cleared so stale data from
+     * a different client never lingers. Values the user typed by hand are kept.
      */
     public function updatedPhone(): void
     {
         $normalized = Client::normalizePhone($this->phone);
+
         if ($normalized === null) {
+            $this->clearAutofill();
+            $this->clientFound = false;
+
             return;
         }
 
         $client = Client::where('phone', $normalized)->first();
+
         if (! $client) {
+            $this->clearAutofill();
+            $this->clientFound = false;
+
             return;
         }
 
-        if ($this->name === '') {
-            $this->name = (string) $client->name;
-        }
-        if ($this->birth_date === '' && $client->birth_date !== null) {
-            $this->birth_date = $client->birth_date->toDateString();
+        $this->name = (string) $client->name;
+        $this->birth_date = $client->birth_date?->toDateString() ?? '';
+        $this->autofilled = true;
+        $this->clientFound = true;
+    }
+
+    private function clearAutofill(): void
+    {
+        if ($this->autofilled) {
+            $this->name = '';
+            $this->birth_date = '';
+            $this->autofilled = false;
         }
     }
 
@@ -249,7 +280,7 @@ class extends Component
 
     public function reset_flow(): void
     {
-        $this->reset(['serviceId', 'barberId', 'time', 'name', 'phone', 'birth_date', 'confirmedAppointmentId']);
+        $this->reset(['serviceId', 'barberId', 'time', 'name', 'phone', 'birth_date', 'clientFound', 'autofilled', 'confirmedAppointmentId']);
         $this->step = 1;
     }
 }; ?>
@@ -461,30 +492,56 @@ class extends Component
             </div>
 
             {{-- Contact form --}}
+            @php($ready = $this->phoneReady)
             <form wire:submit.prevent="confirm" class="space-y-3">
-                <div>
-                    <label for="name" class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('booking.confirm.name') }}</label>
-                    <input id="name" type="text" wire:model="name" placeholder="{{ __('booking.confirm.name_placeholder') }}"
-                           class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content placeholder-content/20 outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
-                    @error('name') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
-                </div>
+                {{-- Phone comes first: it unlocks the fields below --}}
                 <div>
                     <label for="phone" class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('booking.confirm.phone') }}</label>
-                    <input id="phone" type="tel" inputmode="tel" autocomplete="tel" wire:model.blur="phone" placeholder="998 90 123 45 67"
-                           class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content placeholder-content/20 outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
+                    <div class="relative">
+                        <input id="phone" type="tel" inputmode="tel" autocomplete="tel" wire:model.live.debounce.400ms="phone" placeholder="998 90 123 45 67"
+                               class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 pr-10 text-sm text-content placeholder-content/20 outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
+                        <div wire:loading.delay wire:target="phone" class="absolute inset-y-0 right-3.5 flex items-center">
+                            <svg class="h-4 w-4 animate-spin text-content/30" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                        </div>
+                        @if ($ready && $this->clientFound)
+                            <div wire:loading.remove wire:target="phone" class="absolute inset-y-0 right-3.5 flex items-center">
+                                <svg class="h-4 w-4 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/></svg>
+                            </div>
+                        @endif
+                    </div>
                     @error('phone') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
+                    @if ($ready && $this->clientFound)
+                        <p class="mt-1.5 text-xs text-success">{{ __('booking.confirm.client_found') }}</p>
+                    @endif
                 </div>
-                <div>
-                    <label for="birth_date" class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('booking.confirm.birth_date') }} <span class="font-normal text-content/25">{{ __('booking.confirm.optional') }}</span></label>
-                    <input id="birth_date" type="date" wire:model="birth_date"
-                           class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20 dark:[color-scheme:dark]">
-                    @error('birth_date') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
+
+                {{-- Name + birth date: locked until a valid phone is entered --}}
+                <div @class(['space-y-3 transition-opacity duration-300', 'pointer-events-none opacity-40' => ! $ready])>
+                    @unless ($ready)
+                        <p class="flex items-center gap-1.5 text-xs text-content/35">
+                            <svg class="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"/></svg>
+                            {{ __('booking.confirm.phone_hint') }}
+                        </p>
+                    @endunless
+                    <div>
+                        <label for="name" class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('booking.confirm.name') }}</label>
+                        <input id="name" type="text" wire:model="name" placeholder="{{ __('booking.confirm.name_placeholder') }}" @disabled(! $ready)
+                               class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content placeholder-content/20 outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20 disabled:cursor-not-allowed">
+                        @error('name') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
+                    </div>
+                    <div>
+                        <label for="birth_date" class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('booking.confirm.birth_date') }} <span class="font-normal text-content/25">{{ __('booking.confirm.optional') }}</span></label>
+                        <input id="birth_date" type="date" wire:model="birth_date" @disabled(! $ready)
+                               class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20 disabled:cursor-not-allowed dark:[color-scheme:dark]">
+                        @error('birth_date') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
+                    </div>
                 </div>
-                <button type="submit"
-                        class="mt-1 w-full rounded-xl bg-gradient-to-r from-brass to-brass px-4 py-3.5 text-sm font-bold text-black shadow-lg shadow-brass/20 transition-all hover:shadow-brass/30 active:scale-[0.98] disabled:opacity-50"
+
+                <button type="submit" @disabled(! $ready)
+                        class="mt-1 w-full rounded-xl bg-gradient-to-r from-brass to-brass px-4 py-3.5 text-sm font-bold text-black shadow-lg shadow-brass/20 transition-all hover:shadow-brass/30 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                         wire:loading.attr="disabled">
-                    <span wire:loading.remove>{{ __('booking.confirm.submit') }}</span>
-                    <span wire:loading>{{ __('booking.confirm.submitting') }}</span>
+                    <span wire:loading.remove wire:target="confirm">{{ __('booking.confirm.submit') }}</span>
+                    <span wire:loading wire:target="confirm">{{ __('booking.confirm.submitting') }}</span>
                 </button>
             </form>
         </div>

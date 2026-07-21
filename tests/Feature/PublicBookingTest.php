@@ -35,8 +35,8 @@ it('lets a guest create an appointment', function () {
         ->and(Client::where('phone', '998901112233')->exists())->toBeTrue();
 });
 
-it('pre-fills name and birth date from an existing client when the phone is typed', function () {
-    $client = Client::factory()->create([
+it('pulls name and birth date from an existing client when the phone is typed', function () {
+    Client::factory()->create([
         'name' => 'Старый Клиент',
         'phone' => '998901112233',
         'birth_date' => '1990-05-15',
@@ -45,10 +45,11 @@ it('pre-fills name and birth date from an existing client when the phone is type
     Volt::test('pages.booking')
         ->set('phone', '998 90 111 22 33')
         ->assertSet('name', 'Старый Клиент')
-        ->assertSet('birth_date', '1990-05-15');
+        ->assertSet('birth_date', '1990-05-15')
+        ->assertSet('clientFound', true);
 });
 
-it('does not overwrite name or birth date the user already entered', function () {
+it('clears auto-filled details when the phone changes to an unknown number', function () {
     Client::factory()->create([
         'name' => 'Старый Клиент',
         'phone' => '998901112233',
@@ -56,18 +57,32 @@ it('does not overwrite name or birth date the user already entered', function ()
     ]);
 
     Volt::test('pages.booking')
-        ->set('name', 'Новое Имя')
-        ->set('birth_date', '2000-01-01')
         ->set('phone', '998901112233')
-        ->assertSet('name', 'Новое Имя')
-        ->assertSet('birth_date', '2000-01-01');
+        ->assertSet('name', 'Старый Клиент')
+        ->assertSet('clientFound', true)
+        ->set('phone', '998909998877')
+        ->assertSet('name', '')
+        ->assertSet('birth_date', '')
+        ->assertSet('clientFound', false);
+});
+
+it('keeps values the user typed by hand for an unknown phone', function () {
+    Volt::test('pages.booking')
+        ->set('phone', '998909998877')
+        ->set('name', 'Мой Ввод')
+        ->set('birth_date', '2000-01-01')
+        ->set('phone', '998909990000')
+        ->assertSet('name', 'Мой Ввод')
+        ->assertSet('birth_date', '2000-01-01')
+        ->assertSet('clientFound', false);
 });
 
 it('leaves fields empty for an unknown phone', function () {
     Volt::test('pages.booking')
         ->set('phone', '998909998877')
         ->assertSet('name', '')
-        ->assertSet('birth_date', '');
+        ->assertSet('birth_date', '')
+        ->assertSet('clientFound', false);
 });
 
 it('shows the service name in the selected locale on the booking page', function () {

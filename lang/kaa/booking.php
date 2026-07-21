@@ -41,6 +41,8 @@ return [
         'name' => 'At',
         'name_placeholder' => 'Atıńız kim?',
         'phone' => 'Telefon',
+        'phone_hint' => 'Aldın telefon nomerin kiritiń',
+        'client_found' => 'Klient tabıldı — maǵlıwmatlar bazadan alındı',
         'birth_date' => 'Tuwılǵan sáne',
         'optional' => '(májbúriy emes)',
         'submit' => 'Jazılıwdı tastıyıqlaw',
