@@ -22,7 +22,7 @@ class SendRetentionMessages extends Command
         }
 
         $dryRun = (bool) $this->option('dry-run');
-        $days = (int) config('services.barbershop.retention_days', 21);
+        $days = (int) config('services.barbershop.retention_days', 14);
         $target = Carbon::now()->subDays($days)->startOfDay();
         $end = Carbon::now()->subDays($days)->endOfDay();
 

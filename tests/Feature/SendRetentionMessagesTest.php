@@ -50,6 +50,31 @@ it('rejects an invalid test number', function () {
         ->assertFailed();
 });
 
+it('targets clients whose last visit was exactly the retention window ago', function () {
+    config(['services.barbershop.retention_days' => 14]);
+    $days = 14;
+
+    $due = Client::factory()->create([
+        'last_visit_at' => Carbon::now()->subDays($days)->setTime(12, 0),
+        'last_retention_sent_at' => null,
+    ]);
+    $tooRecent = Client::factory()->create([
+        'last_visit_at' => Carbon::now()->subDays($days - 1)->setTime(12, 0),
+        'last_retention_sent_at' => null,
+    ]);
+
+    $this->mock(SmsService::class)
+        ->shouldReceive('sendSms')
+        ->once()
+        ->with($due->phone, NotificationTemplates::renderSms('retention'), $due->id, 'retention')
+        ->andReturnTrue();
+
+    $this->artisan('app:send-retention-messages')->assertSuccessful();
+
+    expect($due->fresh()->last_retention_sent_at)->not->toBeNull()
+        ->and($tooRecent->fresh()->last_retention_sent_at)->toBeNull();
+});
+
 it('sends and stamps eligible clients on a real run', function () {
     $client = Client::factory()->create([
         'last_visit_at' => Carbon::now()->subDays(21),

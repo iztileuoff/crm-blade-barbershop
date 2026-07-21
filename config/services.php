@@ -57,7 +57,7 @@ return [
     ],
 
     'barbershop' => [
-        'retention_days' => (int) env('RETENTION_DAYS', 21),
+        'retention_days' => (int) env('RETENTION_DAYS', 14),
     ],
 
 ];
