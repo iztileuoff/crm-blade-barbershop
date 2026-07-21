@@ -21,7 +21,7 @@ Schedule::command(SyncSmsStatuses::class)
     ->withoutOverlapping()
     ->onOneServer();
 
-// Schedule::command(SendRetentionMessages::class)
-//     ->dailyAt('10:00')
-//     ->withoutOverlapping()
-//     ->onOneServer();
+Schedule::command(SendRetentionMessages::class)
+    ->dailyAt('10:00')
+    ->withoutOverlapping()
+    ->onOneServer();
