@@ -24,6 +24,16 @@ class extends Component
                 'hint' => __('telegram.new_for_barber_hint'),
                 'placeholders' => ['{time}', '{client}', '{services}', '{status}'],
             ],
+            'tg_new_for_client' => [
+                'label' => __('telegram.new_for_client_label'),
+                'hint' => __('telegram.new_for_client_hint'),
+                'placeholders' => ['{date}', '{time}', '{barber}', '{services}', '{price}'],
+            ],
+            'tg_confirmed_for_client' => [
+                'label' => __('telegram.confirmed_for_client_label'),
+                'hint' => __('telegram.confirmed_for_client_hint'),
+                'placeholders' => ['{date}', '{time}', '{barber}', '{services}', '{price}'],
+            ],
             'tg_cancelled_for_barber' => [
                 'label' => __('telegram.cancelled_for_barber_label'),
                 'hint' => __('telegram.cancelled_for_barber_hint'),

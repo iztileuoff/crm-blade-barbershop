@@ -6,6 +6,7 @@ use App\Enums\AppointmentStatus;
 use App\Models\Appointment;
 use App\Models\Client;
 use App\Telegram\AppointmentFormatter;
+use App\Telegram\Keyboards;
 use App\Telegram\TelegramLinker;
 use Illuminate\Support\Carbon;
 use SergiX44\Nutgram\Nutgram;
@@ -14,6 +15,11 @@ class ClientMenuHandler
 {
     public function __construct(private readonly TelegramLinker $linker) {}
 
+    /**
+     * Каждая предстоящая запись — отдельным сообщением со своей инлайн-кнопкой
+     * «Отменить» (#76): у Telegram нет кнопки «на одну строку» внутри общего
+     * списка, поэтому список превратился в заголовок + по сообщению на запись.
+     */
     public function appointments(Nutgram $bot): void
     {
         $client = $this->client($bot);
@@ -31,14 +37,23 @@ class ClientMenuHandler
             ->get();
 
         if ($appointments->isEmpty()) {
-            $bot->sendMessage('📭 У вас нет предстоящих записей.');
+            $bot->sendMessage(__('telegram.no_upcoming_appointments'));
 
             return;
         }
 
-        $lines = $appointments->map(fn (Appointment $a) => AppointmentFormatter::clientLine($a));
+        $bot->sendMessage(__('telegram.your_appointments_title'), parse_mode: 'HTML');
 
-        $bot->sendMessage("📅 <b>Ваши записи</b>\n\n".$lines->implode("\n"), parse_mode: 'HTML');
+        foreach ($appointments as $appointment) {
+            $canCancel = $appointment->status !== AppointmentStatus::Completed
+                && $appointment->starts_at->isFuture();
+
+            $bot->sendMessage(
+                AppointmentFormatter::clientLine($appointment),
+                parse_mode: 'HTML',
+                reply_markup: $canCancel ? Keyboards::cancelAppointment($appointment->id) : null,
+            );
+        }
     }
 
     public function history(Nutgram $bot): void
@@ -58,14 +73,14 @@ class ClientMenuHandler
             ->get();
 
         if ($appointments->isEmpty()) {
-            $bot->sendMessage('📭 История визитов пока пуста.');
+            $bot->sendMessage(__('telegram.no_history'));
 
             return;
         }
 
         $lines = $appointments->map(fn (Appointment $a) => AppointmentFormatter::clientLine($a));
 
-        $bot->sendMessage("🕓 <b>Последние визиты</b>\n\n".$lines->implode("\n"), parse_mode: 'HTML');
+        $bot->sendMessage(__('telegram.history_title')."\n\n".$lines->implode("\n"), parse_mode: 'HTML');
     }
 
     public function debt(Nutgram $bot): void
@@ -82,13 +97,13 @@ class ClientMenuHandler
             ->sum('debt_amount');
 
         if ($total === 0) {
-            $bot->sendMessage('✅ За вами нет задолженности.');
+            $bot->sendMessage(__('telegram.no_debt'));
 
             return;
         }
 
         $bot->sendMessage(
-            sprintf('💳 <b>Ваш долг:</b> %s', number_format($total, 0, '.', ' ').' '.__('common.currency')),
+            __('telegram.debt_amount', ['amount' => number_format($total, 0, '.', ' ').' '.__('common.currency')]),
             parse_mode: 'HTML',
         );
     }
@@ -99,7 +114,7 @@ class ClientMenuHandler
         $client = $chatId !== null ? $this->linker->findClientByChat($chatId) : null;
 
         if ($client === null) {
-            $bot->sendMessage('Сначала привяжите профиль командой /start.');
+            $bot->sendMessage(__('telegram.not_linked'));
         }
 
         return $client;

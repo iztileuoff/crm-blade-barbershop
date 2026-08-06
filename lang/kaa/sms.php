@@ -37,6 +37,7 @@ return [
     'sent' => 'Jiberildi',
     'context_reminder' => 'Esletpe',
     'context_retention' => 'Uslap qalıw',
+    'context_cancelled' => 'Jazılıw biykarlandı',
     'context_broadcast' => 'Tarqatıw',
     'context_manual' => 'Qol menen',
     'col_recipient' => 'Qabıl etiwshi',
@@ -68,4 +69,6 @@ return [
     'field_reminder_hint' => 'Telegramsız klientke keliwden aldın jiberiledi.',
     'field_retention_label' => 'Uslap qalıw xabarı',
     'field_retention_hint' => 'Uzaq waqıt kelmegen klientke jiberiledi.',
+    'field_cancelled_label' => 'Jazılıw biykarlandı',
+    'field_cancelled_hint' => 'Salon jazılıwdı biykarlaǵanda Telegramsız klientke jiberiledi.',
 ];

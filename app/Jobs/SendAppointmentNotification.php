@@ -31,6 +31,8 @@ class SendAppointmentNotification implements ShouldQueue
 
         $text = match ($this->notice) {
             AppointmentNotice::NewForBarber => AppointmentFormatter::newForBarber($appointment),
+            AppointmentNotice::NewForClient => AppointmentFormatter::newForClient($appointment),
+            AppointmentNotice::ConfirmedForClient => AppointmentFormatter::confirmedForClient($appointment),
             AppointmentNotice::CancelledForBarber => AppointmentFormatter::cancelledForBarber($appointment),
             AppointmentNotice::CancelledForClient => AppointmentFormatter::cancelledForClient($appointment),
         };

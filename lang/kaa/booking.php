@@ -54,8 +54,11 @@ return [
         'title' => 'Arza qabıl etildi!',
         'message' => 'Jazılıwıńızdı tastıyıqlaw ushın :date kúni saat :time de :barber barberge baylanısamız.',
         'sms_note' => 'Tastıyıqlanǵannan keyin, kelıwden 30 minut aldın SMS esletpe keledi',
+        'booking_number' => 'Jazılıw nomeri',
         'service' => 'Xızmet',
         'price' => 'Bahası',
+        'contacts_title' => 'Salon baylanıs maǵlıwmatları',
+        'open_bot' => 'Telegram botti ashıw',
         'again' => 'Qayta jazılıw',
     ],
 

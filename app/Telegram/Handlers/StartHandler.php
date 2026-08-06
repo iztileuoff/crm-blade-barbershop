@@ -17,20 +17,19 @@ class StartHandler
         }
 
         if ($linker->findBarberUserByChat($chatId) !== null) {
-            $bot->sendMessage('С возвращением! Выберите действие 👇', reply_markup: Keyboards::barberMenu());
+            $bot->sendMessage(__('telegram.welcome_back'), reply_markup: Keyboards::barberMenu());
 
             return;
         }
 
         if ($linker->findClientByChat($chatId) !== null) {
-            $bot->sendMessage('С возвращением! Выберите действие 👇', reply_markup: Keyboards::clientMenu());
+            $bot->sendMessage(__('telegram.welcome_back'), reply_markup: Keyboards::clientMenu());
 
             return;
         }
 
         $bot->sendMessage(
-            "👋 Добро пожаловать в <b>Blade Barbershop</b>!\n\n".
-            'Чтобы продолжить, поделитесь своим номером телефона — мы найдём ваш профиль.',
+            __('telegram.welcome_new'),
             parse_mode: 'HTML',
             reply_markup: Keyboards::shareContact(),
         );

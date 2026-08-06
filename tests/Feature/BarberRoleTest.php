@@ -255,6 +255,45 @@ it('redirects a barber away from non-appointment admin pages but lets them throu
         ->assertOk();
 });
 
+// Issue #68: the sidebar groups 16 admin pages into eyebrow-headed sections; a barber's
+// allow-list (admin.appointments, admin.earnings) lives entirely inside "Operations", so
+// that heading survives filtering while Business/Communications/System are emptied and
+// must be dropped rather than rendering as orphan headings over nothing.
+it('shows a barber only their permitted sidebar items and drops every heading its section-filtering empties', function () {
+    [$user] = barberUser();
+
+    $response = $this->actingAs($user)
+        ->get(route('admin.appointments'))
+        ->assertOk();
+
+    $response->assertSee(__('nav.section_operations'))
+        ->assertSee(__('nav.appointments'))
+        ->assertSee(__('nav.earnings'))
+        ->assertDontSee(__('nav.section_business'))
+        ->assertDontSee(__('nav.section_communications'))
+        ->assertDontSee(__('nav.section_system'));
+
+    // A stray href would still let the barber navigate straight to a forbidden page even
+    // without a visible label, so assert the link itself — not just its text — is gone.
+    // Matched as href="URL" (not a bare substring): admin.dashboard's URL is a prefix of
+    // admin.appointments's, and booking's is the bare origin, a prefix of every asset URL
+    // on the page — a plain assertDontSee($url) would false-positive on both.
+    $html = $response->getContent();
+
+    foreach ([
+        'admin.dashboard', 'booking', 'admin.barbers', 'admin.services', 'admin.specializations',
+        'admin.clients', 'admin.products', 'admin.orders', 'admin.debts',
+        'admin.sms.templates', 'admin.sms.history', 'admin.sms.settings',
+        'admin.telegram.templates', 'admin.telegram.broadcast', 'admin.telegram.linked',
+        'admin.settings', 'admin.users',
+    ] as $hiddenRoute) {
+        expect($html)->not->toContain(
+            'href="'.route($hiddenRoute).'"',
+            "The barber's sidebar should not link to [{$hiddenRoute}]."
+        );
+    }
+});
+
 it('flags the appointments page with a one-shot banner when a barber is redirected off a restricted page', function () {
     [$user] = barberUser();
 

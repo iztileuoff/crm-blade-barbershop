@@ -63,7 +63,7 @@ it('reports the same figures as the Telegram bot for a barber', function () {
         require base_path('routes/telegram.php');
     })();
     $bot->setCommonChat(Chat::make(id: 556001, type: ChatType::PRIVATE));
-    $bot->hearText(Keyboards::BARBER_EARNINGS)->reply();
+    $bot->hearText(Keyboards::label(Keyboards::BARBER_EARNINGS))->reply();
 
     $botFigures = crmEarningsFigures($bot);
 
@@ -199,7 +199,7 @@ it('matches the Telegram bot exactly in one scenario mixing a completed visit, a
         require base_path('routes/telegram.php');
     })();
     $bot->setCommonChat(Chat::make(id: 556009, type: ChatType::PRIVATE));
-    $bot->hearText(Keyboards::BARBER_EARNINGS)->reply();
+    $bot->hearText(Keyboards::label(Keyboards::BARBER_EARNINGS))->reply();
 
     $botFigures = crmEarningsFigures($bot);
 

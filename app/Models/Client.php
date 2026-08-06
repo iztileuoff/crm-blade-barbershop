@@ -23,6 +23,7 @@ class Client extends Model
         'last_visit_at',
         'last_retention_sent_at',
         'telegram_chat_id',
+        'locale',
     ];
 
     protected function casts(): array

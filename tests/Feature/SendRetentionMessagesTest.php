@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Client;
+use App\Models\Setting;
 use App\Services\SmsService;
 use App\Support\NotificationTemplates;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -106,6 +107,25 @@ it('with --backlog targets everyone absent N or more days', function () {
         ->and($older->fresh()->last_retention_sent_at)->not->toBeNull()
         ->and($tooRecent->fresh()->last_retention_sent_at)->toBeNull()
         ->and($neverVisited->fresh()->last_retention_sent_at)->toBeNull();
+});
+
+it('sends the retention text in each client’s own stored locale', function () {
+    config(['services.barbershop.retention_days' => 14]);
+    Setting::set('sms_locale', 'ru');
+
+    $client = Client::factory()->create([
+        'last_visit_at' => Carbon::now()->subDays(14),
+        'last_retention_sent_at' => null,
+        'locale' => 'kaa',
+    ]);
+
+    $this->mock(SmsService::class)
+        ->shouldReceive('sendSms')
+        ->once()
+        ->with($client->phone, NotificationTemplates::renderSms('retention', [], 'kaa'), $client->id, 'retention')
+        ->andReturnTrue();
+
+    $this->artisan('app:send-retention-messages')->assertSuccessful();
 });
 
 it('does not re-nudge a client messaged within the retention window', function () {

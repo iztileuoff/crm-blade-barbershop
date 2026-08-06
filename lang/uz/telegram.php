@@ -45,6 +45,10 @@ return [
     'save_templates' => 'Shablonlarni saqlash',
     'new_for_barber_label' => 'Yangi yozuv — barberga',
     'new_for_barber_hint' => 'Mijoz barberga yozilganda.',
+    'new_for_client_label' => 'Yangi yozuv — mijozga',
+    'new_for_client_hint' => 'Mijoz yozilganda (bron qilinishi bilanoq).',
+    'confirmed_for_client_label' => 'Yozuv tasdiqlandi — mijozga',
+    'confirmed_for_client_hint' => 'Salon yozuvni tasdiqlaganda.',
     'cancelled_for_barber_label' => 'Yozuv bekor qilindi — barberga',
     'cancelled_for_barber_hint' => 'Yozuv bekor qilinganda.',
     'cancelled_for_client_label' => 'Yozuv bekor qilindi — mijozga',
@@ -53,4 +57,37 @@ return [
     'reminder_for_client_hint' => 'Tashrifdan 30 daqiqa oldin.',
     'reminder_for_barber_label' => 'Eslatma — barberga',
     'reminder_for_barber_hint' => 'Yozuvdan 30 daqiqa oldin.',
+
+    // Bot xabarlari — mijozga, clients.locale boʻyicha koʻp tilli (#76)
+    'welcome_back' => 'Xush kelibsiz! Amalni tanlang 👇',
+    'welcome_new' => "👋 <b>Blade Barbershop</b>ga xush kelibsiz!\n\nDavom etish uchun telefon raqamingizni ulashing — profilingizni topamiz.",
+    'not_linked' => 'Avval /start buyrugʻi bilan profilni ulang.',
+
+    'contact_wrong_owner' => 'Iltimos, aynan oʻzingizning raqamingizni pastdagi tugma orqali yuboring.',
+    'contact_barber_linked' => '✅ Barber profili ulandi. Endi jadval va daromad sizga ochiq.',
+    'contact_client_linked' => '✅ Profil topildi! Bu yerda yozuvlaringiz, tarix va eslatmalar.',
+    'contact_client_created' => "✅ Tayyor! Yozuvlar haqida eslatmalar yuborib turamiz.\nYozuvlar va tarix birinchi tashrifdan keyin paydo boʻladi.",
+    'contact_invalid_phone' => '❌ Raqamni aniqlab boʻlmadi. U 998XXXXXXXXX formatida boʻlishi kerak.',
+
+    'no_upcoming_appointments' => '📭 Sizda kelayotgan yozuvlar yoʻq.',
+    'your_appointments_title' => '📅 <b>Sizning yozuvlaringiz</b>',
+    'no_history' => '📭 Tashriflar tarixi hali boʻsh.',
+    'history_title' => '🕓 <b>Soʻnggi tashriflar</b>',
+    'no_debt' => '✅ Sizda qarzdorlik yoʻq.',
+    'debt_amount' => '💳 <b>Qarzingiz:</b> :amount',
+
+    'cancel_button' => '❌ Bekor qilish',
+    'cancel_done_alert' => '✅ Yozuv bekor qilindi.',
+    'cancel_done_message' => '❌ Yozuv soʻrovingiz boʻyicha bekor qilindi.',
+    'cancel_unavailable' => 'Bu yozuvni endi bekor qilib boʻlmaydi.',
+
+    // Reply-klaviatura yorliqlari — mijoz tilida chiziladi, shuning uchun tugma
+    // matni marshrutlarda barcha tillar uchun birdan roʻyxatga olinadi (Keyboards::labelVariants()).
+    'kb_share_contact' => '📱 Raqamni ulashish',
+    'kb_today' => '📅 Bugun',
+    'kb_tomorrow' => '🗓 Ertaga',
+    'kb_earnings' => '💰 Daromadim',
+    'kb_appointments' => '📅 Yozuvlarim',
+    'kb_history' => '🕓 Tarix',
+    'kb_debt' => '💳 Qarz',
 ];

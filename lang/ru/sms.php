@@ -37,6 +37,7 @@ return [
     'sent' => 'Отправлено',
     'context_reminder' => 'Напоминание',
     'context_retention' => 'Удержание',
+    'context_cancelled' => 'Отмена записи',
     'context_broadcast' => 'Рассылка',
     'context_manual' => 'Вручную',
     'col_recipient' => 'Получатель',
@@ -68,4 +69,6 @@ return [
     'field_reminder_hint' => 'Отправляется клиенту без Telegram перед визитом.',
     'field_retention_label' => 'Сообщение для удержания',
     'field_retention_hint' => 'Отправляется клиенту, который давно не приходил.',
+    'field_cancelled_label' => 'Отмена записи',
+    'field_cancelled_hint' => 'Отправляется клиенту без Telegram, когда салон отменяет запись.',
 ];

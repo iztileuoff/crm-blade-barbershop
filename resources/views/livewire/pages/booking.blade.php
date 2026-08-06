@@ -44,6 +44,34 @@ class extends Component
     }
 
     /**
+     * Контакты салона из Settings — некуда было деть на экране успеха и в
+     * шапке (#76): телефон/адрес/бот админ заполняет, но их никто не читал.
+     */
+    #[Computed]
+    public function shopPhone(): ?string
+    {
+        return Setting::get('shop_phone');
+    }
+
+    #[Computed]
+    public function shopAddress(): ?string
+    {
+        return Setting::get('shop_address');
+    }
+
+    /**
+     * Ссылка на бота вида https://t.me/username — админ хранит хендл в
+     * settings.telegram как «@handle» или «handle», без домена.
+     */
+    #[Computed]
+    public function shopTelegramUrl(): ?string
+    {
+        $handle = trim((string) Setting::get('telegram', ''));
+
+        return $handle !== '' ? 'https://t.me/'.ltrim($handle, '@') : null;
+    }
+
+    /**
      * `#[Url]` makes every one of these attacker-supplied on first paint — this is
      * a public, unauthenticated page. `mount()` below re-derives each value against
      * the database before the view ever renders, so a crafted or stale link can only
@@ -512,6 +540,7 @@ class extends Component
             );
 
             $this->fillClientGaps($client);
+            $this->rememberBookingLocale($client);
 
             $appointment = Appointment::create([
                 'client_id' => $client->id,
@@ -572,6 +601,21 @@ class extends Component
 
         if ($updates !== []) {
             $client->forceFill($updates)->save();
+        }
+    }
+
+    /**
+     * Unlike {@see fillClientGaps()}, the language is overwritten on every
+     * booking — not just filled once: the site the client is booking from
+     * right now is the most current signal of which language reaches them,
+     * for the bot and for SMS (#76).
+     */
+    private function rememberBookingLocale(Client $client): void
+    {
+        $locale = app()->getLocale();
+
+        if ($client->locale !== $locale) {
+            $client->forceFill(['locale' => $locale])->save();
         }
     }
 
@@ -874,7 +918,13 @@ class extends Component
             <p class="mt-1.5 text-xs text-content/25">{{ __('booking.success.sms_note') }}</p>
 
             <div class="mx-auto mt-6 max-w-xs rounded-2xl border border-content/[0.06] bg-content/[0.03] p-4 text-left text-sm">
-                <div class="flex items-center justify-between">
+                @if ($confirmedAppointmentId)
+                    <div class="flex items-center justify-between border-b border-content/[0.06] pb-2">
+                        <span class="text-content/40">{{ __('booking.success.booking_number') }}</span>
+                        <span class="font-mono font-semibold">#{{ $confirmedAppointmentId }}</span>
+                    </div>
+                @endif
+                <div class="flex items-center justify-between {{ $confirmedAppointmentId ? 'mt-2' : '' }}">
                     <span class="text-content/40">{{ __('booking.success.service') }}</span>
                     <span class="font-medium">{{ $this->selectedService?->name }}</span>
                 </div>
@@ -883,6 +933,34 @@ class extends Component
                     <span class="font-semibold text-brass-ink">{{ $this->formattedQuotedPrice ?: '—' }}</span>
                 </div>
             </div>
+
+            {{-- Salon contacts (#76): the client is promised a call-back and had no
+                 way to reach the salon in the meantime. --}}
+            @if ($this->shopPhone || $this->shopAddress || $this->shopTelegramUrl)
+                <div class="mx-auto mt-4 max-w-xs rounded-2xl border border-content/[0.06] bg-content/[0.03] p-4 text-left text-sm">
+                    <div class="mb-2 text-xs font-semibold uppercase tracking-wide text-content/40">{{ __('booking.success.contacts_title') }}</div>
+                    <div class="space-y-1.5">
+                        @if ($this->shopPhone)
+                            <a href="tel:{{ preg_replace('/\D+/', '', $this->shopPhone) }}" class="flex items-center gap-2 text-content/70 transition hover:text-brass-ink">
+                                <svg class="h-4 w-4 shrink-0 text-content/30" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z" /></svg>
+                                {{ $this->shopPhone }}
+                            </a>
+                        @endif
+                        @if ($this->shopAddress)
+                            <div class="flex items-center gap-2 text-content/70">
+                                <svg class="h-4 w-4 shrink-0 text-content/30" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" /></svg>
+                                {{ $this->shopAddress }}
+                            </div>
+                        @endif
+                        @if ($this->shopTelegramUrl)
+                            <a href="{{ $this->shopTelegramUrl }}" target="_blank" rel="noopener" class="flex items-center gap-2 text-content/70 transition hover:text-brass-ink">
+                                <svg class="h-4 w-4 shrink-0 text-content/30" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" /></svg>
+                                {{ __('booking.success.open_bot') }}
+                            </a>
+                        @endif
+                    </div>
+                </div>
+            @endif
 
             <button type="button" wire:click="reset_flow"
                     class="mt-6 inline-flex items-center gap-2 rounded-xl border border-content/[0.08] bg-content/[0.04] px-6 py-3 text-sm font-semibold transition hover:bg-content/[0.08] active:scale-[0.98]">

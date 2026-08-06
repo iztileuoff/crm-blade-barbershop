@@ -71,6 +71,16 @@ class AppointmentFormatter
         return NotificationTemplates::render('tg_new_for_barber', self::vars($appointment));
     }
 
+    public static function newForClient(Appointment $appointment): string
+    {
+        return NotificationTemplates::render('tg_new_for_client', self::vars($appointment));
+    }
+
+    public static function confirmedForClient(Appointment $appointment): string
+    {
+        return NotificationTemplates::render('tg_confirmed_for_client', self::vars($appointment));
+    }
+
     public static function cancelledForBarber(Appointment $appointment): string
     {
         return NotificationTemplates::render('tg_cancelled_for_barber', self::vars($appointment));

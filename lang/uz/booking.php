@@ -54,8 +54,11 @@ return [
         'title' => 'Ariza qabul qilindi!',
         'message' => 'Yozuvingizni tasdiqlash uchun :date kuni soat :time da :barber barberga bogʻlanamiz.',
         'sms_note' => 'Tasdiqlangach, tashrifdan 30 daqiqa oldin SMS eslatma keladi',
+        'booking_number' => 'Yozuv raqami',
         'service' => 'Xizmat',
         'price' => 'Narxi',
+        'contacts_title' => 'Salon kontaktlari',
+        'open_bot' => 'Telegram botni ochish',
         'again' => 'Yana yozilish',
     ],
 

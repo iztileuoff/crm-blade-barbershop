@@ -48,21 +48,20 @@ class SendRetentionMessages extends Command
 
         $clients = $query->get();
 
-        $message = NotificationTemplates::renderSms('retention');
-
         if ($dryRun) {
             $window = $backlog ? "{$days}+ дн. назад (backlog)" : "ровно {$days} дн. назад";
             $this->info('Пробный запуск (--dry-run): SMS НЕ отправляются.');
             $this->info("Клиентов под условие ({$window}): {$clients->count()}");
             foreach ($clients as $client) {
-                $this->line("  • {$client->phone} (последний визит: {$client->last_visit_at?->toDateString()})");
+                $this->line("  • {$client->phone} (последний визит: {$client->last_visit_at?->toDateString()}, язык: ".NotificationTemplates::localeFor($client->locale).')');
             }
-            $this->info("Текст: {$message}");
 
             return self::SUCCESS;
         }
 
         foreach ($clients as $client) {
+            $message = NotificationTemplates::renderSms('retention', [], $client->locale);
+
             if ($sms->sendSms($client->phone, $message, $client->id, 'retention')) {
                 $client->forceFill(['last_retention_sent_at' => Carbon::now()])->save();
                 $this->info("SMS-удержание отправлено клиенту {$client->phone}");

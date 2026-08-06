@@ -23,6 +23,14 @@ class Appointment extends Model
     /** @use HasFactory<AppointmentFactory> */
     use HasFactory;
 
+    /**
+     * Отмену сделал сам клиент из бота — ему уже ответили в том же чате, и
+     * второе «ваша запись отменена» было бы шумом. Флаг живёт только в памяти
+     * этого экземпляра и в базу не уезжает: он про то, кто нажал, а не про
+     * состояние записи.
+     */
+    public bool $cancelledByClient = false;
+
     protected $fillable = [
         'client_id',
         'barber_id',

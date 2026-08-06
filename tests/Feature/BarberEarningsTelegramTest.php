@@ -64,7 +64,7 @@ it('counts an appointment completed for later today in all three periods', funct
     })();
     $bot->setCommonChat(Chat::make(id: 555001, type: ChatType::PRIVATE));
 
-    $bot->hearText(Keyboards::BARBER_EARNINGS)->reply();
+    $bot->hearText(Keyboards::label(Keyboards::BARBER_EARNINGS))->reply();
 
     $figures = earningsFigures($bot);
 
@@ -109,7 +109,7 @@ it('reports the same figure as the dashboard for a visit that went on credit', f
         require base_path('routes/telegram.php');
     })();
     $bot->setCommonChat(Chat::make(id: 555003, type: ChatType::PRIVATE));
-    $bot->hearText(Keyboards::BARBER_EARNINGS)->reply();
+    $bot->hearText(Keyboards::label(Keyboards::BARBER_EARNINGS))->reply();
 
     expect(earningsFigures($bot)['today'])->toBe($dashboardSalary)
         ->and($dashboardSalary)->toBe(0);
@@ -140,7 +140,7 @@ it('counts a visit closed ahead of time later in the week', function () {
         require base_path('routes/telegram.php');
     })();
     $bot->setCommonChat(Chat::make(id: 555004, type: ChatType::PRIVATE));
-    $bot->hearText(Keyboards::BARBER_EARNINGS)->reply();
+    $bot->hearText(Keyboards::label(Keyboards::BARBER_EARNINGS))->reply();
 
     $figures = earningsFigures($bot);
 
@@ -183,7 +183,7 @@ it('counts a debt repayment on the day it was collected', function () {
         require base_path('routes/telegram.php');
     })();
     $bot->setCommonChat(Chat::make(id: 555005, type: ChatType::PRIVATE));
-    $bot->hearText(Keyboards::BARBER_EARNINGS)->reply();
+    $bot->hearText(Keyboards::label(Keyboards::BARBER_EARNINGS))->reply();
 
     $figures = earningsFigures($bot);
 
@@ -220,7 +220,7 @@ it('never reports more for today than for the week or the month', function () {
     })();
     $bot->setCommonChat(Chat::make(id: 555002, type: ChatType::PRIVATE));
 
-    $bot->hearText(Keyboards::BARBER_EARNINGS)->reply();
+    $bot->hearText(Keyboards::label(Keyboards::BARBER_EARNINGS))->reply();
 
     $figures = earningsFigures($bot);
 

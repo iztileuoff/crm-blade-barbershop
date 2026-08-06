@@ -23,7 +23,7 @@ class ContactHandler
         // проставляет, а без него привязка ушла бы к любому владельцу номера —
         // вместе с его заработком и расписанием.
         if ($contact->user_id === null || $contact->user_id !== $bot->userId()) {
-            $bot->sendMessage('Пожалуйста, отправьте именно свой номер кнопкой ниже.', reply_markup: Keyboards::shareContact());
+            $bot->sendMessage(__('telegram.contact_wrong_owner'), reply_markup: Keyboards::shareContact());
 
             return;
         }
@@ -34,19 +34,19 @@ class ContactHandler
 
         match ($outcome) {
             LinkOutcome::BarberLinked => $bot->sendMessage(
-                '✅ Профиль мастера привязан. Теперь вам доступно расписание и заработок.',
+                __('telegram.contact_barber_linked'),
                 reply_markup: Keyboards::barberMenu(),
             ),
             LinkOutcome::ClientLinked => $bot->sendMessage(
-                '✅ Профиль найден! Здесь ваши записи, история и напоминания.',
+                __('telegram.contact_client_linked'),
                 reply_markup: Keyboards::clientMenu(),
             ),
             LinkOutcome::ClientCreated => $bot->sendMessage(
-                "✅ Готово! Мы будем присылать напоминания о записях.\nЗаписи и история появятся после первого визита.",
+                __('telegram.contact_client_created'),
                 reply_markup: Keyboards::clientMenu(),
             ),
             LinkOutcome::InvalidPhone => $bot->sendMessage(
-                '❌ Не удалось распознать номер. Он должен быть в формате 998XXXXXXXXX.',
+                __('telegram.contact_invalid_phone'),
                 reply_markup: Keyboards::shareContact(),
             ),
         };

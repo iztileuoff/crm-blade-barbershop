@@ -2,11 +2,16 @@
 
 use App\Enums\AppointmentStatus;
 use App\Enums\Role;
+use App\Jobs\NotifyAppointmentClientOfCancellation;
 use App\Jobs\SendAppointmentNotification;
 use App\Models\Appointment;
 use App\Models\Barber;
 use App\Models\Client;
+use App\Models\Setting;
 use App\Models\User;
+use App\Services\SmsService;
+use App\Services\TelegramService;
+use App\Support\NotificationTemplates;
 use App\Telegram\AppointmentNotice;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
@@ -55,7 +60,87 @@ it('does not notify when the barber has no linked telegram', function () {
     Queue::assertNotPushed(SendAppointmentNotification::class);
 });
 
-it('notifies barber and client when an appointment is cancelled', function () {
+it('notifies a telegram-linked client when a new appointment is created', function () {
+    Queue::fake();
+    $barber = linkedBarber(123);
+    $client = Client::factory()->create(['telegram_chat_id' => 456]);
+
+    makeAppointment($barber, $client, AppointmentStatus::Pending);
+
+    Queue::assertPushed(
+        SendAppointmentNotification::class,
+        fn (SendAppointmentNotification $job) => (fn () => $this->notice)->call($job) === AppointmentNotice::NewForClient,
+    );
+});
+
+it('tells a client their appointment is confirmed when the salon books it as confirmed', function () {
+    // Админ заводит запись сразу подтверждённой, и статус больше не меняется:
+    // «мы свяжемся для подтверждения» было бы единственным и неверным сообщением.
+    Queue::fake();
+    $barber = linkedBarber(123);
+    $client = Client::factory()->create(['telegram_chat_id' => 456]);
+
+    makeAppointment($barber, $client, AppointmentStatus::Confirmed);
+
+    Queue::assertPushed(
+        SendAppointmentNotification::class,
+        fn (SendAppointmentNotification $job) => (fn () => $this->notice)->call($job) === AppointmentNotice::ConfirmedForClient,
+    );
+
+    Queue::assertNotPushed(
+        SendAppointmentNotification::class,
+        fn (SendAppointmentNotification $job) => (fn () => $this->notice)->call($job) === AppointmentNotice::NewForClient,
+    );
+});
+
+it('notifies the client and the barber exactly once each, not more, when both are telegram-linked', function () {
+    Queue::fake();
+    $barber = linkedBarber(123);
+    $client = Client::factory()->create(['telegram_chat_id' => 456]);
+
+    makeAppointment($barber, $client);
+
+    expect(Queue::pushed(
+        SendAppointmentNotification::class,
+        fn (SendAppointmentNotification $job) => (fn () => $this->notice)->call($job) === AppointmentNotice::NewForBarber,
+    ))->toHaveCount(1);
+
+    expect(Queue::pushed(
+        SendAppointmentNotification::class,
+        fn (SendAppointmentNotification $job) => (fn () => $this->notice)->call($job) === AppointmentNotice::ConfirmedForClient,
+    ))->toHaveCount(1);
+});
+
+it('does not notify the client on creation when telegram is not linked', function () {
+    // Item 1 in #76 is Telegram-only for new/confirmed — no SMS fallback there,
+    // unlike cancellation.
+    Queue::fake();
+    $barber = linkedBarber(123);
+    $client = Client::factory()->create(['telegram_chat_id' => null]);
+
+    makeAppointment($barber, $client);
+
+    Queue::assertNotPushed(
+        SendAppointmentNotification::class,
+        fn (SendAppointmentNotification $job) => (fn () => $this->notice)->call($job) === AppointmentNotice::NewForClient,
+    );
+});
+
+it('notifies a telegram-linked client when the appointment is confirmed', function () {
+    Queue::fake();
+    $barber = linkedBarber(123);
+    $client = Client::factory()->create(['telegram_chat_id' => 456]);
+    $appointment = makeAppointment($barber, $client, AppointmentStatus::Pending);
+
+    $appointment->update(['status' => AppointmentStatus::Confirmed]);
+
+    Queue::assertPushed(
+        SendAppointmentNotification::class,
+        fn (SendAppointmentNotification $job) => (fn () => $this->notice)->call($job) === AppointmentNotice::ConfirmedForClient,
+    );
+});
+
+it('notifies barber and dispatches the client cancellation job when an appointment is cancelled', function () {
     Queue::fake();
     $barber = linkedBarber(123);
     $client = Client::factory()->create(['telegram_chat_id' => 456]);
@@ -64,7 +149,88 @@ it('notifies barber and client when an appointment is cancelled', function () {
     $appointment->update(['status' => AppointmentStatus::Cancelled]);
 
     Queue::assertPushed(SendAppointmentNotification::class, fn ($job) => (fn () => $this->notice)->call($job) === AppointmentNotice::CancelledForBarber);
-    Queue::assertPushed(SendAppointmentNotification::class, fn ($job) => (fn () => $this->notice)->call($job) === AppointmentNotice::CancelledForClient);
+    Queue::assertPushed(
+        NotifyAppointmentClientOfCancellation::class,
+        fn (NotifyAppointmentClientOfCancellation $job) => (fn () => $this->appointmentId)->call($job) === $appointment->id,
+    );
+});
+
+it('cancellation reaches a telegram-linked client via telegram, not sms', function () {
+    // No linked barber here: isolates the assertion to the client-side ladder,
+    // which is what NotifyAppointmentClientOfCancellation is responsible for.
+    $unlinkedBarberUser = User::factory()->create(['role' => Role::BARBER, 'telegram_chat_id' => null]);
+    $barber = Barber::factory()->create(['user_id' => $unlinkedBarberUser->id]);
+    $client = Client::factory()->create(['telegram_chat_id' => 456]);
+    $appointment = makeAppointment($barber, $client);
+
+    $this->mock(TelegramService::class)
+        ->shouldReceive('sendMessage')->once()->with(456, Mockery::type('string'))->andReturnTrue();
+    $this->mock(SmsService::class)
+        ->shouldNotReceive('sendSms');
+
+    $appointment->update(['status' => AppointmentStatus::Cancelled]);
+});
+
+it('cancellation falls back to sms when the client has no linked telegram', function () {
+    $unlinkedBarberUser = User::factory()->create(['role' => Role::BARBER, 'telegram_chat_id' => null]);
+    $barber = Barber::factory()->create(['user_id' => $unlinkedBarberUser->id]);
+    $client = Client::factory()->create(['telegram_chat_id' => null, 'phone' => '998901234567']);
+    $appointment = makeAppointment($barber, $client);
+
+    $this->mock(SmsService::class)
+        ->shouldReceive('sendSms')->once()->with('998901234567', Mockery::type('string'), $client->id, 'cancelled')->andReturnTrue();
+    $this->mock(TelegramService::class)
+        ->shouldNotReceive('sendMessage');
+
+    $appointment->update(['status' => AppointmentStatus::Cancelled]);
+});
+
+it('sends the cancellation sms to a client without telegram in their own stored locale', function () {
+    $unlinkedBarberUser = User::factory()->create(['role' => Role::BARBER, 'telegram_chat_id' => null]);
+    $barber = Barber::factory()->create(['user_id' => $unlinkedBarberUser->id]);
+    $client = Client::factory()->create([
+        'telegram_chat_id' => null,
+        'phone' => '998901234567',
+        'locale' => 'uz',
+    ]);
+    $appointment = makeAppointment($barber, $client);
+
+    $expectedText = NotificationTemplates::renderSms('cancelled', [
+        'time' => $appointment->starts_at->format('H:i'),
+        'date' => Client::formatRussianDate($appointment->starts_at),
+    ], 'uz');
+
+    $this->mock(SmsService::class)
+        ->shouldReceive('sendSms')->once()->with('998901234567', $expectedText, $client->id, 'cancelled')->andReturnTrue();
+    $this->mock(TelegramService::class)
+        ->shouldNotReceive('sendMessage');
+
+    $appointment->update(['status' => AppointmentStatus::Cancelled]);
+});
+
+it('falls back to the global sms_locale for the cancellation sms when the client has no stored locale', function () {
+    Setting::set('sms_locale', 'kaa');
+
+    $unlinkedBarberUser = User::factory()->create(['role' => Role::BARBER, 'telegram_chat_id' => null]);
+    $barber = Barber::factory()->create(['user_id' => $unlinkedBarberUser->id]);
+    $client = Client::factory()->create([
+        'telegram_chat_id' => null,
+        'phone' => '998901234567',
+        'locale' => null,
+    ]);
+    $appointment = makeAppointment($barber, $client);
+
+    $expectedText = NotificationTemplates::renderSms('cancelled', [
+        'time' => $appointment->starts_at->format('H:i'),
+        'date' => Client::formatRussianDate($appointment->starts_at),
+    ], 'kaa');
+
+    $this->mock(SmsService::class)
+        ->shouldReceive('sendSms')->once()->with('998901234567', $expectedText, $client->id, 'cancelled')->andReturnTrue();
+    $this->mock(TelegramService::class)
+        ->shouldNotReceive('sendMessage');
+
+    $appointment->update(['status' => AppointmentStatus::Cancelled]);
 });
 
 it('does not re-notify on unrelated updates', function () {

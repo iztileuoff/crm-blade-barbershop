@@ -26,6 +26,11 @@ class extends Component
                 'hint' => __('sms.field_retention_hint'),
                 'placeholders' => [],
             ],
+            'cancelled' => [
+                'label' => __('sms.field_cancelled_label'),
+                'hint' => __('sms.field_cancelled_hint'),
+                'placeholders' => ['{time}'],
+            ],
         ];
     }
 

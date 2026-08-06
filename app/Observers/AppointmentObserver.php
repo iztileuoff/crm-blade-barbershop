@@ -3,6 +3,7 @@
 namespace App\Observers;
 
 use App\Enums\AppointmentStatus;
+use App\Jobs\NotifyAppointmentClientOfCancellation;
 use App\Jobs\SendAppointmentNotification;
 use App\Models\Appointment;
 use App\Telegram\AppointmentNotice;
@@ -37,7 +38,10 @@ class AppointmentObserver
     }
 
     /**
-     * Новая запись — уведомляем мастера в Telegram.
+     * Новая запись — уведомляем мастера и (если чат уже привязан) клиента в
+     * Telegram. Клиенту без Telegram здесь ничего не уходит: для «новой записи»
+     * SMS-резерва нет, только у отмены (#76) — это активная связь с салоном,
+     * а не удобство.
      */
     public function created(Appointment $appointment): void
     {
@@ -54,11 +58,33 @@ class AppointmentObserver
                 AppointmentNotice::NewForBarber,
             );
         }
+
+        $clientChatId = $appointment->client?->telegram_chat_id;
+
+        // Запись, заведённую админом, статус-кво не требует подтверждать: она
+        // создаётся сразу Confirmed, и «мы свяжемся для подтверждения» описывало
+        // бы не то, что произошло. Дальше статус уже не меняется, так что
+        // второго шанса сказать правду не будет.
+        $notice = match ($appointment->status) {
+            AppointmentStatus::Pending => AppointmentNotice::NewForClient,
+            AppointmentStatus::Confirmed => AppointmentNotice::ConfirmedForClient,
+            default => null,
+        };
+
+        if ($clientChatId !== null && $notice !== null) {
+            SendAppointmentNotification::dispatch(
+                $clientChatId,
+                $appointment->id,
+                $notice,
+            );
+        }
     }
 
     /**
      * Смена статуса: завершение — обновляем «последний визит» клиента (нужно для
-     * SMS-удержания); отмена — уведомляем мастера и клиента.
+     * SMS-удержания); подтверждение — уведомляем клиента; отмена — уведомляем
+     * мастера и клиента (клиента — через лестницу Telegram → SMS, чтобы узнавали
+     * даже без привязанного чата).
      */
     public function updated(Appointment $appointment): void
     {
@@ -68,6 +94,20 @@ class AppointmentObserver
 
         if ($appointment->status === AppointmentStatus::Completed) {
             $this->touchClientLastVisit($appointment);
+
+            return;
+        }
+
+        if ($appointment->status === AppointmentStatus::Confirmed) {
+            $clientChatId = $appointment->client?->telegram_chat_id;
+
+            if ($clientChatId !== null) {
+                SendAppointmentNotification::dispatch(
+                    $clientChatId,
+                    $appointment->id,
+                    AppointmentNotice::ConfirmedForClient,
+                );
+            }
 
             return;
         }
@@ -86,14 +126,10 @@ class AppointmentObserver
             );
         }
 
-        $clientChatId = $appointment->client?->telegram_chat_id;
-
-        if ($clientChatId !== null) {
-            SendAppointmentNotification::dispatch(
-                $clientChatId,
-                $appointment->id,
-                AppointmentNotice::CancelledForClient,
-            );
+        // Клиент, отменивший запись сам в боте, уже получил ответ в том же
+        // сообщении — второе уведомление было бы шумом от собственного действия.
+        if ($appointment->client !== null && ! $appointment->cancelledByClient) {
+            NotifyAppointmentClientOfCancellation::dispatch($appointment->id);
         }
     }
 

@@ -37,6 +37,7 @@ return [
     'sent' => 'Yuborilgan',
     'context_reminder' => 'Eslatma',
     'context_retention' => 'Ushlab qolish',
+    'context_cancelled' => 'Yozuv bekor qilindi',
     'context_broadcast' => 'Tarqatma',
     'context_manual' => 'Qoʻlda',
     'col_recipient' => 'Qabul qiluvchi',
@@ -68,4 +69,6 @@ return [
     'field_reminder_hint' => 'Telegramsiz mijozga tashrifdan oldin yuboriladi.',
     'field_retention_label' => 'Ushlab qolish xabari',
     'field_retention_hint' => 'Anchadan beri kelmagan mijozga yuboriladi.',
+    'field_cancelled_label' => 'Yozuv bekor qilindi',
+    'field_cancelled_hint' => 'Telegramsiz mijozga salon yozuvni bekor qilganda yuboriladi.',
 ];

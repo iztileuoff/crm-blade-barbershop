@@ -45,6 +45,10 @@ return [
     'save_templates' => 'Shablonlardı saqlaw',
     'new_for_barber_label' => 'Jańa jazılıw — barberge',
     'new_for_barber_hint' => 'Klient barberge jazılǵanda.',
+    'new_for_client_label' => 'Jańa jazılıw — klientke',
+    'new_for_client_hint' => 'Klient jazılǵanda (bronlanǵannan soń).',
+    'confirmed_for_client_label' => 'Jazılıw tastıyıqlandı — klientke',
+    'confirmed_for_client_hint' => 'Salon jazılıwdı tastıyıqlaǵanda.',
     'cancelled_for_barber_label' => 'Jazılıw biykarlandı — barberge',
     'cancelled_for_barber_hint' => 'Jazılıw biykarlanǵanda.',
     'cancelled_for_client_label' => 'Jazılıw biykarlandı — klientke',
@@ -53,4 +57,37 @@ return [
     'reminder_for_client_hint' => 'Keliwden 30 minut aldın.',
     'reminder_for_barber_label' => 'Esletpe — barberge',
     'reminder_for_barber_hint' => 'Jazılıwdan 30 minut aldın.',
+
+    // Bot xabarları — klientke, clients.locale boyınsha kóp tilli (#76)
+    'welcome_back' => 'Qaytıp kelgenińizge quwanamız! Ámeldi saylań 👇',
+    'welcome_new' => "👋 <b>Blade Barbershop</b>qa xosh keldińiz!\n\nDawam etiw ushın telefon nomerińizdi bólisiń — profilińizdi tabamız.",
+    'not_linked' => 'Aldın /start buyrıǵı menen profildi baylanıstırıń.',
+
+    'contact_wrong_owner' => 'Ótinish, ózińizdiń nomerińizdi tómendegi túymesheden jiberiń.',
+    'contact_barber_linked' => '✅ Barber profili baylanıstırıldı. Endi kesteler hám daramat sizge ashıq.',
+    'contact_client_linked' => '✅ Profil tabıldı! Bul jerde jazılıwlarıńız, tariyx hám esletpeler.',
+    'contact_client_created' => "✅ Tayyar! Jazılıwlar haqqında esletpeler jiberip turamız.\nJazılıwlar hám tariyx birinshi kelıwden keyin payda boladı.",
+    'contact_invalid_phone' => '❌ Nomerdi anıqlaw múmkin bolmadı. Ol 998XXXXXXXXX formatında bolıwı kerek.',
+
+    'no_upcoming_appointments' => '📭 Sizde aldaǵı jazılıwlar joq.',
+    'your_appointments_title' => '📅 <b>Sizdiń jazılıwlarıńız</b>',
+    'no_history' => '📭 Kelıw tariyxı házirshe bos.',
+    'history_title' => '🕓 <b>Aqırǵı kelıwler</b>',
+    'no_debt' => '✅ Sizde qarızdarlıq joq.',
+    'debt_amount' => '💳 <b>Qarızıńız:</b> :amount',
+
+    'cancel_button' => '❌ Biykarlaw',
+    'cancel_done_alert' => '✅ Jazılıw biykarlandı.',
+    'cancel_done_message' => '❌ Jazılıw sizdiń sorawıńız boyınsha biykarlandı.',
+    'cancel_unavailable' => 'Bul jazılıwdı endi biykarlaw múmkin emes.',
+
+    // Reply-klaviatura yarlıqları — klient tilinde sızıladı, sonlıqtan túyme
+    // teksti marshrutlarda barlıq tiller ushın birden dizimge alınadı (Keyboards::labelVariants()).
+    'kb_share_contact' => '📱 Nomerdi bólisiw',
+    'kb_today' => '📅 Búgin',
+    'kb_tomorrow' => '🗓 Erteń',
+    'kb_earnings' => '💰 Daramatım',
+    'kb_appointments' => '📅 Jazılıwlarım',
+    'kb_history' => '🕓 Tariyx',
+    'kb_debt' => '💳 Qarız',
 ];

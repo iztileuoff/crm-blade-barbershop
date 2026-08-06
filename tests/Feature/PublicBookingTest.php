@@ -526,6 +526,94 @@ it('completes a booking that started from a fully valid deep link', function () 
     expect(Appointment::count())->toBe(1);
 });
 
+it("writes the app's active locale onto a brand-new client at booking time", function () {
+    app()->setLocale('kaa');
+
+    $service = Service::factory()->create(['duration_minutes' => 60]);
+    $barber = Barber::factory()->create();
+
+    Volt::test('pages.booking')
+        ->call('selectService', $service->id)
+        ->call('selectBarber', $barber->id)
+        ->set('date', now()->toDateString())
+        ->call('selectTime', '12:00')
+        ->set('name', 'Jańa Klient')
+        ->set('phone', '998901112233')
+        ->call('confirm')
+        ->assertHasNoErrors()
+        ->assertSet('step', 5);
+
+    expect(Client::where('phone', '998901112233')->first()->locale)->toBe('kaa');
+});
+
+it('overwrites an existing client locale with the language used for this booking', function () {
+    $client = Client::factory()->create(['phone' => '998901112233', 'locale' => 'ru']);
+
+    app()->setLocale('uz');
+
+    $service = Service::factory()->create(['duration_minutes' => 60]);
+    $barber = Barber::factory()->create();
+
+    Volt::test('pages.booking')
+        ->call('selectService', $service->id)
+        ->call('selectBarber', $barber->id)
+        ->set('date', now()->toDateString())
+        ->call('selectTime', '12:00')
+        ->set('name', 'Ismi')
+        ->set('phone', '998901112233')
+        ->call('confirm')
+        ->assertHasNoErrors()
+        ->assertSet('step', 5);
+
+    expect($client->fresh()->locale)->toBe('uz');
+});
+
+it('shows the salon contacts and the booking number on the success screen', function () {
+    Setting::set('shop_phone', '+998 90 123 45 67');
+    Setting::set('shop_address', 'Ташкент, ул. Амира Темура, 1');
+    Setting::set('telegram', '@blade_barbershop');
+
+    $service = Service::factory()->create(['duration_minutes' => 60]);
+    $barber = Barber::factory()->create();
+
+    $component = Volt::test('pages.booking')
+        ->call('selectService', $service->id)
+        ->call('selectBarber', $barber->id)
+        ->set('date', now()->toDateString())
+        ->call('selectTime', '12:00')
+        ->set('name', 'Гость Клиент')
+        ->set('phone', '998901112233')
+        ->call('confirm')
+        ->assertHasNoErrors()
+        ->assertSet('step', 5);
+
+    $appointmentId = Appointment::first()->id;
+
+    $component
+        ->assertSee('#'.$appointmentId)
+        ->assertSee('+998 90 123 45 67')
+        ->assertSee('Ташкент, ул. Амира Темура, 1')
+        ->assertSeeHtml('tel:998901234567')
+        ->assertSeeHtml('https://t.me/blade_barbershop');
+});
+
+it('hides the contacts card entirely when no salon contacts are configured', function () {
+    $service = Service::factory()->create(['duration_minutes' => 60]);
+    $barber = Barber::factory()->create();
+
+    Volt::test('pages.booking')
+        ->call('selectService', $service->id)
+        ->call('selectBarber', $barber->id)
+        ->set('date', now()->toDateString())
+        ->call('selectTime', '12:00')
+        ->set('name', 'Гость Клиент')
+        ->set('phone', '998901112233')
+        ->call('confirm')
+        ->assertHasNoErrors()
+        ->assertSet('step', 5)
+        ->assertDontSee(__('booking.success.contacts_title'));
+});
+
 it('cannot confirm an appointment for a taken slot by setting time directly after loading a deep link', function () {
     $service = Service::factory()->create(['duration_minutes' => 60]);
     $barber = Barber::factory()->create();
