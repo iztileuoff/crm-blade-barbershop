@@ -340,14 +340,54 @@ it('refuses to delete an operation whose repayments sit in another day', functio
         ->set('payAmount', 40000)
         ->call('payOrderDebt');
 
+    // Причина отказа должна быть видна: ключ `delete` рисуется баннером над
+    // таблицей, а не внутри закрытой формы.
     Livewire::actingAs($admin)
         ->test('pages.admin.orders')
         ->call('deleteOrder', $order->id)
-        ->assertHasErrors('cart');
+        ->assertHasErrors('delete')
+        ->assertSee(__('orders.err_delete_has_payments'));
 
     expect(Order::whereKey($order->id)->exists())->toBeTrue()
         // касса дня платежа не сдвинулась
         ->and(dashboardOn($admin, '2026-08-02')->receivedTotal())->toBe(40000);
+
+    Carbon::setTestNow();
+});
+
+it('shows the reason when a visit with repayments cannot be deleted', function () {
+    $admin = debtAdmin();
+    $client = Client::factory()->create();
+    $barber = Barber::factory()->create();
+
+    Carbon::setTestNow(Carbon::parse('2026-05-27 11:00:00', 'Asia/Tashkent'));
+    $appointment = Appointment::create([
+        'client_id' => $client->id,
+        'barber_id' => $barber->id,
+        'starts_at' => Carbon::now(),
+        'ends_at' => Carbon::now()->addHour(),
+        'status' => AppointmentStatus::Completed,
+        'price' => 100000,
+        'payment_type' => 'cash',
+        'cash_amount' => 60000,
+        'debt_amount' => 40000,
+    ]);
+
+    Carbon::setTestNow(Carbon::parse('2026-08-02 09:00:00', 'Asia/Tashkent'));
+    Livewire::actingAs($admin)
+        ->test('pages.admin.debts')
+        ->call('openPayAppointment', $appointment->id)
+        ->set('payAmount', 40000)
+        ->call('payAppointmentDebt');
+
+    Livewire::actingAs($admin)
+        ->test('pages.admin.appointments')
+        ->set('date', '2026-05-27')
+        ->call('delete', $appointment->id)
+        ->assertHasErrors('delete')
+        ->assertSee(__('appointments.err_delete_has_payments'));
+
+    expect(Appointment::whereKey($appointment->id)->exists())->toBeTrue();
 
     Carbon::setTestNow();
 });

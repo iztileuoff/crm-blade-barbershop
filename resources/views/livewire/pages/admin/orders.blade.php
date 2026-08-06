@@ -103,10 +103,34 @@ class extends Component
         return (int) $this->orders->sum(fn (Order $o) => $o->outstandingDebt);
     }
 
+    /**
+     * Подтверждённый выбор клиента — тот, что реально уедет в продажу.
+     */
+    #[Computed]
+    public function selectedClient(): ?Client
+    {
+        return $this->client_id ? Client::find($this->client_id) : null;
+    }
+
     public function selectClient(int $id, string $label): void
     {
         $this->client_id = $id;
         $this->clientSearch = $label;
+    }
+
+    /**
+     * Текст поиска правят — значит, выбранный id больше не подтверждён.
+     * Иначе долг уедет на клиента, которого в поле уже не видно.
+     */
+    public function updatedClientSearch(): void
+    {
+        $this->client_id = null;
+    }
+
+    public function clearClient(): void
+    {
+        $this->client_id = null;
+        $this->clientSearch = '';
     }
 
     public function updatedDebtEnabled($value): void
@@ -259,12 +283,15 @@ class extends Component
 
     public function deleteOrder(int $id): void
     {
+        $this->resetErrorBag('delete');
+
         $order = Order::with('items')->findOrFail($id);
 
         // Удаление унесёт и погашения — а они лежат в кассе других дней.
-        // Молча двигать закрытый день нельзя.
+        // Молча двигать закрытый день нельзя. Ошибка идёт в ключ `delete`:
+        // его баннер живёт над таблицей, а не внутри закрытой формы.
         if ($order->debtPayments()->exists()) {
-            $this->addError('cart', __('orders.err_delete_has_payments'));
+            $this->addError('delete', __('orders.err_delete_has_payments'));
 
             return;
         }
@@ -286,6 +313,11 @@ class extends Component
         });
 
         unset($this->orders, $this->availableProducts);
+    }
+
+    public function dismissDeleteError(): void
+    {
+        $this->resetErrorBag('delete');
     }
 
     public function cancel(): void
@@ -357,6 +389,18 @@ class extends Component
             </div>
         @endif
     </div>
+
+    {{-- Заблокированное удаление: баннер живёт над таблицей, вне формы --}}
+    @error('delete')
+        <div class="mb-6 flex items-start gap-2.5 rounded-xl border border-danger/20 bg-danger/10 px-4 py-3 text-sm font-bold text-danger">
+            <svg class="mt-0.5 h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9.303-3.376c.866 1.5-.217 3.374-1.948 3.374H4.645c-1.73 0-2.813-1.874-1.948-3.374L9.4 3.378c.866-1.5 3.032-1.5 3.898 0l6.85 11.872ZM12 17.25h.007v.008H12v-.008Z" /></svg>
+            <span class="flex-1">{{ $message }}</span>
+            <button type="button" wire:click="dismissDeleteError" aria-label="{{ __('common.close') }}"
+                    class="shrink-0 rounded-lg p-0.5 text-danger/60 transition hover:bg-danger/15 hover:text-danger">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+            </button>
+        </div>
+    @enderror
 
     {{-- New order form --}}
     @if ($showForm)
@@ -496,6 +540,8 @@ class extends Component
                             labelField="name"
                             subLabelField="phone"
                             placeholder="{{ __('orders.search_client') }}"
+                            :selectedLabel="$this->selectedClient?->name"
+                            onClear="clearClient"
                         />
                         @error('client_id') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                     </div>

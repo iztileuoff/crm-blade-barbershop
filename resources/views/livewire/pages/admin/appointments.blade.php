@@ -160,10 +160,35 @@ class extends Component
             ->get();
     }
 
+    /**
+     * Подтверждённый выбор клиента — тот, на кого реально уедет визит.
+     */
+    #[Computed]
+    public function selectedClient(): ?Client
+    {
+        return $this->client_id ? Client::find($this->client_id) : null;
+    }
+
     public function selectClient($id, $label)
     {
         $this->client_id = $id;
         $this->clientSearch = $label;
+    }
+
+    /**
+     * Текст поиска правят — значит, выбранный id больше не подтверждён.
+     * Иначе визит с деньгами, долгом и SMS уедет на клиента, которого в поле
+     * уже не видно.
+     */
+    public function updatedClientSearch(): void
+    {
+        $this->client_id = null;
+    }
+
+    public function clearClient(): void
+    {
+        $this->client_id = null;
+        $this->clientSearch = '';
     }
 
     #[Computed]
@@ -560,18 +585,26 @@ class extends Component
     public function delete(int $id): void
     {
         $this->abortIfBarber();
+        $this->resetErrorBag('delete');
 
         $appointment = Appointment::findOrFail($id);
 
         // Удаление унесёт и погашения — а они лежат в кассе других дней.
+        // Ошибка идёт в ключ `delete`: его баннер живёт над таблицей, а не
+        // внутри модалки, закрытой при удалении из строки.
         if ($appointment->debtPayments()->exists()) {
-            $this->addError('selectedServices', __('appointments.err_delete_has_payments'));
+            $this->addError('delete', __('appointments.err_delete_has_payments'));
 
             return;
         }
 
         $appointment->delete();
         unset($this->appointments);
+    }
+
+    public function dismissDeleteError(): void
+    {
+        $this->resetErrorBag('delete');
     }
 
     public function cancel(): void
@@ -634,6 +667,18 @@ class extends Component
         </button>
     </div>
 
+    {{-- Заблокированное удаление: баннер живёт над таблицей, вне модалки --}}
+    @error('delete')
+        <div class="mb-6 flex items-start gap-2.5 rounded-xl border border-danger/20 bg-danger/10 px-4 py-3 text-sm font-bold text-danger">
+            <svg class="mt-0.5 h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9.303-3.376c.866 1.5-.217 3.374-1.948 3.374H4.645c-1.73 0-2.813-1.874-1.948-3.374L9.4 3.378c.866-1.5 3.032-1.5 3.898 0l6.85 11.872ZM12 17.25h.007v.008H12v-.008Z" /></svg>
+            <span class="flex-1">{{ $message }}</span>
+            <button type="button" wire:click="dismissDeleteError" aria-label="{{ __('common.close') }}"
+                    class="shrink-0 rounded-lg p-0.5 text-danger/60 transition hover:bg-danger/15 hover:text-danger">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+            </button>
+        </div>
+    @enderror
+
     {{-- Modal — мастеру недоступна: внутри поиск по всему справочнику клиентов --}}
     @if ($showForm && ! $isBarberView)
         <div class="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -660,6 +705,8 @@ class extends Component
                                     labelField="name"
                                     subLabelField="phone"
                                     placeholder="{{ __('appointments.search_client') }}"
+                                    :selectedLabel="$this->selectedClient?->name"
+                                    onClear="clearClient"
                                 />
                                 @error('client_id') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                             </div>
