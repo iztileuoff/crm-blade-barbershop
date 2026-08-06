@@ -14,6 +14,7 @@ return [
     'remaining_debt' => 'Qarz qoldigʻi',
     'pay_amount' => 'Toʻlov summasi',
     'pay_full' => 'Toʻliq toʻlash (:amount)',
+    'pay_method' => 'Toʻlov usuli',
     'accept_payment' => 'Toʻlovni qabul qilish',
 
     'appointment_debts_title' => 'Yozuvlar boʻyicha qarzlar',

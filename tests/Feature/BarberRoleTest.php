@@ -6,6 +6,7 @@ use App\Models\Barber;
 use App\Models\Client;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyException;
 use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
@@ -75,6 +76,62 @@ it('forbids a barber from mutating appointments', function () {
     Livewire::actingAs($user)
         ->test('pages.admin.appointments')
         ->call('openCreate')
+        ->assertForbidden();
+});
+
+it('refuses to let the client rewrite the role properties at all', function () {
+    // Первый рубеж: свойства заперты, подделать их запросом нельзя.
+    [$user] = barberUser();
+
+    foreach (['isBarberView', 'ownBarberId'] as $property) {
+        expect(fn () => Livewire::actingAs($user)
+            ->test('pages.admin.appointments')
+            ->set($property, $property === 'isBarberView' ? false : 999)
+        )->toThrow(CannotUpdateLockedPropertyException::class);
+    }
+});
+
+it('blocks every mutating method for a barber regardless of component state', function () {
+    // Второй рубеж: страж берёт роль из сессии, а не из свойства.
+    [$user, $barber] = barberUser();
+    $appointment = appointmentFor($barber, 'My Client');
+
+    foreach (['markCompleted', 'markConfirmed', 'markCancelled', 'delete', 'edit'] as $method) {
+        Livewire::actingAs($user)
+            ->test('pages.admin.appointments')
+            ->call($method, $appointment->id)
+            ->assertForbidden();
+    }
+
+    Livewire::actingAs($user)
+        ->test('pages.admin.appointments')
+        ->call('save')
+        ->assertForbidden();
+});
+
+it('never shows a barber another barber appointments even if the filter is forged', function () {
+    [$user, $barber] = barberUser();
+    $other = Barber::factory()->create(['name' => 'Someone Else']);
+
+    appointmentFor($barber, 'My Client');
+    appointmentFor($other, 'Their Client');
+
+    // barberFilter не заперт — но выборка всё равно сужается по сессии.
+    $rows = Livewire::actingAs($user)
+        ->test('pages.admin.appointments')
+        ->set('barberFilter', $other->id)
+        ->instance()
+        ->appointments();
+
+    expect($rows)->toHaveCount(1)
+        ->and($rows->first()->barber_id)->toBe($barber->id);
+});
+
+it('forbids a barber from reaching the debts screen', function () {
+    [$user] = barberUser();
+
+    Livewire::actingAs($user)
+        ->test('pages.admin.debts')
         ->assertForbidden();
 });
 

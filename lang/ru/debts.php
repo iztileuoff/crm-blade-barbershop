@@ -14,6 +14,7 @@ return [
     'remaining_debt' => 'Остаток долга',
     'pay_amount' => 'Сумма оплаты',
     'pay_full' => 'Погасить полностью (:amount)',
+    'pay_method' => 'Способ оплаты',
     'accept_payment' => 'Принять оплату',
 
     'appointment_debts_title' => 'Долги по записям',

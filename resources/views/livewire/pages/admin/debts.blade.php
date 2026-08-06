@@ -2,7 +2,9 @@
 
 use App\Models\Appointment;
 use App\Models\Order;
+use Carbon\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
@@ -19,14 +21,33 @@ class extends Component
 
     public ?int $payAmount = null;
 
+    public string $payPaymentType = 'cash';
+
+    /**
+     * Маршрутный middleware на update-запросах Livewire не переигрывается,
+     * поэтому денежный экран сторожит себя сам.
+     */
+    public function mount(): void
+    {
+        $this->abortIfBarber();
+    }
+
+    private function abortIfBarber(): void
+    {
+        abort_if(auth()->user()?->isBarber() ?? false, 403);
+    }
+
     #[Computed]
     public function appointmentDebts(): Collection
     {
         return Appointment::query()
             ->with(['client', 'barber', 'services'])
+            ->withSum('debtPayments as debt_paid_total', 'amount')
             ->where('debt_amount', '>', 0)
             ->orderByDesc('starts_at')
-            ->get();
+            ->get()
+            ->filter(fn (Appointment $a) => $a->outstandingDebt > 0)
+            ->values();
     }
 
     #[Computed]
@@ -34,21 +55,24 @@ class extends Component
     {
         return Order::query()
             ->with(['client', 'items.product'])
+            ->withSum('debtPayments as debt_paid_total', 'amount')
             ->where('debt_amount', '>', 0)
             ->orderByDesc('created_at')
-            ->get();
+            ->get()
+            ->filter(fn (Order $o) => $o->outstandingDebt > 0)
+            ->values();
     }
 
     #[Computed]
     public function totalAppointmentDebt(): int
     {
-        return (int) $this->appointmentDebts->sum('debt_amount');
+        return (int) $this->appointmentDebts->sum(fn (Appointment $a) => $a->outstandingDebt);
     }
 
     #[Computed]
     public function totalOrderDebt(): int
     {
-        return (int) $this->orderDebts->sum('debt_amount');
+        return (int) $this->orderDebts->sum(fn (Order $o) => $o->outstandingDebt);
     }
 
     #[Computed]
@@ -61,14 +85,16 @@ class extends Component
     {
         $this->payingAppointmentId = $id;
         $this->payingOrderId = null;
-        $this->payAmount = Appointment::find($id)?->debt_amount;
+        $this->payAmount = Appointment::find($id)?->outstandingDebt;
+        $this->payPaymentType = 'cash';
     }
 
     public function openPayOrder(int $id): void
     {
         $this->payingOrderId = $id;
         $this->payingAppointmentId = null;
-        $this->payAmount = Order::find($id)?->debt_amount;
+        $this->payAmount = Order::find($id)?->outstandingDebt;
+        $this->payPaymentType = 'cash';
     }
 
     public function cancelPay(): void
@@ -76,41 +102,70 @@ class extends Component
         $this->payingAppointmentId = null;
         $this->payingOrderId = null;
         $this->payAmount = null;
+        $this->payPaymentType = 'cash';
+        $this->resetErrorBag('payAmount');
     }
 
     public function payAppointmentDebt(): void
     {
-        $appointment = Appointment::findOrFail($this->payingAppointmentId);
-        $pay = min((int) ($this->payAmount ?? 0), (int) $appointment->debt_amount);
-
-        if ($pay <= 0) {
-            $this->addError('payAmount', __('debts.err_enter_amount'));
-
-            return;
-        }
-
-        $remaining = max(0, (int) $appointment->debt_amount - $pay);
-        $appointment->update(['debt_amount' => $remaining ?: null]);
-
+        $this->recordPayment(Appointment::findOrFail($this->payingAppointmentId));
         unset($this->appointmentDebts);
-        $this->cancelPay();
     }
 
     public function payOrderDebt(): void
     {
-        $order = Order::findOrFail($this->payingOrderId);
-        $pay = min((int) ($this->payAmount ?? 0), (int) $order->debt_amount);
+        $this->recordPayment(Order::findOrFail($this->payingOrderId));
+        unset($this->orderDebts);
+    }
 
-        if ($pay <= 0) {
+    /**
+     * Записываем погашение отдельной операцией с датой платежа: касса прошлых
+     * дней не должна меняться задним числом, а деньги должны попасть в кассу
+     * того дня, когда их реально приняли.
+     */
+    private function recordPayment(Appointment|Order $payable): void
+    {
+        $this->abortIfBarber();
+
+        $method = in_array($this->payPaymentType, ['cash', 'card'], true)
+            ? $this->payPaymentType
+            : 'cash';
+        $requested = (int) ($this->payAmount ?? 0);
+
+        // Остаток перечитываем под блокировкой внутри транзакции: иначе два
+        // параллельных запроса (двойной клик, вторая вкладка) читают один и тот
+        // же остаток и записывают платёж дважды, завышая кассу дня.
+        $recorded = DB::transaction(function () use ($payable, $requested, $method): int {
+            $fresh = $payable->newQuery()
+                ->lockForUpdate()
+                ->find($payable->getKey());
+
+            if ($fresh === null) {
+                return 0;
+            }
+
+            $pay = min($requested, $fresh->outstandingDebt);
+
+            if ($pay <= 0) {
+                return 0;
+            }
+
+            $fresh->debtPayments()->create([
+                'amount' => $pay,
+                'payment_type' => $method,
+                'paid_at' => Carbon::now('Asia/Tashkent'),
+                'user_id' => auth()->id(),
+            ]);
+
+            return $pay;
+        });
+
+        if ($recorded <= 0) {
             $this->addError('payAmount', __('debts.err_enter_amount'));
 
             return;
         }
 
-        $remaining = max(0, (int) $order->debt_amount - $pay);
-        $order->update(['debt_amount' => $remaining ?: null]);
-
-        unset($this->orderDebts);
         $this->cancelPay();
     }
 }; ?>
@@ -148,7 +203,7 @@ class extends Component
             $debtRecord = $payingAppointmentId
                 ? $this->appointmentDebts->firstWhere('id', $payingAppointmentId)
                 : $this->orderDebts->firstWhere('id', $payingOrderId);
-            $maxPay = (int) ($debtRecord?->debt_amount ?? 0);
+            $maxPay = (int) ($debtRecord?->outstandingDebt ?? 0);
         @endphp
         <div class="fixed inset-0 z-50 flex items-center justify-center p-4"
              x-data
@@ -184,14 +239,40 @@ class extends Component
                             class="mb-4 text-xs text-brass-ink/70 hover:text-brass-ink">
                         {{ __('debts.pay_full', ['amount' => number_format($maxPay, 0, '.', ' ').' '.__('common.currency')]) }}
                     </button>
+
+                    {{-- Способ оплаты: платёж идёт в кассу дня платежа именно этим способом --}}
+                    <div class="mb-4">
+                        <label class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('debts.pay_method') }}</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button type="button" wire:click="$set('payPaymentType', 'cash')"
+                                    @class([
+                                        'rounded-xl border px-4 py-2.5 text-xs font-bold transition',
+                                        'border-success/40 bg-success/10 text-success' => $payPaymentType === 'cash',
+                                        'border-content/[0.08] text-content/50 hover:bg-content/[0.06]' => $payPaymentType !== 'cash',
+                                    ])>
+                                {{ __('enums.payment_type.cash') }}
+                            </button>
+                            <button type="button" wire:click="$set('payPaymentType', 'card')"
+                                    @class([
+                                        'rounded-xl border px-4 py-2.5 text-xs font-bold transition',
+                                        'border-info/40 bg-info/10 text-info' => $payPaymentType === 'card',
+                                        'border-content/[0.08] text-content/50 hover:bg-content/[0.06]' => $payPaymentType !== 'card',
+                                    ])>
+                                {{ __('enums.payment_type.card') }}
+                            </button>
+                        </div>
+                    </div>
                     <div class="flex gap-3">
                         <button type="button" wire:click="cancelPay"
                                 class="rounded-xl border border-content/[0.08] px-5 py-2.5 text-sm font-bold text-content/60 transition hover:bg-content/[0.06] hover:text-content">
                             {{ __('common.cancel') }}
                         </button>
+                        @php($payAction = $payingAppointmentId ? 'payAppointmentDebt' : 'payOrderDebt')
                         <button type="button"
-                                wire:click="{{ $payingAppointmentId ? 'payAppointmentDebt' : 'payOrderDebt' }}"
-                                class="flex-1 rounded-xl bg-success px-6 py-2.5 text-sm font-bold text-black transition-all hover:brightness-110 active:scale-[0.98]">
+                                wire:click="{{ $payAction }}"
+                                wire:loading.attr="disabled"
+                                wire:target="{{ $payAction }}"
+                                class="flex-1 rounded-xl bg-success px-6 py-2.5 text-sm font-bold text-black transition-all hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60">
                             {{ __('debts.accept_payment') }}
                         </button>
                     </div>

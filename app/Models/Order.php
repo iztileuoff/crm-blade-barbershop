@@ -52,11 +52,14 @@ class Order extends Model
         get => number_format((int) $this->total_price, 0, '.', ' ').' сум';
     }
 
+    /**
+     * Непогашенный остаток долга — то, что клиент ещё должен.
+     */
     public string $formattedDebt {
-        get => number_format((int) ($this->debt_amount ?? 0), 0, '.', ' ').' сум';
+        get => number_format($this->outstandingDebt, 0, '.', ' ').' сум';
     }
 
     public bool $hasDebt {
-        get => ($this->debt_amount ?? 0) > 0;
+        get => $this->outstandingDebt > 0;
     }
 }

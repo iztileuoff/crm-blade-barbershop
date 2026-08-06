@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Services\SmsService;
 use App\Support\NotificationTemplates;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
 use Livewire\Livewire;
 
@@ -117,11 +118,12 @@ it('skips retention SMS when retention is disabled', function () {
     ]);
 
     configuredSms();
+    config(['services.barbershop.retention_days' => 14]);
     Setting::set('sms_enabled_retention', '0');
 
     Client::factory()->create([
         'phone' => '998901234567',
-        'last_visit_at' => now()->subDays(21),
+        'last_visit_at' => Carbon::now()->subDays(14)->setTime(12, 0),
         'last_retention_sent_at' => null,
     ]);
 
@@ -161,10 +163,11 @@ it('uses the fixed retention template and logs context for retention SMS', funct
     ]);
 
     configuredSms();
+    config(['services.barbershop.retention_days' => 14]);
 
     Client::factory()->create([
         'phone' => '998901234567',
-        'last_visit_at' => now()->subDays(21),
+        'last_visit_at' => Carbon::now()->subDays(14)->setTime(12, 0),
         'last_retention_sent_at' => null,
     ]);
 

@@ -5,9 +5,11 @@ use App\Models\Appointment;
 use App\Models\Barber;
 use App\Models\Client;
 use App\Models\Service;
+use App\Support\PaymentSplit;
 use Carbon\Carbon;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\Validate;
 use Livewire\Volt\Component;
 
@@ -53,6 +55,13 @@ class extends Component
 
     public bool $debtEnabled = false;
 
+    /**
+     * Уже принятая по долгу сумма — только для подсказки в форме.
+     * Заперта: при сохранении значение всё равно перечитывается из БД.
+     */
+    #[Locked]
+    public int $debtAlreadyPaid = 0;
+
     #[Validate('required|date')]
     public string $form_date = '';
 
@@ -68,8 +77,15 @@ class extends Component
 
     public string $clientSearch = '';
 
+    /**
+     * Роль и «свой» мастер — заперты: публичные свойства Livewire пишутся с
+     * клиента, и без замка мастер мог одним запросом выставить isBarberView
+     * в false и дотянуться до чужих записей.
+     */
+    #[Locked]
     public bool $isBarberView = false;
 
+    #[Locked]
     public ?int $ownBarberId = null;
 
     public function mount(): void
@@ -86,9 +102,23 @@ class extends Component
         }
     }
 
+    /**
+     * Роль берём из сессии, а не из свойства компонента: свойство — лишь
+     * подсказка для шаблона, источником прав оно быть не может.
+     */
     private function abortIfBarber(): void
     {
-        abort_if($this->isBarberView, 403);
+        abort_if(auth()->user()?->isBarber() ?? false, 403);
+    }
+
+    /**
+     * Id мастера, если страницу смотрит мастер. Тоже из сессии.
+     */
+    private function sessionBarberId(): ?int
+    {
+        $user = auth()->user();
+
+        return $user?->isBarber() ? $user->barber?->id : null;
     }
 
     #[Computed]
@@ -114,13 +144,28 @@ class extends Component
     #[Computed]
     public function appointments()
     {
+        // Мастеру отдаём только его записи, и решает это сессия, а не свойство.
+        $ownBarberId = $this->sessionBarberId();
+
         return Appointment::query()
             ->with(['client', 'barber', 'services'])
+            ->withSum('debtPayments as debt_paid_total', 'amount')
             ->whereDate('starts_at', $this->date)
-            ->when($this->isBarberView, fn ($q) => $q->where('barber_id', $this->ownBarberId))
-            ->when(! $this->isBarberView && $this->barberFilter, fn ($q) => $q->where('barber_id', $this->barberFilter))
-            ->orderBy($this->sortField, $this->sortDirection)
+            ->when($ownBarberId !== null, fn ($q) => $q->where('barber_id', $ownBarberId))
+            ->when($ownBarberId === null && $this->barberFilter, fn ($q) => $q->where('barber_id', $this->barberFilter))
+            ->orderBy($this->sortableField(), $this->sortDirection === 'desc' ? 'desc' : 'asc')
             ->get();
+    }
+
+    /**
+     * Колонка сортировки только из белого списка: поле приходит с клиента, и
+     * произвольное имя роняло бы запрос.
+     */
+    private function sortableField(): string
+    {
+        return in_array($this->sortField, ['starts_at', 'status', 'price', 'barber_id'], true)
+            ? $this->sortField
+            : 'starts_at';
     }
 
     #[Computed]
@@ -211,6 +256,8 @@ class extends Component
         $this->card_amount = $appointment->card_amount;
         $this->debt_amount = $appointment->debt_amount;
         $this->debtEnabled = ($appointment->debt_amount ?? 0) > 0;
+        // Сколько по этому долгу уже принято — ниже этой суммы опускать нельзя.
+        $this->debtAlreadyPaid = $appointment->debtPaid;
         $this->form_date = $appointment->starts_at->toDateString();
         $this->form_start_time = $appointment->starts_at->format('H:i');
         $this->form_end_time = $appointment->ends_at->format('H:i');
@@ -337,11 +384,29 @@ class extends Component
         }
     }
 
+    /**
+     * Клиент обязателен, только если операция уходит в долг. Метод объявлен
+     * отдельно, чтобы validate() без аргументов не терял правила #[Validate].
+     *
+     * @return array<string, string>
+     */
+    public function rules(): array
+    {
+        return [
+            'client_id' => ($this->debt_amount ?? 0) > 0
+                ? 'required|exists:clients,id'
+                : 'nullable|exists:clients,id',
+            // Суммы услуг складываются в price — отрицательная строка иначе
+            // молча уменьшала бы цену визита.
+            'selectedServices.*.service_id' => 'nullable|integer|exists:services,id',
+            'selectedServices.*.amount' => 'nullable|integer|min:0',
+        ];
+    }
+
     public function save(): void
     {
         $this->abortIfBarber();
-        $clientRule = ($this->debt_amount ?? 0) > 0 ? 'required|exists:clients,id' : 'nullable|exists:clients,id';
-        $this->validate(['client_id' => $clientRule]);
+        $this->validate();
 
         $validServices = collect($this->selectedServices)
             ->filter(fn ($row) => ! empty($row['service_id']))
@@ -371,6 +436,24 @@ class extends Component
         }
 
         $this->recalculateTotal();
+
+        // Цена собирается из услуг, поэтому денежные поля сверяем уже после неё.
+        $moneyErrors = PaymentSplit::errors(
+            $this->payment_type,
+            (int) ($this->price ?? 0),
+            $this->cash_amount,
+            $this->card_amount,
+            $this->debt_amount,
+            $this->editingId ? (Appointment::find($this->editingId)?->debtPaid ?? 0) : 0,
+        );
+
+        if ($moneyErrors !== []) {
+            foreach ($moneyErrors as $field => $message) {
+                $this->addError($field, $message);
+            }
+
+            return;
+        }
 
         $payload = [
             'client_id' => $this->client_id,
@@ -440,7 +523,7 @@ class extends Component
 
     private function resetForm(): void
     {
-        $this->reset(['editingId', 'client_id', 'barber_id', 'selectedServices', 'price', 'note', 'form_start_time', 'form_end_time', 'cash_amount', 'card_amount', 'debt_amount', 'debtEnabled']);
+        $this->reset(['editingId', 'client_id', 'barber_id', 'selectedServices', 'price', 'note', 'form_start_time', 'form_end_time', 'cash_amount', 'card_amount', 'debt_amount', 'debtEnabled', 'debtAlreadyPaid']);
         $this->payment_type = 'cash';
         $this->form_date = $this->date;
         $this->resetErrorBag();

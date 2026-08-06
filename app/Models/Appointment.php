@@ -59,17 +59,62 @@ class Appointment extends Model
         get => number_format((int) ($this->price ?? 0), 0, '.', ' ').' сум';
     }
 
+    /**
+     * Непогашенный остаток долга — то, что клиент ещё должен.
+     */
     public string $formattedDebt {
-        get => number_format((int) ($this->debt_amount ?? 0), 0, '.', ' ').' сум';
+        get => number_format($this->outstandingDebt, 0, '.', ' ').' сум';
     }
 
     public bool $hasDebt {
-        get => ($this->debt_amount ?? 0) > 0;
+        get => $this->outstandingDebt > 0;
     }
 
     public function kassaTotalAmount(): int
     {
         return (int) ($this->price ?? 0);
+    }
+
+    /**
+     * Деньги по этой записи, попавшие в кассу внутри рассматриваемого периода:
+     * полученное при оказании услуги плюс погашения долга, принятые в том же
+     * периоде.
+     *
+     * Слагаемое с погашениями берётся из withSum('... as debt_collected_in_period').
+     * Без него остаётся только полученное при визите — это и нужно там, где
+     * период не задан.
+     */
+    public int $collectedInPeriod {
+        get => $this->receivedAmount
+            + (int) ($this->attributes['debt_collected_in_period'] ?? 0);
+    }
+
+    /**
+     * Доля мастера по этой записи.
+     *
+     * Единственное место, где живёт формула зарплаты: и дашборд, и Telegram
+     * обязаны звать её, иначе мастеру показывают одну сумму, а начисляют другую.
+     * База — ПОЛУЧЕННЫЕ деньги: услуга, ушедшая в долг, приносит долю только
+     * после того, как деньги дошли до кассы, и только если их собрали внутри
+     * того же периода — иначе пересчитывались бы уже закрытые расчётные месяцы.
+     *
+     * @param  int|null  $fallbackPercent  процент, если у записи нет своего снимка
+     */
+    public function salaryShare(?int $fallbackPercent = null): int
+    {
+        $percent = $this->salary_percent ?? $fallbackPercent ?? $this->barber?->salary_percent ?? 0;
+
+        return (int) round($this->collectedInPeriod * $percent / 100);
+    }
+
+    /**
+     * Погашения долга, принятые внутри периода, — слагаемое для базы зарплаты.
+     */
+    public function scopeWithDebtCollectedBetween(Builder $query, \DateTimeInterface $from, \DateTimeInterface $to): Builder
+    {
+        return $query->withSum([
+            'debtPayments as debt_collected_in_period' => fn ($q) => $q->whereBetween('paid_at', [$from, $to]),
+        ], 'amount');
     }
 
     public function client(): BelongsTo

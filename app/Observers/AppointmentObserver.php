@@ -12,10 +12,26 @@ class AppointmentObserver
     /**
      * Фиксируем процент мастера в момент завершения записи, чтобы изменение
      * процента в будущем не пересчитывало уже завершённые записи.
+     *
+     * Процент перефиксируется, если у завершённой записи сменили мастера: иначе
+     * снимок «процента мастера» превращается в снимок «процента чужого мастера»
+     * и зарплата начисляется по ставке того, кто услугу не оказывал.
      */
     public function saving(Appointment $appointment): void
     {
-        if ($appointment->status === AppointmentStatus::Completed && $appointment->salary_percent === null) {
+        if ($appointment->status !== AppointmentStatus::Completed) {
+            return;
+        }
+
+        if ($appointment->isDirty('barber_id')) {
+            // Связь могла быть загружена до смены barber_id — иначе возьмём прежнего мастера.
+            $appointment->unsetRelation('barber');
+            $appointment->salary_percent = $appointment->barber?->salary_percent;
+
+            return;
+        }
+
+        if ($appointment->salary_percent === null) {
             $appointment->salary_percent = $appointment->barber?->salary_percent;
         }
     }

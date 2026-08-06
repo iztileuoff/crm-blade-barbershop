@@ -14,6 +14,7 @@ return [
     'remaining_debt' => 'Qarız qaldıǵı',
     'pay_amount' => 'Tólew summası',
     'pay_full' => 'Tolıq tólew (:amount)',
+    'pay_method' => 'Tólew usılı',
     'accept_payment' => 'Tólewdi qabıl etiw',
 
     'appointment_debts_title' => 'Jazılıwlar boyınsha qarızlar',

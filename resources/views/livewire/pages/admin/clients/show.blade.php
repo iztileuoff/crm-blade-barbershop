@@ -67,13 +67,22 @@ class extends Component
             : 0;
     }
 
+    /**
+     * Непогашенный долг клиента: выданное минус то, что он уже принёс.
+     */
     #[Computed]
     public function totalDebt(): int
     {
-        $fromAppointments = (int) $this->client->appointments()->sum('debt_amount');
-        $fromOrders = (int) $this->client->orders()->sum('debt_amount');
+        $outstanding = function ($relation): int {
+            return (int) $relation
+                ->withSum('debtPayments as debt_paid_total', 'amount')
+                ->where('debt_amount', '>', 0)
+                ->get()
+                ->sum(fn ($row) => $row->outstandingDebt);
+        };
 
-        return $fromAppointments + $fromOrders;
+        return $outstanding($this->client->appointments())
+            + $outstanding($this->client->orders());
     }
 
     #[Computed]
@@ -122,6 +131,7 @@ class extends Component
     {
         return $this->client->orders()
             ->with('items.product')
+            ->withSum('debtPayments as debt_paid_total', 'amount')
             ->orderByDesc('created_at')
             ->get();
     }

@@ -3,6 +3,7 @@
 use App\Enums\AppointmentStatus;
 use App\Models\Appointment;
 use App\Models\Barber;
+use App\Models\DebtPayment;
 use App\Models\Order;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
@@ -57,9 +58,31 @@ class extends Component
     #[Computed]
     public function appointments(): Collection
     {
+        $day = Carbon::parse($this->date ?: today('Asia/Tashkent'), 'Asia/Tashkent')->startOfDay();
+
         return Appointment::query()
             ->with(['barber', 'services'])
-            ->whereDate('starts_at', $this->date ?: today('Asia/Tashkent'))
+            ->withDebtCollectedBetween($day, $day->copy()->endOfDay())
+            ->whereBetween('starts_at', [$day, $day->copy()->endOfDay()])
+            ->get();
+    }
+
+    /**
+     * Погашения долгов, принятые в этот день. Это живые деньги дня платежа —
+     * они не относятся к операции, по которой возник долг.
+     *
+     * Берём только платежи по живым операциям: удаление клиента или мастера
+     * уносит записи каскадом на уровне БД, событий Eloquent при этом не
+     * возникает, и осиротевший платёж иначе засчитывался бы в кассу вечно.
+     */
+    #[Computed]
+    public function debtPaymentsToday(): Collection
+    {
+        $day = Carbon::parse($this->date ?: today('Asia/Tashkent'), 'Asia/Tashkent')->startOfDay();
+
+        return DebtPayment::query()
+            ->betweenDates($day, $day->copy()->endOfDay())
+            ->whereHasMorph('payable', [Appointment::class, Order::class])
             ->get();
     }
 
@@ -134,24 +157,39 @@ class extends Component
         return (int) $this->productOrders->sum(fn ($o) => $o->receivedAmount);
     }
 
+    /**
+     * Долги, погашенные сегодня, — тоже приход сегодняшнего дня.
+     */
+    #[Computed]
+    public function debtRepaidToday(): int
+    {
+        return (int) $this->debtPaymentsToday->sum('amount');
+    }
+
     #[Computed]
     public function cashTotal(): int
     {
         return (int) $this->completedAppointments->sum(fn ($a) => $a->cashReceived)
-            + (int) $this->productOrders->sum(fn ($o) => $o->cashReceived);
+            + (int) $this->productOrders->sum(fn ($o) => $o->cashReceived)
+            + (int) $this->debtPaymentsToday->sum(fn ($p) => $p->cashReceived);
     }
 
     #[Computed]
     public function cardTotal(): int
     {
         return (int) $this->completedAppointments->sum(fn ($a) => $a->cardReceived)
-            + (int) $this->productOrders->sum(fn ($o) => $o->cardReceived);
+            + (int) $this->productOrders->sum(fn ($o) => $o->cardReceived)
+            + (int) $this->debtPaymentsToday->sum(fn ($p) => $p->cardReceived);
     }
 
+    /**
+     * Касса дня. Считается один раз здесь; нал/карта — только её разбивка,
+     * поэтому заголовок карточки всегда сходится со своей расшифровкой.
+     */
     #[Computed]
     public function receivedTotal(): int
     {
-        return $this->cashTotal + $this->cardTotal;
+        return $this->serviceReceived + $this->productReceived + $this->debtRepaidToday;
     }
 
     #[Computed]
@@ -161,49 +199,130 @@ class extends Component
             + (int) $this->productOrders->sum(fn ($o) => (int) ($o->debt_amount ?? 0));
     }
 
+    /**
+     * Операции дня, где разбивка нал/карта или сумма долга не сходятся с ценой.
+     * Кассир должен поправить их вручную — молча расходиться в цифрах нельзя.
+     */
+    #[Computed]
+    public function brokenOperationsCount(): int
+    {
+        return $this->completedAppointments->filter(fn ($a) => $a->hasBrokenPaymentSplit)->count()
+            + $this->productOrders->filter(fn ($o) => $o->hasBrokenPaymentSplit)->count();
+    }
+
+    /**
+     * То же за месяц: битая строка в день, который никто не открывал, иначе
+     * не всплывёт нигде.
+     */
+    #[Computed]
+    public function monthlyBrokenOperationsCount(): int
+    {
+        return $this->monthlyAppointments->filter(fn ($a) => $a->hasBrokenPaymentSplit)->count()
+            + $this->monthlyOrders->filter(fn ($o) => $o->hasBrokenPaymentSplit)->count();
+    }
+
+    /**
+     * Мастера для зарплатных таблиц: все активные плюс те, у кого есть записи
+     * за период. Деактивация мастера не должна прятать его зарплату, оставляя
+     * его выручку в обороте, — иначе «Прибыль компании» скачком растёт.
+     *
+     * @param  Collection<int, Appointment>  $appointments
+     * @return Collection<int, Barber>
+     */
+    private function barbersForStats(Collection $appointments): Collection
+    {
+        $idsWithAppointments = $appointments->pluck('barber_id')->filter()->unique()->all();
+
+        return Barber::query()
+            ->where(function ($query) use ($idsWithAppointments) {
+                $query->where('is_active', true);
+
+                if ($idsWithAppointments !== []) {
+                    $query->orWhereIn('id', $idsWithAppointments);
+                }
+            })
+            ->orderBy('name')
+            ->get();
+    }
+
+    /**
+     * Строка зарплатной таблицы по одному мастеру.
+     *
+     * Зарплата начисляется от ПОЛУЧЕННЫХ денег (receivedAmount), а не от
+     * выставленной цены: услуга, ушедшая в долг, приносит мастеру долю только
+     * после того, как деньги дошли до кассы.
+     *
+     * @param  Collection<int, Appointment>  $completed
+     */
+    private function barberStatRow(
+        Barber $barber,
+        Collection $completed,
+        int $totalCount,
+        int $cancelledCount,
+    ): object {
+        $revenue = (int) $completed->sum(fn ($a) => (int) ($a->price ?? $barber->price ?? 0));
+        // База зарплаты: полученное при визите плюс собранные за период долги.
+        $received = (int) $completed->sum(fn ($a) => $a->collectedInPeriod);
+        $cashRevenue = (int) $completed->sum(fn ($a) => $a->cashReceived);
+        $cardRevenue = (int) $completed->sum(fn ($a) => $a->cardReceived);
+        $debt = (int) $completed->sum(fn ($a) => (int) ($a->debt_amount ?? 0));
+
+        $salary = (int) $completed->sum(fn ($a) => $a->salaryShare($barber->salary_percent));
+
+        // Фактическая ставка по начисленному, а не «текущий процент мастера»:
+        // иначе ошибка в зафиксированном проценте не видна глазами.
+        $actualPercent = $received > 0
+            ? (int) round($salary / $received * 100)
+            : (int) $barber->salary_percent;
+
+        // Ругаемся только когда все снимки периода одинаковы и при этом расходятся
+        // с текущей ставкой. Если процент меняли внутри периода, средневзвешенное
+        // значение закономерно не совпадает ни с одним из них — это штатно, и
+        // красная пометка на исправных строках только приучает её игнорировать.
+        $uniformPercent = $completed->pluck('salary_percent')->unique()->count() === 1;
+
+        $remainder = $received - $salary;
+
+        return (object) [
+            'id' => $barber->id,
+            'name' => $barber->name,
+            'photoUrl' => $barber->photoUrl,
+            'isActive' => (bool) $barber->is_active,
+            'count' => $totalCount,
+            'cancelled_count' => $cancelledCount,
+            'revenue' => $revenue,
+            'received' => $received,
+            'cashRevenue' => $cashRevenue,
+            'cardRevenue' => $cardRevenue,
+            'debt' => $debt,
+            'salary' => $salary,
+            'salaryPercent' => $actualPercent,
+            'percentMismatch' => $received > 0
+                && $uniformPercent
+                && $actualPercent !== (int) $barber->salary_percent,
+            'remainder' => $remainder,
+            'formattedRevenue' => number_format($revenue, 0, '.', ' ').' '.__('common.currency'),
+            'formattedReceived' => number_format($received, 0, '.', ' ').' '.__('common.currency'),
+            'formattedSalary' => number_format($salary, 0, '.', ' ').' '.__('common.currency'),
+            'formattedRemainder' => number_format($remainder, 0, '.', ' ').' '.__('common.currency'),
+        ];
+    }
+
     #[Computed]
     public function barberStats(): Collection
     {
         $byBarber = $this->appointments->groupBy('barber_id');
 
-        return Barber::active()
-            ->orderBy('name')
-            ->get()
+        return $this->barbersForStats($this->appointments)
             ->map(function (Barber $barber) use ($byBarber) {
                 $items = $byBarber->get($barber->id, collect());
 
-                $confirmedItems = $items->filter(
-                    fn ($a) => $a->status === AppointmentStatus::Completed
+                return $this->barberStatRow(
+                    $barber,
+                    $items->filter(fn ($a) => $a->status === AppointmentStatus::Completed),
+                    $items->count(),
+                    $items->where('status', AppointmentStatus::Cancelled)->count(),
                 );
-
-                $revenue = (int) $confirmedItems->sum(fn ($a) => (int) ($a->price ?? $barber->price ?? 0));
-
-                $cashRevenue = (int) $confirmedItems->sum(fn ($a) => $a->cashReceived);
-                $cardRevenue = (int) $confirmedItems->sum(fn ($a) => $a->cardReceived);
-                $debt = (int) $confirmedItems->sum(fn ($a) => (int) ($a->debt_amount ?? 0));
-
-                $cancelledCount = $items->where('status', AppointmentStatus::Cancelled)->count();
-                $salary = (int) round($confirmedItems->sum(
-                    fn ($a) => (int) ($a->price ?? $barber->price ?? 0) * ($a->salary_percent ?? $barber->salary_percent) / 100
-                ));
-
-                return (object) [
-                    'id' => $barber->id,
-                    'name' => $barber->name,
-                    'photoUrl' => $barber->photoUrl,
-                    'count' => $items->count(),
-                    'cancelled_count' => $cancelledCount,
-                    'revenue' => $revenue,
-                    'cashRevenue' => $cashRevenue,
-                    'cardRevenue' => $cardRevenue,
-                    'debt' => $debt,
-                    'salary' => $salary,
-                    'salaryPercent' => $barber->salary_percent,
-                    'remainder' => $revenue - $salary,
-                    'formattedRevenue' => number_format($revenue, 0, '.', ' ').' '.__('common.currency'),
-                    'formattedSalary' => number_format($salary, 0, '.', ' ').' '.__('common.currency'),
-                    'formattedRemainder' => number_format($revenue - $salary, 0, '.', ' ').' '.__('common.currency'),
-                ];
             });
     }
 
@@ -217,6 +336,8 @@ class extends Component
 
         return Appointment::query()
             ->with(['barber'])
+            ->withSum('debtPayments as debt_paid_total', 'amount')
+            ->withDebtCollectedBetween($start, $end)
             ->where('status', AppointmentStatus::Completed)
             ->whereBetween('starts_at', [$start, $end])
             ->get();
@@ -229,8 +350,24 @@ class extends Component
         $end = $start->copy()->endOfMonth();
 
         return Order::query()
+            ->withSum('debtPayments as debt_paid_total', 'amount')
             ->whereBetween('created_at', [$start, $end])
-            ->get(['created_at', 'total_price', 'debt_amount', 'payment_type', 'cash_amount', 'card_amount']);
+            ->get(['id', 'created_at', 'total_price', 'debt_amount', 'payment_type', 'cash_amount', 'card_amount']);
+    }
+
+    /**
+     * Погашения долгов, принятые в этом месяце.
+     */
+    #[Computed]
+    public function monthlyDebtPayments(): Collection
+    {
+        $start = Carbon::parse($this->month.'-01', 'Asia/Tashkent')->startOfMonth();
+        $end = $start->copy()->endOfMonth();
+
+        return DebtPayment::query()
+            ->betweenDates($start, $end)
+            ->whereHasMorph('payable', [Appointment::class, Order::class])
+            ->get();
     }
 
     #[Computed]
@@ -255,20 +392,28 @@ class extends Component
     public function monthlyCashTotal(): int
     {
         return (int) $this->monthlyAppointments->sum(fn ($a) => $a->cashReceived)
-            + (int) $this->monthlyOrders->sum(fn ($o) => $o->cashReceived);
+            + (int) $this->monthlyOrders->sum(fn ($o) => $o->cashReceived)
+            + (int) $this->monthlyDebtPayments->sum(fn ($p) => $p->cashReceived);
     }
 
     #[Computed]
     public function monthlyCardTotal(): int
     {
         return (int) $this->monthlyAppointments->sum(fn ($a) => $a->cardReceived)
-            + (int) $this->monthlyOrders->sum(fn ($o) => $o->cardReceived);
+            + (int) $this->monthlyOrders->sum(fn ($o) => $o->cardReceived)
+            + (int) $this->monthlyDebtPayments->sum(fn ($p) => $p->cardReceived);
     }
 
+    /**
+     * Касса месяца: полученное по операциям месяца плюс погашения долгов,
+     * принятые в этом месяце.
+     */
     #[Computed]
     public function monthlyReceivedTotal(): int
     {
-        return $this->monthlyCashTotal + $this->monthlyCardTotal;
+        return (int) $this->monthlyAppointments->sum(fn ($a) => $a->receivedAmount)
+            + (int) $this->monthlyOrders->sum(fn ($o) => $o->receivedAmount)
+            + (int) $this->monthlyDebtPayments->sum('amount');
     }
 
     #[Computed]
@@ -283,37 +428,11 @@ class extends Component
     {
         $byBarber = $this->monthlyAppointments->groupBy('barber_id');
 
-        return Barber::active()
-            ->orderBy('name')
-            ->get()
+        return $this->barbersForStats($this->monthlyAppointments)
             ->map(function (Barber $barber) use ($byBarber) {
                 $items = $byBarber->get($barber->id, collect());
-                $revenue = (int) $items->sum('price');
 
-                $cashRevenue = (int) $items->sum(fn ($a) => $a->cashReceived);
-                $cardRevenue = (int) $items->sum(fn ($a) => $a->cardReceived);
-                $debt = (int) $items->sum(fn ($a) => (int) ($a->debt_amount ?? 0));
-
-                $salary = (int) round($items->sum(
-                    fn ($a) => (int) ($a->price ?? 0) * ($a->salary_percent ?? $barber->salary_percent) / 100
-                ));
-
-                return (object) [
-                    'id' => $barber->id,
-                    'name' => $barber->name,
-                    'photoUrl' => $barber->photoUrl,
-                    'count' => $items->count(),
-                    'revenue' => $revenue,
-                    'cashRevenue' => $cashRevenue,
-                    'cardRevenue' => $cardRevenue,
-                    'debt' => $debt,
-                    'salary' => $salary,
-                    'salaryPercent' => $barber->salary_percent,
-                    'remainder' => $revenue - $salary,
-                    'formattedRevenue' => number_format($revenue, 0, '.', ' ').' '.__('common.currency'),
-                    'formattedSalary' => number_format($salary, 0, '.', ' ').' '.__('common.currency'),
-                    'formattedRemainder' => number_format($revenue - $salary, 0, '.', ' ').' '.__('common.currency'),
-                ];
+                return $this->barberStatRow($barber, $items, $items->count(), 0);
             });
     }
 
@@ -323,10 +442,32 @@ class extends Component
         return (int) $this->monthlyBarberStats->sum('salary');
     }
 
+    /**
+     * Прибыль по обороту: включает то, что ещё не собрано с должников.
+     */
     #[Computed]
     public function companyProfit(): int
     {
         return $this->monthlyTotalRevenue - $this->monthlyTotalSalary;
+    }
+
+    /**
+     * Прибыль, реально лежащая в кассе: полученные деньги минус зарплата.
+     */
+    #[Computed]
+    public function companyProfitInCash(): int
+    {
+        return $this->monthlyReceivedTotal - $this->monthlyTotalSalary;
+    }
+
+    /**
+     * Не собрано: непогашенный остаток по долгам, выданным в этом месяце.
+     */
+    #[Computed]
+    public function monthlyNotCollected(): int
+    {
+        return (int) $this->monthlyAppointments->sum(fn ($a) => $a->outstandingDebt)
+            + (int) $this->monthlyOrders->sum(fn ($o) => $o->outstandingDebt);
     }
 
     #[Computed]
@@ -457,6 +598,9 @@ class extends Component
                 <div class="mt-1 flex flex-wrap items-center gap-4 text-xs">
                     <span class="text-success/70">{{ __('dashboard.services') }}: {{ $this->formatSum($this->serviceReceived) }}</span>
                     <span class="text-brass-ink/70">{{ __('dashboard.products') }}: {{ $this->formatSum($this->productReceived) }}</span>
+                    @if ($this->debtRepaidToday > 0)
+                        <span class="text-royal/70">{{ __('dashboard.debt_repaid') }}: {{ $this->formatSum($this->debtRepaidToday) }}</span>
+                    @endif
                 </div>
             </div>
 
@@ -484,6 +628,19 @@ class extends Component
                 <div class="mt-1 text-xs text-info/60">{{ __('dashboard.on_card_terminal') }}</div>
             </div>
         </div>
+
+        {{-- Broken operations: split or debt does not reconcile with the price --}}
+        @if ($this->brokenOperationsCount > 0)
+            <div class="mb-8 flex flex-wrap items-center gap-3 rounded-2xl border border-danger/30 bg-danger/[0.07] px-6 py-4 shadow-xl backdrop-blur-md">
+                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-danger/15 text-danger">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" /></svg>
+                </div>
+                <div>
+                    <div class="text-xs font-bold uppercase tracking-widest text-danger/70">{{ __('dashboard.broken_operations') }}</div>
+                    <div class="mt-0.5 text-sm text-content/70">{{ __('dashboard.broken_operations_hint', ['count' => $this->brokenOperationsCount]) }}</div>
+                </div>
+            </div>
+        @endif
 
         {{-- Debt issued today (not part of the cash register) --}}
         @if ($this->debtIssuedToday > 0)
@@ -628,6 +785,7 @@ class extends Component
                             <th class="px-6 py-4 text-center">{{ __('dashboard.appointments_day') }}</th>
                             <th class="px-6 py-4 text-center">{{ __('dashboard.cancelled') }}</th>
                             <th class="px-6 py-4 text-right">{{ __('common.revenue') }}</th>
+                            <th class="px-6 py-4 text-right">{{ __('dashboard.paid_by_client') }}</th>
                             <th class="px-6 py-4 text-right">{{ __('dashboard.salary_short') }}</th>
                             <th class="px-6 py-4 text-right">{{ __('dashboard.remainder') }}</th>
                         </tr>
@@ -644,7 +802,14 @@ class extends Component
                                                 {{ mb_substr($stat->name, 0, 1) }}
                                             </div>
                                         @endif
-                                        <div class="font-bold text-content">{{ $stat->name }}</div>
+                                        <div>
+                                            <div class="font-bold text-content">{{ $stat->name }}</div>
+                                            @unless ($stat->isActive)
+                                                <span class="mt-0.5 inline-flex items-center rounded-full bg-content/[0.08] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-content/40">
+                                                    {{ __('dashboard.barber_inactive') }}
+                                                </span>
+                                            @endunless
+                                        </div>
                                     </div>
                                 </td>
                                 <td class="px-6 py-4 text-center">
@@ -695,6 +860,16 @@ class extends Component
                                         </div>
                                     @endif
                                 </td>
+                                {{-- База зарплаты: Оплачено − ЗП = Остаток --}}
+                                <td class="px-6 py-4 text-right">
+                                    <span @class([
+                                        'font-extrabold tabular-nums',
+                                        'text-content/70' => $stat->received > 0,
+                                        'text-content/30' => $stat->received === 0,
+                                    ])>
+                                        {{ $stat->formattedReceived }}
+                                    </span>
+                                </td>
                                 <td class="px-6 py-4 text-right">
                                     <span @class([
                                         'font-extrabold tabular-nums',
@@ -703,7 +878,16 @@ class extends Component
                                     ])>
                                         {{ $stat->formattedSalary }}
                                     </span>
-                                    <div class="mt-0.5 text-[10px] text-content/25">{{ $stat->salaryPercent }}%</div>
+                                    <div @class([
+                                        'mt-0.5 text-[10px]',
+                                        'text-danger/70' => $stat->percentMismatch,
+                                        'text-content/25' => ! $stat->percentMismatch,
+                                    ])>
+                                        {{ $stat->salaryPercent }}%
+                                        @if ($stat->percentMismatch)
+                                            <span title="{{ __('dashboard.percent_mismatch') }}">⚠</span>
+                                        @endif
+                                    </div>
                                 </td>
                                 <td class="px-6 py-4 text-right">
                                     <span @class([
@@ -717,7 +901,7 @@ class extends Component
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="px-6 py-12 text-center text-content/20">{{ __('dashboard.no_active_barbers') }}</td>
+                                <td colspan="7" class="px-6 py-12 text-center text-content/20">{{ __('dashboard.no_active_barbers') }}</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -728,6 +912,7 @@ class extends Component
                                 <td class="px-6 py-4 text-center text-content">{{ $this->barberStats->sum('count') }}</td>
                                 <td class="px-6 py-4 text-center text-content">{{ $this->barberStats->sum('cancelled_count') }}</td>
                                 <td class="px-6 py-4 text-right text-success">{{ $this->formatSum((int) $this->barberStats->sum('revenue')) }}</td>
+                                <td class="px-6 py-4 text-right text-content">{{ $this->formatSum((int) $this->barberStats->sum('received')) }}</td>
                                 <td class="px-6 py-4 text-right text-brass-ink">{{ $this->formatSum((int) $this->barberStats->sum('salary')) }}</td>
                                 <td class="px-6 py-4 text-right text-royal">{{ $this->formatSum((int) $this->barberStats->sum('remainder')) }}</td>
                             </tr>
@@ -837,6 +1022,19 @@ class extends Component
             </div>
         </div>
 
+        {{-- Broken operations for the month --}}
+        @if ($this->monthlyBrokenOperationsCount > 0)
+            <div class="mb-8 flex flex-wrap items-center gap-3 rounded-2xl border border-danger/30 bg-danger/[0.07] px-6 py-4 shadow-xl backdrop-blur-md">
+                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-danger/15 text-danger">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" /></svg>
+                </div>
+                <div>
+                    <div class="text-xs font-bold uppercase tracking-widest text-danger/70">{{ __('dashboard.broken_operations') }}</div>
+                    <div class="mt-0.5 text-sm text-content/70">{{ __('dashboard.broken_operations_hint', ['count' => $this->monthlyBrokenOperationsCount]) }}</div>
+                </div>
+            </div>
+        @endif
+
         {{-- Salary & Profit row --}}
         <div class="mb-8 grid gap-5 sm:grid-cols-2">
             {{-- Total salary --}}
@@ -878,6 +1076,20 @@ class extends Component
                     'text-danger/60' => $this->companyProfit < 0,
                 ])>
                     {{ $this->companyProfit >= 0 ? __('dashboard.profit_positive') : __('dashboard.profit_negative') }}
+                </div>
+                {{-- Прибыль по обороту включает ещё не собранные деньги — показываем разрыв явно --}}
+                <div class="mt-3 flex flex-wrap items-center gap-4 border-t border-content/[0.06] pt-3 text-xs">
+                    <span class="text-content/50">
+                        {{ __('dashboard.profit_in_cash') }}:
+                        <span class="font-bold tabular-nums text-content/80">{{ $this->formatSum($this->companyProfitInCash) }}</span>
+                    </span>
+                    <span @class([
+                        'text-danger/70' => $this->monthlyNotCollected > 0,
+                        'text-content/40' => $this->monthlyNotCollected === 0,
+                    ])>
+                        {{ __('dashboard.not_collected') }}:
+                        <span class="font-bold tabular-nums">{{ $this->formatSum($this->monthlyNotCollected) }}</span>
+                    </span>
                 </div>
             </div>
         </div>
@@ -995,6 +1207,7 @@ class extends Component
                             <th class="px-6 py-4">{{ __('common.barber') }}</th>
                             <th class="px-6 py-4 text-center">{{ __('dashboard.col_appointments') }}</th>
                             <th class="px-6 py-4 text-right">{{ __('common.revenue') }}</th>
+                            <th class="px-6 py-4 text-right">{{ __('dashboard.paid_by_client') }}</th>
                             <th class="px-6 py-4 text-right">{{ __('dashboard.col_salary_percent') }}</th>
                             <th class="px-6 py-4 text-right">{{ __('dashboard.col_salary_payable') }}</th>
                             <th class="px-6 py-4 text-right">{{ __('dashboard.remainder') }}</th>
@@ -1012,7 +1225,14 @@ class extends Component
                                                 {{ mb_substr($stat->name, 0, 1) }}
                                             </div>
                                         @endif
-                                        <div class="font-bold text-content">{{ $stat->name }}</div>
+                                        <div>
+                                            <div class="font-bold text-content">{{ $stat->name }}</div>
+                                            @unless ($stat->isActive)
+                                                <span class="mt-0.5 inline-flex items-center rounded-full bg-content/[0.08] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-content/40">
+                                                    {{ __('dashboard.barber_inactive') }}
+                                                </span>
+                                            @endunless
+                                        </div>
                                     </div>
                                 </td>
                                 <td class="px-6 py-4 text-center">
@@ -1054,8 +1274,27 @@ class extends Component
                                         </div>
                                     @endif
                                 </td>
+                                {{-- База зарплаты: Оплачено − ЗП = Остаток --}}
                                 <td class="px-6 py-4 text-right">
-                                    <span class="text-xs font-bold text-content/40">{{ $stat->salaryPercent }}%</span>
+                                    <span @class([
+                                        'font-extrabold tabular-nums',
+                                        'text-content/70' => $stat->received > 0,
+                                        'text-content/30' => $stat->received === 0,
+                                    ])>
+                                        {{ $stat->formattedReceived }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 text-right">
+                                    <span @class([
+                                        'text-xs font-bold',
+                                        'text-danger/70' => $stat->percentMismatch,
+                                        'text-content/40' => ! $stat->percentMismatch,
+                                    ])>
+                                        {{ $stat->salaryPercent }}%
+                                        @if ($stat->percentMismatch)
+                                            <span title="{{ __('dashboard.percent_mismatch') }}">⚠</span>
+                                        @endif
+                                    </span>
                                 </td>
                                 <td class="px-6 py-4 text-right">
                                     <span @class([
@@ -1078,7 +1317,7 @@ class extends Component
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="px-6 py-12 text-center text-content/20">{{ __('dashboard.no_active_barbers') }}</td>
+                                <td colspan="7" class="px-6 py-12 text-center text-content/20">{{ __('dashboard.no_active_barbers') }}</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -1088,12 +1327,13 @@ class extends Component
                                 <td class="px-6 py-4">{{ __('common.total') }}</td>
                                 <td class="px-6 py-4 text-center text-content">{{ $this->monthlyBarberStats->sum('count') }}</td>
                                 <td class="px-6 py-4 text-right text-success">{{ $this->formatSum((int) $this->monthlyBarberStats->sum('revenue')) }}</td>
+                                <td class="px-6 py-4 text-right text-content">{{ $this->formatSum((int) $this->monthlyBarberStats->sum('received')) }}</td>
                                 <td class="px-6 py-4"></td>
                                 <td class="px-6 py-4 text-right text-info">{{ $this->formatSum($this->monthlyTotalSalary) }}</td>
                                 <td class="px-6 py-4 text-right text-royal">{{ $this->formatSum((int) $this->monthlyBarberStats->sum('remainder')) }}</td>
                             </tr>
                             <tr class="border-t border-content/[0.06] bg-content/[0.02] text-xs font-bold uppercase tracking-wider">
-                                <td class="px-6 py-4 text-content/40" colspan="3">{{ __('dashboard.profit_row') }}</td>
+                                <td class="px-6 py-4 text-content/40" colspan="4">{{ __('dashboard.profit_row') }}</td>
                                 <td class="px-6 py-4"></td>
                                 <td @class([
                                     'px-6 py-4 text-right font-extrabold tabular-nums',

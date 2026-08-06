@@ -4,10 +4,12 @@ use App\Models\Client;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
+use App\Support\PaymentSplit;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Validate;
 use Livewire\Volt\Component;
 
 new
@@ -22,16 +24,21 @@ class extends Component
 
     public string $clientSearch = '';
 
+    #[Validate('nullable|string|max:500')]
     public string $note = '';
 
+    #[Validate('nullable|integer|min:0')]
     public ?int $debt_amount = null;
 
     public bool $debtEnabled = false;
 
+    #[Validate('required|in:cash,card,both')]
     public string $payment_type = 'cash';
 
+    #[Validate('nullable|integer|min:0')]
     public ?int $cash_amount = null;
 
+    #[Validate('nullable|integer|min:0')]
     public ?int $card_amount = null;
 
     /** @var array<int, array{product_id: int, quantity: int, price: int, name: string}> */
@@ -47,6 +54,7 @@ class extends Component
     {
         return Order::query()
             ->with(['client', 'items.product'])
+            ->withSum('debtPayments as debt_paid_total', 'amount')
             ->whereDate('created_at', $this->date)
             ->latest()
             ->get();
@@ -84,10 +92,14 @@ class extends Component
         return (int) $this->orders->sum('total_price');
     }
 
+    /**
+     * Непогашенный остаток, а не выданный долг — иначе шапка показывает долг,
+     * которого ни в одной строке уже нет.
+     */
     #[Computed]
     public function todayDebt(): int
     {
-        return (int) $this->orders->sum('debt_amount');
+        return (int) $this->orders->sum(fn (Order $o) => $o->outstandingDebt);
     }
 
     public function selectClient(int $id, string $label): void
@@ -157,8 +169,25 @@ class extends Component
         $this->cartItems[$index]['quantity'] = min($quantity, $maxQty);
     }
 
+    /**
+     * Клиент обязателен, только если продажа уходит в долг. Объявлено методом,
+     * чтобы validate() без аргументов не терял правила #[Validate].
+     *
+     * @return array<string, string>
+     */
+    public function rules(): array
+    {
+        return [
+            'client_id' => ($this->debt_amount ?? 0) > 0
+                ? 'required|exists:clients,id'
+                : 'nullable|exists:clients,id',
+        ];
+    }
+
     public function save(): void
     {
+        $this->validate();
+
         if (empty($this->cartItems)) {
             $this->addError('cart', __('orders.err_empty_cart'));
 
@@ -174,6 +203,22 @@ class extends Component
         }
 
         $total = $this->cartTotal;
+
+        $moneyErrors = PaymentSplit::errors(
+            $this->payment_type,
+            $total,
+            $this->cash_amount,
+            $this->card_amount,
+            $debtAmount,
+        );
+
+        if ($moneyErrors !== []) {
+            foreach ($moneyErrors as $field => $message) {
+                $this->addError($field, $message);
+            }
+
+            return;
+        }
 
         $order = Order::create([
             'client_id' => $this->client_id,

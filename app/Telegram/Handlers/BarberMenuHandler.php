@@ -12,6 +12,11 @@ use SergiX44\Nutgram\Nutgram;
 
 class BarberMenuHandler
 {
+    /**
+     * Тот же дефолт, что и у колонки barbers.salary_percent в БД.
+     */
+    private const DEFAULT_SALARY_PERCENT = 50;
+
     public function __construct(private readonly TelegramLinker $linker) {}
 
     public function today(Nutgram $bot): void
@@ -32,26 +37,32 @@ class BarberMenuHandler
             return;
         }
 
-        $percent = $barber->salary_percent ?? 100;
+        $percent = $barber->salary_percent ?? self::DEFAULT_SALARY_PERCENT;
 
+        // Формула зарплаты живёт на модели — иначе бот и дашборд разъезжаются.
+        // Погашения внутри периода добираются тем же скоупом, что и на дашборде.
         $share = function (Carbon $from, Carbon $to) use ($barber, $percent): int {
-            return (int) round(
-                Appointment::query()
-                    ->where('barber_id', $barber->id)
-                    ->where('status', AppointmentStatus::Completed->value)
-                    ->whereBetween('starts_at', [$from, $to])
-                    ->get(['price', 'salary_percent'])
-                    ->sum(fn ($a) => (int) ($a->price ?? 0) * ($a->salary_percent ?? $percent) / 100)
-            );
+            return (int) Appointment::query()
+                ->where('barber_id', $barber->id)
+                ->where('status', AppointmentStatus::Completed->value)
+                ->withDebtCollectedBetween($from, $to)
+                ->whereBetween('starts_at', [$from, $to])
+                ->get()
+                ->sum(fn (Appointment $a) => $a->salaryShare($percent));
         };
 
+        // Правая граница у всех трёх периодов одна — конец сегодняшнего дня. Иначе
+        // запись, завершённая заранее на вечер, попадала бы в «Сегодня», но не в
+        // «За неделю»/«За месяц», и «Сегодня» оказывалось больше «За месяц».
         $now = Carbon::now();
+        $until = $now->copy()->endOfDay();
+
         $text = sprintf(
             "💰 <b>Ваш заработок</b> (доля %d%%)\n\nСегодня: <b>%s</b>\nЗа неделю: <b>%s</b>\nЗа месяц: <b>%s</b>",
             $percent,
-            $this->money($share(Carbon::today(), $now->copy()->endOfDay())),
-            $this->money($share($now->copy()->startOfWeek(), $now)),
-            $this->money($share($now->copy()->startOfMonth(), $now)),
+            $this->money($share($now->copy()->startOfDay(), $until)),
+            $this->money($share($now->copy()->startOfWeek(), $until)),
+            $this->money($share($now->copy()->startOfMonth(), $until)),
         );
 
         $bot->sendMessage($text, parse_mode: 'HTML');
