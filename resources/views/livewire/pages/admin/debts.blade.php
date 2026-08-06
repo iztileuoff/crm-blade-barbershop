@@ -381,6 +381,9 @@ class extends Component
                                     <td class="whitespace-nowrap px-6 py-4 text-right">
                                         <div class="text-xs text-content/40">{{ $appointment->formattedPrice }}</div>
                                         <div class="mt-0.5 font-extrabold text-danger tabular-nums">{{ $appointment->formattedDebt }}</div>
+                                        @if ($appointment->debtPaid > 0)
+                                            <div class="mt-0.5 text-[10px] font-bold text-success tabular-nums">{{ __('debts.paid_amount', ['amount' => number_format($appointment->debtPaid, 0, '.', ' ').' '.__('common.currency')]) }}</div>
+                                        @endif
                                     </td>
                                     <td class="whitespace-nowrap px-6 py-4 text-right">
                                         <button type="button" wire:click="openPayAppointment({{ $appointment->id }})"
@@ -441,6 +444,9 @@ class extends Component
                                     <td class="whitespace-nowrap px-6 py-4 text-right">
                                         <div class="text-xs text-content/40">{{ $order->formattedTotal }}</div>
                                         <div class="mt-0.5 font-extrabold text-danger tabular-nums">{{ $order->formattedDebt }}</div>
+                                        @if ($order->debtPaid > 0)
+                                            <div class="mt-0.5 text-[10px] font-bold text-success tabular-nums">{{ __('debts.paid_amount', ['amount' => number_format($order->debtPaid, 0, '.', ' ').' '.__('common.currency')]) }}</div>
+                                        @endif
                                     </td>
                                     <td class="whitespace-nowrap px-6 py-4 text-right">
                                         <button type="button" wire:click="openPayOrder({{ $order->id }})"

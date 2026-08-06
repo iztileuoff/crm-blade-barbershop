@@ -22,6 +22,7 @@ return [
     'date_time' => 'Sáne / Waqıt',
     'barber_services' => 'Barber / Xızmetler',
     'amount_debt' => 'Summa / Qarız',
+    'paid_amount' => 'Tólengen :amount',
     'action' => 'Ámel',
     'pay' => 'Tólew',
 

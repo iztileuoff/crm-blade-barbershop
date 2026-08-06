@@ -22,6 +22,7 @@ return [
     'date_time' => 'Sana / Vaqt',
     'barber_services' => 'Barber / Xizmatlar',
     'amount_debt' => 'Summa / Qarz',
+    'paid_amount' => 'Toʻlangan :amount',
     'action' => 'Amal',
     'pay' => 'Toʻlash',
 

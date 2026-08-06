@@ -87,8 +87,23 @@ class extends Component
         return array_sum(array_map(fn ($item) => $item['quantity'] * $item['price'], $this->cartItems));
     }
 
+    /**
+     * Реально полученные деньги за день — то, что сверяет кассир. Долг из
+     * этой суммы исключён: он ещё не в кассе (см. HasCashRegisterAmounts).
+     */
     #[Computed]
     public function todayTotal(): int
+    {
+        return (int) $this->orders->sum(fn (Order $o) => $o->receivedAmount);
+    }
+
+    /**
+     * Валовый оборот дня — стоимость всех продаж, включая ещё не полученный
+     * долг. Показывается рядом с кассой отдельной строкой, чтобы не путать
+     * с деньгами, которые реально лежат в ящике.
+     */
+    #[Computed]
+    public function todayTurnover(): int
     {
         return (int) $this->orders->sum('total_price');
     }
@@ -366,6 +381,10 @@ class extends Component
                         {{ number_format($this->todayTotal, 0, '.', ' ') }} {{ __('common.currency') }}
                     </div>
                     <div class="mt-1 text-xs text-success/60">{{ __('orders.sales_count', ['count' => $this->orders->count()]) }}</div>
+                    {{-- Оборот показываем, только когда он расходится с кассой: одинаковые числа рядом лишь путают. --}}
+                    @if ($this->todayTurnover !== $this->todayTotal)
+                        <div class="mt-0.5 text-[10px] text-content-muted">{{ __('orders.turnover_day') }}: {{ number_format($this->todayTurnover, 0, '.', ' ') }} {{ __('common.currency') }}</div>
+                    @endif
                 </div>
                 <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-success/15 text-success">
                     <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007Z" /></svg>

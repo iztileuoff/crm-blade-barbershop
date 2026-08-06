@@ -124,6 +124,54 @@ it('says nothing was found instead of claiming there are no debts', function () 
         ->assertDontSee(__('debts.all_paid'));
 });
 
+it('shows how much of a debt has already been repaid', function () {
+    $client = Client::factory()->create();
+    $order = orderDebt($client, 50000);
+
+    $page = Livewire::actingAs(debtListAdmin())->test('pages.admin.debts');
+
+    // Ничего не погашено — строка "погашено" не должна появляться вовсе.
+    expect($page->html())->not->toContain(__('debts.paid_amount', ['amount' => '0 '.__('common.currency')]));
+
+    $page->call('openPayOrder', $order->id)
+        ->set('payAmount', 20000)
+        ->call('payOrderDebt')
+        ->assertHasNoErrors();
+
+    $html = Livewire::actingAs(debtListAdmin())->test('pages.admin.debts')->html();
+
+    expect($html)->toContain(__('debts.paid_amount', ['amount' => '20 000 '.__('common.currency')]));
+});
+
+it('shows how much of an appointment debt has already been repaid', function () {
+    $client = Client::factory()->create();
+    $barber = Barber::factory()->create();
+
+    $appointment = Appointment::create([
+        'client_id' => $client->id,
+        'barber_id' => $barber->id,
+        'starts_at' => now(),
+        'ends_at' => now()->addHour(),
+        'price' => 80000,
+        'payment_type' => 'cash',
+        'debt_amount' => 50000,
+    ]);
+
+    $page = Livewire::actingAs(debtListAdmin())->test('pages.admin.debts');
+
+    // Ничего не погашено — строка "погашено" не должна появляться вовсе.
+    expect($page->html())->not->toContain(__('debts.paid_amount', ['amount' => '0 '.__('common.currency')]));
+
+    $page->call('openPayAppointment', $appointment->id)
+        ->set('payAmount', 15000)
+        ->call('payAppointmentDebt')
+        ->assertHasNoErrors();
+
+    $html = Livewire::actingAs(debtListAdmin())->test('pages.admin.debts')->html();
+
+    expect($html)->toContain(__('debts.paid_amount', ['amount' => '15 000 '.__('common.currency')]));
+});
+
 it('opens the pay modal for a record that is not on the first page', function () {
     $client = Client::factory()->create();
     $orders = collect(range(1, 30))->map(fn () => orderDebt($client, 10000));

@@ -5,6 +5,7 @@ return [
     'subtitle' => 'Kassa — chakana savdo',
     'new' => 'Yangi savdo',
     'revenue_day' => 'Kunlik tushum',
+    'turnover_day' => 'Kunlik aylanma',
     'sales_count' => ':count savdo',
     'debt_day' => 'Kunlik qarzlar',
     'all_debts' => 'Barcha qarzlar →',

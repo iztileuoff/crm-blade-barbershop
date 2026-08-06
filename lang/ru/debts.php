@@ -22,6 +22,7 @@ return [
     'date_time' => 'Дата / Время',
     'barber_services' => 'Мастер / Услуги',
     'amount_debt' => 'Сумма / Долг',
+    'paid_amount' => 'Погашено :amount',
     'action' => 'Действие',
     'pay' => 'Оплатить',
 

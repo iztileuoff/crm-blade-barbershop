@@ -5,6 +5,7 @@ return [
     'subtitle' => 'Kassa — bólshek satıw',
     'new' => 'Jańa satıw',
     'revenue_day' => 'Kúnlik túsim',
+    'turnover_day' => 'Kúnlik aylanba',
     'sales_count' => ':count satıw',
     'debt_day' => 'Kúnlik qarızlar',
     'all_debts' => 'Barlıq qarızlar →',
