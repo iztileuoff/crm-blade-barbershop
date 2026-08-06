@@ -67,12 +67,8 @@ class extends Component
     {
         $day = $this->dayStart();
 
-        // Окно сбора долгов — расчётный МЕСЯЦ этого дня, а не сам день. Иначе
-        // сумма дневных зарплат не сходится с месячной: погашение приходит в
-        // другой день, чем сама запись, и не попадает ни в одну дневную строку.
         return Appointment::query()
             ->with(['barber', 'services'])
-            ->withDebtCollectedBetween($day->copy()->startOfMonth(), $day->copy()->endOfMonth())
             ->whereBetween('starts_at', [$day, $day->copy()->endOfDay()])
             ->get();
     }
@@ -93,6 +89,7 @@ class extends Component
         return DebtPayment::query()
             ->betweenDates($day, $day->copy()->endOfDay())
             ->whereHasMorph('payable', [Appointment::class, Order::class])
+            ->with('payable')
             ->get();
     }
 
@@ -236,12 +233,20 @@ class extends Component
      * за период. Деактивация мастера не должна прятать его зарплату, оставляя
      * его выручку в обороте, — иначе «Прибыль компании» скачком растёт.
      *
+     * Плюс те, у кого за период есть только погашения без записей: их доля
+     * начисляется в день платежа, и строка не должна пропасть.
+     *
      * @param  Collection<int, Appointment>  $appointments
+     * @param  array<int, int>  $extraBarberIds
      * @return Collection<int, Barber>
      */
-    private function barbersForStats(Collection $appointments): Collection
+    private function barbersForStats(Collection $appointments, array $extraBarberIds = []): Collection
     {
-        $idsWithAppointments = $appointments->pluck('barber_id')->filter()->unique()->all();
+        $idsWithAppointments = $appointments->pluck('barber_id')
+            ->filter()
+            ->merge($extraBarberIds)
+            ->unique()
+            ->all();
 
         return Barber::query()
             // photoUrl читает медиатеку — без этого запрос на каждого мастера
@@ -259,6 +264,27 @@ class extends Component
     }
 
     /**
+     * Деньги и доли мастеров с погашений, принятых в периоде.
+     *
+     * Погашение — операция своего дня: и в кассу, и в зарплату оно попадает в
+     * день платежа. Поэтому суммы по дням складываются в месяц, а закрытые
+     * периоды не пересчитываются.
+     *
+     * @param  Collection<int, DebtPayment>  $payments
+     * @return array{collected: array<int, int>, salary: array<int, int>}
+     */
+    private function debtSharesByBarber(Collection $payments): array
+    {
+        $byBarber = $payments->filter(fn (DebtPayment $p) => $p->barberId !== null)
+            ->groupBy(fn (DebtPayment $p) => $p->barberId);
+
+        return [
+            'collected' => $byBarber->map(fn ($group) => (int) $group->sum('amount'))->all(),
+            'salary' => $byBarber->map(fn ($group) => (int) $group->sum(fn (DebtPayment $p) => $p->salaryShare))->all(),
+        ];
+    }
+
+    /**
      * Строка зарплатной таблицы по одному мастеру.
      *
      * Зарплата начисляется от ПОЛУЧЕННЫХ денег (receivedAmount), а не от
@@ -272,15 +298,18 @@ class extends Component
         Collection $completed,
         int $totalCount,
         int $cancelledCount,
+        int $collectedFromDebts = 0,
+        int $salaryFromDebts = 0,
     ): object {
         $revenue = (int) $completed->sum(fn ($a) => (int) ($a->price ?? $barber->price ?? 0));
-        // База зарплаты: полученное при визите плюс собранные за период долги.
-        $received = (int) $completed->sum(fn ($a) => $a->collectedInPeriod);
+        // База зарплаты: полученное при визите плюс погашения, принятые в этом
+        // же периоде (они относятся к дню платежа, а не к дню услуги).
+        $received = (int) $completed->sum(fn ($a) => $a->receivedAmount) + $collectedFromDebts;
         $cashRevenue = (int) $completed->sum(fn ($a) => $a->cashReceived);
         $cardRevenue = (int) $completed->sum(fn ($a) => $a->cardReceived);
         $debt = (int) $completed->sum(fn ($a) => (int) ($a->debt_amount ?? 0));
 
-        $salary = (int) $completed->sum(fn ($a) => $a->salaryShare($barber->salary_percent));
+        $salary = (int) $completed->sum(fn ($a) => $a->salaryShare($barber->salary_percent)) + $salaryFromDebts;
 
         // Фактическая ставка по начисленному, а не «текущий процент мастера»:
         // иначе ошибка в зафиксированном проценте не видна глазами. Пометки
@@ -319,9 +348,10 @@ class extends Component
     public function barberStats(): Collection
     {
         $byBarber = $this->appointments->groupBy('barber_id');
+        $debts = $this->debtSharesByBarber($this->debtPaymentsToday);
 
-        return $this->barbersForStats($this->appointments)
-            ->map(function (Barber $barber) use ($byBarber) {
+        return $this->barbersForStats($this->appointments, array_keys($debts['salary']))
+            ->map(function (Barber $barber) use ($byBarber, $debts) {
                 $items = $byBarber->get($barber->id, collect());
 
                 return $this->barberStatRow(
@@ -329,6 +359,8 @@ class extends Component
                     $items->filter(fn ($a) => $a->status === AppointmentStatus::Completed),
                     $items->count(),
                     $items->where('status', AppointmentStatus::Cancelled)->count(),
+                    $debts['collected'][$barber->id] ?? 0,
+                    $debts['salary'][$barber->id] ?? 0,
                 );
             });
     }
@@ -344,7 +376,6 @@ class extends Component
         return Appointment::query()
             ->with(['barber'])
             ->withSum('debtPayments as debt_paid_total', 'amount')
-            ->withDebtCollectedBetween($start, $end)
             ->where('status', AppointmentStatus::Completed)
             ->whereBetween('starts_at', [$start, $end])
             ->get();
@@ -374,6 +405,7 @@ class extends Component
         return DebtPayment::query()
             ->betweenDates($start, $end)
             ->whereHasMorph('payable', [Appointment::class, Order::class])
+            ->with('payable')
             ->get();
     }
 
@@ -434,12 +466,20 @@ class extends Component
     public function monthlyBarberStats(): Collection
     {
         $byBarber = $this->monthlyAppointments->groupBy('barber_id');
+        $debts = $this->debtSharesByBarber($this->monthlyDebtPayments);
 
-        return $this->barbersForStats($this->monthlyAppointments)
-            ->map(function (Barber $barber) use ($byBarber) {
+        return $this->barbersForStats($this->monthlyAppointments, array_keys($debts['salary']))
+            ->map(function (Barber $barber) use ($byBarber, $debts) {
                 $items = $byBarber->get($barber->id, collect());
 
-                return $this->barberStatRow($barber, $items, $items->count(), 0);
+                return $this->barberStatRow(
+                    $barber,
+                    $items,
+                    $items->count(),
+                    0,
+                    $debts['collected'][$barber->id] ?? 0,
+                    $debts['salary'][$barber->id] ?? 0,
+                );
             });
     }
 

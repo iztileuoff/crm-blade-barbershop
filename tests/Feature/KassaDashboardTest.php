@@ -482,13 +482,53 @@ it('leaves a closed month untouched when the debt is collected later', function 
         ->set('payAmount', 100000)
         ->call('payAppointmentDebt');
 
-    $july = Livewire::actingAs($admin)
+    $monthly = fn (string $month) => Livewire::actingAs($admin)
         ->test('pages.admin.dashboard')
         ->set('activeTab', 'month')
-        ->set('month', '2026-07')
+        ->set('month', $month)
         ->instance();
 
-    expect($july->monthlyTotalSalary())->toBe(0);
+    // Июль закрыт и не пересчитывается…
+    expect($monthly('2026-07')->monthlyTotalSalary())->toBe(0)
+        // …а доля начисляется в августе, когда деньги реально пришли.
+        ->and($monthly('2026-08')->monthlyTotalSalary())->toBe(50000);
+
+    Carbon::setTestNow();
+});
+
+it('books the repayment share on the day the money arrived, not the visit day', function () {
+    $admin = kassaAdmin();
+    $barber = Barber::factory()->create(['salary_percent' => 50, 'price' => 100000]);
+    $client = Client::factory()->create();
+
+    Carbon::setTestNow(Carbon::parse('2026-08-01 12:00:00', 'Asia/Tashkent'));
+    $appointment = Appointment::create([
+        'client_id' => $client->id,
+        'barber_id' => $barber->id,
+        'starts_at' => now()->setTime(12, 0),
+        'ends_at' => now()->setTime(13, 0),
+        'status' => AppointmentStatus::Completed,
+        'price' => 100000,
+        'payment_type' => 'cash',
+        'debt_amount' => 100000,
+    ]);
+
+    Carbon::setTestNow(Carbon::parse('2026-08-06 10:00:00', 'Asia/Tashkent'));
+    Livewire::actingAs($admin)
+        ->test('pages.admin.debts')
+        ->call('openPayAppointment', $appointment->id)
+        ->set('payAmount', 100000)
+        ->call('payAppointmentDebt');
+
+    $rowOn = fn (string $date) => dashboard($admin, $date)->barberStats()->firstWhere('id', $barber->id);
+
+    // День услуги: денег не было — начислять не с чего.
+    expect($rowOn('2026-08-01')->received)->toBe(0)
+        ->and($rowOn('2026-08-01')->salary)->toBe(0)
+        // День платежа: деньги пришли — здесь и доля.
+        ->and($rowOn('2026-08-06')->received)->toBe(100000)
+        ->and($rowOn('2026-08-06')->salary)->toBe(50000)
+        ->and($rowOn('2026-08-06')->remainder)->toBe(50000);
 
     Carbon::setTestNow();
 });

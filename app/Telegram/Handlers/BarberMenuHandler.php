@@ -5,6 +5,7 @@ namespace App\Telegram\Handlers;
 use App\Enums\AppointmentStatus;
 use App\Models\Appointment;
 use App\Models\Barber;
+use App\Models\DebtPayment;
 use App\Telegram\AppointmentFormatter;
 use App\Telegram\TelegramLinker;
 use Illuminate\Support\Carbon;
@@ -39,31 +40,37 @@ class BarberMenuHandler
 
         $percent = $barber->salary_percent ?? self::DEFAULT_SALARY_PERCENT;
 
-        // Формула зарплаты живёт на модели — иначе бот и дашборд разъезжаются.
-        // Окно сбора долгов — расчётный месяц, как и на дашборде, чтобы «Сегодня»
-        // и «За месяц» считались по одному правилу.
+        // Формула зарплаты живёт на моделях — иначе бот и дашборд разъезжаются.
+        // Доля с погашения начисляется в день платежа, поэтому периоды считаются
+        // ровно так же, как в дашборде, и «Сегодня» всегда входит в «За месяц».
         $share = function (Carbon $from, Carbon $to) use ($barber, $percent): int {
-            return (int) Appointment::query()
+            $fromVisits = Appointment::query()
                 ->where('barber_id', $barber->id)
                 ->where('status', AppointmentStatus::Completed->value)
-                ->withDebtCollectedBetween($to->copy()->startOfMonth(), $to->copy()->endOfMonth())
                 ->whereBetween('starts_at', [$from, $to])
                 ->get()
                 ->sum(fn (Appointment $a) => $a->salaryShare($percent));
+
+            $fromDebts = DebtPayment::query()
+                ->betweenDates($from, $to)
+                ->whereHasMorph('payable', [Appointment::class], fn ($q) => $q->where('barber_id', $barber->id))
+                ->with('payable')
+                ->get()
+                ->sum(fn (DebtPayment $p) => $p->salaryShare);
+
+            return (int) ($fromVisits + $fromDebts);
         };
 
-        // Правая граница у всех трёх периодов одна — конец сегодняшнего дня. Иначе
-        // запись, завершённая заранее на вечер, попадала бы в «Сегодня», но не в
-        // «За неделю»/«За месяц», и «Сегодня» оказывалось больше «За месяц».
+        // Периоды берутся целиком: визит, закрытый заранее на конец недели, сразу
+        // виден в «За неделю», и «Сегодня» гарантированно входит в оба периода.
         $now = Carbon::now();
-        $until = $now->copy()->endOfDay();
 
         $text = sprintf(
             "💰 <b>Ваш заработок</b> (доля %d%%)\n\nСегодня: <b>%s</b>\nЗа неделю: <b>%s</b>\nЗа месяц: <b>%s</b>",
             $percent,
-            $this->money($share($now->copy()->startOfDay(), $until)),
-            $this->money($share($now->copy()->startOfWeek(), $until)),
-            $this->money($share($now->copy()->startOfMonth(), $until)),
+            $this->money($share($now->copy()->startOfDay(), $now->copy()->endOfDay())),
+            $this->money($share($now->copy()->startOfWeek(), $now->copy()->endOfWeek())),
+            $this->money($share($now->copy()->startOfMonth(), $now->copy()->endOfMonth())),
         );
 
         $bot->sendMessage($text, parse_mode: 'HTML');

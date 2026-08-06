@@ -76,48 +76,29 @@ class Appointment extends Model
     }
 
     /**
-     * Деньги по этой записи, попавшие в кассу внутри рассматриваемого периода:
-     * полученное при оказании услуги плюс погашения долга, принятые в том же
-     * периоде.
-     *
-     * Слагаемое с погашениями приходит из {@see scopeWithDebtCollectedBetween()}.
-     * Если скоуп не применяли, период не задан — считаем по всем погашениям,
-     * как это делает соседний {@see HasCashRegisterAmounts::$debtPaid}. Молча
-     * возвращать «только полученное при визите» нельзя: вызов без скоупа тогда
-     * недоплачивал бы мастеру без единой ошибки.
+     * Процент мастера по этой записи: снимок, зафиксированный при завершении.
      */
-    public int $collectedInPeriod {
-        get => $this->receivedAmount + (array_key_exists('debt_collected_in_period', $this->attributes)
-            ? (int) $this->attributes['debt_collected_in_period']
-            : $this->debtPaid);
+    public function salaryPercent(?int $fallbackPercent = null): int
+    {
+        return (int) ($this->salary_percent ?? $fallbackPercent ?? $this->barber?->salary_percent ?? 0);
     }
 
     /**
-     * Доля мастера по этой записи.
+     * Доля мастера по этой записи — от денег, полученных при самом визите.
      *
      * Единственное место, где живёт формула зарплаты: и дашборд, и Telegram
      * обязаны звать её, иначе мастеру показывают одну сумму, а начисляют другую.
-     * База — ПОЛУЧЕННЫЕ деньги: услуга, ушедшая в долг, приносит долю только
-     * после того, как деньги дошли до кассы, и только если их собрали внутри
-     * того же периода — иначе пересчитывались бы уже закрытые расчётные месяцы.
+     *
+     * Долю с ПОГАШЕНИЙ эта величина не включает: погашение — отдельная операция
+     * своего дня, и доля с него начисляется в день платежа
+     * ({@see DebtPayment::salaryShare()}). Так суммы по дням складываются в
+     * месяц, а закрытые периоды не пересчитываются задним числом.
      *
      * @param  int|null  $fallbackPercent  процент, если у записи нет своего снимка
      */
     public function salaryShare(?int $fallbackPercent = null): int
     {
-        $percent = $this->salary_percent ?? $fallbackPercent ?? $this->barber?->salary_percent ?? 0;
-
-        return (int) round($this->collectedInPeriod * $percent / 100);
-    }
-
-    /**
-     * Погашения долга, принятые внутри периода, — слагаемое для базы зарплаты.
-     */
-    public function scopeWithDebtCollectedBetween(Builder $query, \DateTimeInterface $from, \DateTimeInterface $to): Builder
-    {
-        return $query->withSum([
-            'debtPayments as debt_collected_in_period' => fn ($q) => $q->whereBetween('paid_at', [$from, $to]),
-        ], 'amount');
+        return (int) round($this->receivedAmount * $this->salaryPercent($fallbackPercent) / 100);
     }
 
     public function client(): BelongsTo

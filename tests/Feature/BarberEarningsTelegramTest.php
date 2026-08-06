@@ -117,6 +117,84 @@ it('reports the same figure as the dashboard for a visit that went on credit', f
     Carbon::setTestNow();
 });
 
+it('counts a visit closed ahead of time later in the week', function () {
+    // Среда. Визит стоит на пятницу и уже отмечен завершённым.
+    Carbon::setTestNow(Carbon::parse('2026-08-12 10:00:00', 'Asia/Tashkent'));
+
+    $user = User::factory()->create(['role' => Role::BARBER, 'telegram_chat_id' => 555004]);
+    $barber = Barber::factory()->create(['user_id' => $user->id, 'salary_percent' => 50, 'price' => 100000]);
+    $client = Client::factory()->create();
+
+    Appointment::create([
+        'client_id' => $client->id,
+        'barber_id' => $barber->id,
+        'starts_at' => Carbon::parse('2026-08-14 12:00:00', 'Asia/Tashkent'),
+        'ends_at' => Carbon::parse('2026-08-14 13:00:00', 'Asia/Tashkent'),
+        'status' => AppointmentStatus::Completed,
+        'price' => 100000,
+        'payment_type' => 'cash',
+    ]);
+
+    $bot = Nutgram::fake();
+    (function () use ($bot) {
+        require base_path('routes/telegram.php');
+    })();
+    $bot->setCommonChat(Chat::make(id: 555004, type: ChatType::PRIVATE));
+    $bot->hearText(Keyboards::BARBER_EARNINGS)->reply();
+
+    $figures = earningsFigures($bot);
+
+    // Периоды берутся целиком, поэтому пятничный визит виден уже в среду.
+    expect($figures['today'])->toBe(0)
+        ->and($figures['week'])->toBe(50000)
+        ->and($figures['month'])->toBe(50000);
+
+    Carbon::setTestNow();
+});
+
+it('counts a debt repayment on the day it was collected', function () {
+    Carbon::setTestNow(Carbon::parse('2026-08-12 10:00:00', 'Asia/Tashkent'));
+
+    $admin = User::factory()->create(['role' => Role::ADMIN]);
+    $user = User::factory()->create(['role' => Role::BARBER, 'telegram_chat_id' => 555005]);
+    $barber = Barber::factory()->create(['user_id' => $user->id, 'salary_percent' => 50, 'price' => 100000]);
+    $client = Client::factory()->create();
+
+    // Визит на прошлой неделе, целиком в долг.
+    $appointment = Appointment::create([
+        'client_id' => $client->id,
+        'barber_id' => $barber->id,
+        'starts_at' => Carbon::parse('2026-08-05 12:00:00', 'Asia/Tashkent'),
+        'ends_at' => Carbon::parse('2026-08-05 13:00:00', 'Asia/Tashkent'),
+        'status' => AppointmentStatus::Completed,
+        'price' => 100000,
+        'payment_type' => 'cash',
+        'debt_amount' => 100000,
+    ]);
+
+    Livewire::actingAs($admin)
+        ->test('pages.admin.debts')
+        ->call('openPayAppointment', $appointment->id)
+        ->set('payAmount', 100000)
+        ->call('payAppointmentDebt');
+
+    $bot = Nutgram::fake();
+    (function () use ($bot) {
+        require base_path('routes/telegram.php');
+    })();
+    $bot->setCommonChat(Chat::make(id: 555005, type: ChatType::PRIVATE));
+    $bot->hearText(Keyboards::BARBER_EARNINGS)->reply();
+
+    $figures = earningsFigures($bot);
+
+    // Деньги приняли сегодня — доля видна и в «Сегодня», и в старших периодах.
+    expect($figures['today'])->toBe(50000)
+        ->and($figures['week'])->toBe(50000)
+        ->and($figures['month'])->toBe(50000);
+
+    Carbon::setTestNow();
+});
+
 it('never reports more for today than for the week or the month', function () {
     Carbon::setTestNow(Carbon::parse('2026-08-12 10:00:00', 'Asia/Tashkent'));
 

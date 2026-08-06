@@ -50,6 +50,26 @@ class DebtPayment extends Model
     }
 
     /**
+     * Мастер, которому причитается доля с этого платежа, — тот, кто оказал
+     * услугу. У погашения по продаже мастера нет.
+     */
+    public ?int $barberId {
+        get => $this->payable instanceof Appointment ? $this->payable->barber_id : null;
+    }
+
+    /**
+     * Доля мастера с этого погашения, по проценту исходной записи.
+     *
+     * Начисляется в день платежа: деньги пришли именно тогда, и закрытые
+     * расчётные периоды от этого не пересчитываются.
+     */
+    public int $salaryShare {
+        get => $this->payable instanceof Appointment
+            ? (int) round($this->amount * $this->payable->salaryPercent() / 100)
+            : 0;
+    }
+
+    /**
      * Часть платежа, попавшая в наличные.
      */
     public int $cashReceived {
