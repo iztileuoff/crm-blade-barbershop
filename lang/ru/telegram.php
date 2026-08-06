@@ -5,6 +5,7 @@ return [
     'linked_title' => 'Telegram · Привязанные',
     'linked_subtitle' => 'Клиенты и мастера с подключённым Telegram',
     'col_chat_id' => 'Chat ID',
+    'search_placeholder' => 'Имя или телефон',
     'unlink' => 'Отвязать',
     'unlink_confirm' => 'Отвязать Telegram у «:name»?',
     'empty_linked' => 'Нет привязанных пользователей',

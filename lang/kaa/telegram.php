@@ -5,6 +5,7 @@ return [
     'linked_title' => 'Telegram · Baylanısqan',
     'linked_subtitle' => 'Telegram jalǵanǵan klientler hám barberler',
     'col_chat_id' => 'Chat ID',
+    'search_placeholder' => 'At yaki telefon',
     'unlink' => 'Ajıratıw',
     'unlink_confirm' => '«:name» den Telegram ajıratılsınba?',
     'empty_linked' => 'Baylanısqan paydalanıwshılar joq',

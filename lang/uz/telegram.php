@@ -5,6 +5,7 @@ return [
     'linked_title' => 'Telegram · Bogʻlangan',
     'linked_subtitle' => 'Telegram ulangan mijozlar va barberlar',
     'col_chat_id' => 'Chat ID',
+    'search_placeholder' => 'Ism yoki telefon',
     'unlink' => 'Uzish',
     'unlink_confirm' => '«:name» dan Telegram uzilsinmi?',
     'empty_linked' => 'Bogʻlangan foydalanuvchilar yoʻq',
