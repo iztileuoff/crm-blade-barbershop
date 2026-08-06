@@ -21,6 +21,29 @@ it('shows the booking tab in the admin navigation', function () {
         ->assertSee('Новая запись');
 });
 
+it('includes the offline indicator markup and its translated strings in the admin layout', function () {
+    // Issue #75: the offline strip, the transport-error banner and the
+    // session-expired modal all live in the shared admin layout, not on any
+    // one page — resources/js/app.js dispatches the `transport-*` window
+    // events these listeners react to, and carries no translated text of
+    // its own, so the strings must come from the markup itself.
+    $user = User::factory()->create(['role' => Role::SUPER_ADMIN]);
+
+    $this->actingAs($user)
+        ->get(route('admin.dashboard'))
+        ->assertOk()
+        ->assertSee('x-on:offline.window', escape: false)
+        ->assertSee('x-on:online.window', escape: false)
+        ->assertSee('transport-error.window', escape: false)
+        ->assertSee('transport-session-expired.window', escape: false)
+        ->assertSee(__('errors.offline_indicator'))
+        ->assertSee(__('errors.connection_lost_title'))
+        ->assertSee(__('errors.connection_lost_body'))
+        ->assertSee(__('errors.session_expired_title'))
+        ->assertSee(__('errors.session_expired_body'))
+        ->assertSee(route('login'), escape: false);
+});
+
 it('applies the stored theme before paint to avoid a flash', function () {
     $user = User::factory()->create(['role' => Role::SUPER_ADMIN]);
 

@@ -30,6 +30,13 @@ return [
     | to expire immediately when the browser is closed then you may
     | indicate that via the expire_on_close configuration option.
     |
+    | На планшете это не абстрактная цифра: 120 минут регулярно кончаются
+    | посреди обеда, следующий тап отвечает 419. resources/js/app.js это
+    | ловит (Livewire.interceptRequest) и предлагает войти заново в новой
+    | вкладке, не трогая полунабранную форму — см. issue #75. Значение
+    | оставлено как есть: сама по себе более длинная сессия не устраняет
+    | проблему, а честная обработка 419 устраняет её при любом lifetime.
+    |
     */
 
     'lifetime' => (int) env('SESSION_LIFETIME', 120),

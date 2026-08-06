@@ -80,6 +80,7 @@
     </div>
 
     <x-toast />
+    <x-transport-status />
 
     @livewireScripts
 </body>
