@@ -1431,7 +1431,7 @@ class extends Component
                                 fill-opacity="0.65"
                                 rx="2"
                             >
-                                <title>{{ $d['date'] }}: {{ __('dashboard.products') }} {{ number_format($d['product'], 0, '.', ' ') }} {{ __('common.currency') }}</title>
+                                <title>{{ $d['date'] }}: {{ __('dashboard.products') }} {{ $this->formatSum($d['product']) }}</title>
                             </rect>
                             {{-- Service overlay (emerald) from top --}}
                             @if ($serviceH > 0)
@@ -1444,7 +1444,7 @@ class extends Component
                                     fill-opacity="0.75"
                                     rx="2"
                                 >
-                                    <title>{{ $d['date'] }}: {{ __('dashboard.services') }} {{ number_format($d['service'], 0, '.', ' ') }} {{ __('common.currency') }}</title>
+                                    <title>{{ $d['date'] }}: {{ __('dashboard.services') }} {{ $this->formatSum($d['service']) }}</title>
                                 </rect>
                             @endif
                         @else

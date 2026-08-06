@@ -98,6 +98,6 @@ class BarberMenuHandler
 
     private function money(int $amount): string
     {
-        return number_format($amount, 0, '.', ' ').' сум';
+        return number_format($amount, 0, '.', ' ').' '.__('common.currency');
     }
 }

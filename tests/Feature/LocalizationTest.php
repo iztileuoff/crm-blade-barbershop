@@ -3,11 +3,26 @@
 use App\Enums\AppointmentStatus;
 use App\Enums\PaymentType;
 use App\Enums\Role;
+use App\Models\Appointment;
+use App\Models\Barber;
 use App\Models\Client;
+use App\Models\Order;
+use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
+
+/**
+ * Counts whole-word occurrences of a currency word in rendered HTML, so a
+ * substring collision (e.g. "sum" inside unrelated markup) can't produce a
+ * false positive.
+ */
+function currencyWordCount(string $html, string $word): int
+{
+    return preg_match_all('/(?<![\p{L}\p{N}])'.preg_quote($word, '/').'(?![\p{L}\p{N}])/u', $html);
+}
 
 beforeEach(function () {
     $this->actingAs(User::factory()->create(['role' => Role::SUPER_ADMIN]));
@@ -86,4 +101,58 @@ it('formats a date with month names in the active locale', function (string $loc
     'russian' => ['ru', '16 июня 2026'],
     'uzbek' => ['uz', '16 iyun 2026'],
     'karakalpak' => ['kaa', '16 iyun 2026'],
+]);
+
+it('formats model money accessors with the active locale\'s currency word, not a hardcoded one', function (string $locale, string $currency) {
+    app()->setLocale($locale);
+
+    $barber = Barber::factory()->create(['price' => 25000]);
+    $product = Product::create(['name' => 'Wax', 'selling_price' => 15000]);
+    $order = Order::create(['total_price' => 40000, 'debt_amount' => 10000]);
+    $appointment = Appointment::factory()->create(['price' => 30000, 'debt_amount' => 5000]);
+
+    expect($barber->formattedPrice)->toBe('25 000 '.$currency)
+        ->and($product->formattedPrice)->toBe('15 000 '.$currency)
+        ->and($order->formattedTotal)->toBe('40 000 '.$currency)
+        ->and($order->formattedDebt)->toBe('10 000 '.$currency)
+        ->and($appointment->formattedPrice)->toBe('30 000 '.$currency)
+        ->and($appointment->formattedDebt)->toBe('5 000 '.$currency);
+})->with([
+    'russian' => ['ru', 'сум'],
+    'uzbek' => ['uz', 'soʻm'],
+    'karakalpak' => ['kaa', 'sum'],
+]);
+
+it('keeps a single currency word on a client page mixing accessor-formatted and template-formatted money', function (string $locale, string $currency, array $otherCurrencies) {
+    app()->setLocale($locale);
+
+    $client = Client::factory()->create();
+    Appointment::factory()->create([
+        'client_id' => $client->id,
+        'status' => AppointmentStatus::Completed,
+        'price' => 20000,
+        'debt_amount' => 0,
+    ]);
+    Order::create(['client_id' => $client->id, 'total_price' => 40000, 'debt_amount' => 10000]);
+
+    // The metrics block is template-formatted via the component's own money()
+    // helper; the orders tab is model-accessor-formatted via
+    // Order::formattedTotal/formattedDebt. Both must agree on one currency word.
+    $html = Livewire::test('pages.admin.clients.show', ['client' => $client])
+        ->call('showTab', 'orders')
+        ->assertSeeText('60 000 '.$currency) // metrics: totalSpent (template)
+        ->assertSeeText('10 000 '.$currency) // metrics: totalDebt (template)
+        ->assertSeeText('40 000 '.$currency) // orders tab: formattedTotal (accessor)
+        ->html();
+
+    expect(currencyWordCount($html, $currency))->toBeGreaterThan(0);
+
+    foreach ($otherCurrencies as $otherCurrency) {
+        expect(currencyWordCount($html, $otherCurrency))
+            ->toBe(0, "Found the wrong-locale currency word \"{$otherCurrency}\" mixed in with \"{$currency}\".");
+    }
+})->with([
+    'russian' => ['ru', 'сум', ['soʻm', 'sum']],
+    'uzbek' => ['uz', 'soʻm', ['сум', 'sum']],
+    'karakalpak' => ['kaa', 'sum', ['сум', 'soʻm']],
 ]);

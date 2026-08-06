@@ -40,6 +40,6 @@ class Product extends Model
     }
 
     public string $formattedPrice {
-        get => number_format((int) $this->selling_price, 0, '.', ' ').' сум';
+        get => number_format((int) $this->selling_price, 0, '.', ' ').' '.__('common.currency');
     }
 }

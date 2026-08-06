@@ -88,7 +88,7 @@ class ClientMenuHandler
         }
 
         $bot->sendMessage(
-            sprintf('💳 <b>Ваш долг:</b> %s', number_format($total, 0, '.', ' ').' сум'),
+            sprintf('💳 <b>Ваш долг:</b> %s', number_format($total, 0, '.', ' ').' '.__('common.currency')),
             parse_mode: 'HTML',
         );
     }

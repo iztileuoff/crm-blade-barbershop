@@ -49,14 +49,14 @@ class Order extends Model
     }
 
     public string $formattedTotal {
-        get => number_format((int) $this->total_price, 0, '.', ' ').' сум';
+        get => number_format((int) $this->total_price, 0, '.', ' ').' '.__('common.currency');
     }
 
     /**
      * Непогашенный остаток долга — то, что клиент ещё должен.
      */
     public string $formattedDebt {
-        get => number_format($this->outstandingDebt, 0, '.', ' ').' сум';
+        get => number_format($this->outstandingDebt, 0, '.', ' ').' '.__('common.currency');
     }
 
     public bool $hasDebt {

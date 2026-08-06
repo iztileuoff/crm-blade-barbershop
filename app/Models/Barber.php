@@ -86,6 +86,6 @@ class Barber extends Model implements HasMedia
      * Цена в формате "12 000 сум" (PHP 8.4 property hook).
      */
     public string $formattedPrice {
-        get => number_format((int) $this->price, 0, '.', ' ').' сум';
+        get => number_format((int) $this->price, 0, '.', ' ').' '.__('common.currency');
     }
 }
