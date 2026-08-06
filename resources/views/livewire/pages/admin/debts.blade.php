@@ -3,17 +3,23 @@
 use App\Models\Appointment;
 use App\Models\Order;
 use Carbon\Carbon;
-use Illuminate\Support\Collection;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
+use Livewire\WithPagination;
 
 new
 #[Layout('components.layouts.app')]
 class extends Component
 {
+    use WithPagination;
+
     public string $tab = 'all';
+
+    public string $search = '';
 
     public ?int $payingAppointmentId = null;
 
@@ -37,38 +43,84 @@ class extends Component
         abort_if(auth()->user()?->isBarber() ?? false, 403);
     }
 
-    #[Computed]
-    public function appointmentDebts(): Collection
+    /**
+     * Операции с непогашенным остатком, отфильтрованные общим поиском.
+     *
+     * Один и тот же запрос кормит и страницу, и итоговую сумму: считать итог
+     * по загруженной странице нельзя — шапка показывала бы долг 25 строк.
+     *
+     * @param  class-string<Appointment|Order>  $model
+     * @return Builder<Appointment|Order>
+     */
+    private function debtQuery(string $model): Builder
     {
-        return Appointment::query()
-            ->with(['client', 'barber', 'services'])
-            ->withSum('debtPayments as debt_paid_total', 'amount')
+        return $model::query()
             ->withOutstandingDebt()
-            ->orderByDesc('starts_at')
-            ->get();
+            ->when(
+                trim($this->search) !== '',
+                fn (Builder $q) => $q->whereHas('client', fn (Builder $c) => $c->search($this->search)),
+            );
     }
 
     #[Computed]
-    public function orderDebts(): Collection
+    public function appointmentDebts(): LengthAwarePaginator
     {
-        return Order::query()
+        return $this->debtQuery(Appointment::class)
+            ->with(['client', 'barber', 'services'])
+            ->withSum('debtPayments as debt_paid_total', 'amount')
+            ->orderByDesc('starts_at')
+            ->paginate(25, ['*'], 'appointmentsPage');
+    }
+
+    #[Computed]
+    public function orderDebts(): LengthAwarePaginator
+    {
+        return $this->debtQuery(Order::class)
             ->with(['client', 'items.product'])
             ->withSum('debtPayments as debt_paid_total', 'amount')
-            ->withOutstandingDebt()
             ->orderByDesc('created_at')
-            ->get();
+            ->paginate(25, ['*'], 'ordersPage');
+    }
+
+    /**
+     * Операция, по которой открыта модалка оплаты. Ищем запросом, а не в
+     * загруженной странице: строка могла уехать на другую страницу.
+     */
+    #[Computed]
+    public function payingRecord(): Appointment|Order|null
+    {
+        $model = match (true) {
+            $this->payingAppointmentId !== null => Appointment::class,
+            $this->payingOrderId !== null => Order::class,
+            default => null,
+        };
+
+        if ($model === null) {
+            return null;
+        }
+
+        return $model::query()
+            ->with('client')
+            ->withSum('debtPayments as debt_paid_total', 'amount')
+            ->find($this->payingAppointmentId ?? $this->payingOrderId);
+    }
+
+    public function updatedSearch(): void
+    {
+        $this->resetPage('appointmentsPage');
+        $this->resetPage('ordersPage');
     }
 
     #[Computed]
     public function totalAppointmentDebt(): int
     {
-        return (int) $this->appointmentDebts->sum(fn (Appointment $a) => $a->outstandingDebt);
+        return $this->debtQuery(Appointment::class)->sumOutstandingDebt();
     }
 
     #[Computed]
     public function totalOrderDebt(): int
     {
-        return (int) $this->orderDebts->sum(fn (Order $o) => $o->outstandingDebt);
+        return $this->debtQuery(Order::class)->sumOutstandingDebt();
     }
 
     #[Computed]
@@ -191,6 +243,11 @@ class extends Component
             <h1 class="font-display text-4xl font-semibold uppercase tracking-tight text-content">{{ __('debts.title') }}</h1>
             <p class="mt-1 text-sm text-content/40">{{ __('debts.subtitle') }}</p>
         </div>
+        <div class="relative">
+            <svg class="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-content/20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
+            <input type="text" wire:model.live.debounce.300ms="search" placeholder="{{ __('debts.search_placeholder') }}"
+                   class="w-64 rounded-xl border border-content/[0.08] bg-content/[0.04] py-2.5 pl-10 pr-4 text-sm text-content placeholder-content/20 outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
+        </div>
     </div>
 
     {{-- Оплата принята: молча закрывать модалку нельзя --}}
@@ -208,26 +265,24 @@ class extends Component
         <div class="overflow-hidden rounded-2xl border border-danger/20 bg-gradient-to-br from-danger/10 to-danger/[0.02] p-5 backdrop-blur-md">
             <div class="text-xs font-bold uppercase tracking-widest text-danger/70">{{ __('debts.total_debts') }}</div>
             <div class="mt-2 font-display text-3xl font-bold tabular-nums text-content">{{ number_format($this->grandTotal, 0, '.', ' ') }} {{ __('common.currency') }}</div>
-            <div class="mt-1 text-xs text-danger/50">{{ __('debts.positions', ['count' => $this->appointmentDebts->count() + $this->orderDebts->count()]) }}</div>
+            <div class="mt-1 text-xs text-danger/50">{{ __('debts.positions', ['count' => $this->appointmentDebts->total() + $this->orderDebts->total()]) }}</div>
         </div>
         <div class="overflow-hidden rounded-2xl border border-brass/20 bg-gradient-to-br from-brass/10 to-brass/[0.02] p-5 backdrop-blur-md">
             <div class="text-xs font-bold uppercase tracking-widest text-brass-ink/70">{{ __('debts.by_appointments') }}</div>
             <div class="mt-2 font-display text-3xl font-bold tabular-nums text-content">{{ number_format($this->totalAppointmentDebt, 0, '.', ' ') }} {{ __('common.currency') }}</div>
-            <div class="mt-1 text-xs text-brass-ink/50">{{ __('debts.appointments_count', ['count' => $this->appointmentDebts->count()]) }}</div>
+            <div class="mt-1 text-xs text-brass-ink/50">{{ __('debts.appointments_count', ['count' => $this->appointmentDebts->total()]) }}</div>
         </div>
         <div class="overflow-hidden rounded-2xl border border-info/20 bg-gradient-to-br from-info/10 to-info/[0.02] p-5 backdrop-blur-md">
             <div class="text-xs font-bold uppercase tracking-widest text-info/70">{{ __('debts.by_orders') }}</div>
             <div class="mt-2 font-display text-3xl font-bold tabular-nums text-content">{{ number_format($this->totalOrderDebt, 0, '.', ' ') }} {{ __('common.currency') }}</div>
-            <div class="mt-1 text-xs text-info/50">{{ __('debts.sales_count', ['count' => $this->orderDebts->count()]) }}</div>
+            <div class="mt-1 text-xs text-info/50">{{ __('debts.sales_count', ['count' => $this->orderDebts->total()]) }}</div>
         </div>
     </div>
 
     {{-- Pay modal --}}
     @if ($payingAppointmentId || $payingOrderId)
         @php
-            $debtRecord = $payingAppointmentId
-                ? $this->appointmentDebts->firstWhere('id', $payingAppointmentId)
-                : $this->orderDebts->firstWhere('id', $payingOrderId);
+            $debtRecord = $this->payingRecord;
             $maxPay = (int) ($debtRecord?->outstandingDebt ?? 0);
             $payAction = $payingAppointmentId ? 'payAppointmentDebt' : 'payOrderDebt';
         @endphp
@@ -356,6 +411,9 @@ class extends Component
                     </table>
                 </div>
             </div>
+            <div class="mt-4">
+                {{ $this->appointmentDebts->links() }}
+            </div>
         </div>
     @endif
 
@@ -413,17 +471,30 @@ class extends Component
                     </table>
                 </div>
             </div>
+            <div class="mt-4">
+                {{ $this->orderDebts->links() }}
+            </div>
         </div>
     @endif
 
     @if ($this->appointmentDebts->isEmpty() && $this->orderDebts->isEmpty())
+        @php($isSearching = trim($search) !== '')
         <div class="flex flex-col items-center gap-4 rounded-2xl border border-content/[0.06] bg-content/[0.03] py-20 text-center">
-            <div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-success/10 text-success">
-                <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+            <div @class([
+                'flex h-16 w-16 items-center justify-center rounded-2xl',
+                'bg-content/[0.06] text-content/30' => $isSearching,
+                'bg-success/10 text-success' => ! $isSearching,
+            ])>
+                @if ($isSearching)
+                    <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
+                @else
+                    <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+                @endif
             </div>
             <div>
-                <p class="text-lg font-bold text-content">{{ __('debts.no_debts') }}</p>
-                <p class="mt-1 text-sm text-content/30">{{ __('debts.all_paid') }}</p>
+                {{-- Пустой поиск — это не «долгов нет»: иначе поиск врёт про кассу --}}
+                <p class="text-lg font-bold text-content">{{ $isSearching ? __('common.nothing_found') : __('debts.no_debts') }}</p>
+                <p class="mt-1 text-sm text-content/30">{{ $isSearching ? __('debts.search_empty') : __('debts.all_paid') }}</p>
             </div>
         </div>
     @endif

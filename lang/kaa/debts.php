@@ -25,6 +25,8 @@ return [
     'action' => 'Ámel',
     'pay' => 'Tólew',
 
+    'search_placeholder' => 'Klient atı yaki telefonı',
+    'search_empty' => 'Bul soraw boyınsha qarızdarlar joq',
     'no_debts' => 'Qarızlar joq',
     'all_paid' => 'Barlıq klientler esapların tóledi',
 

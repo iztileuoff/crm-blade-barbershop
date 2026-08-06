@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Carbon\Carbon;
 use Database\Factories\ClientFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -91,6 +92,51 @@ class Client extends Model
             substr($digits, 8, 2),
             substr($digits, 10, 2),
         );
+    }
+
+    /**
+     * Цифры поискового терма, пригодные для матчинга по колонке `phone`.
+     *
+     * Интерфейс везде показывает «+998 90 123 45 67», а в колонке лежат голые
+     * цифры: скопированный из UI или Telegram номер обязан находиться. Ведущее
+     * «998» срезаем — поиск идёт подстрокой, поэтому это только расширяет
+     * совпадения, но не теряет их. Меньше трёх цифр не ищем: одиночная цифра
+     * из имени вроде «Али 2» иначе подтянет пол-базы.
+     */
+    public static function searchDigits(string $term): ?string
+    {
+        $digits = preg_replace('/\D+/', '', $term) ?? '';
+
+        if (str_starts_with($digits, '998')) {
+            $digits = substr($digits, 3);
+        }
+
+        return strlen($digits) >= 3 ? $digits : null;
+    }
+
+    /**
+     * Поиск клиента по имени или телефону в любом видимом формате.
+     *
+     * @param  Builder<Client>  $query
+     * @return Builder<Client>
+     */
+    public function scopeSearch(Builder $query, string $term): Builder
+    {
+        $term = trim($term);
+
+        if ($term === '') {
+            return $query;
+        }
+
+        $digits = self::searchDigits($term);
+
+        return $query->where(function (Builder $q) use ($term, $digits): void {
+            $q->where('name', 'like', '%'.$term.'%');
+
+            if ($digits !== null) {
+                $q->orWhere('phone', 'like', '%'.$digits.'%');
+            }
+        });
     }
 
     /**

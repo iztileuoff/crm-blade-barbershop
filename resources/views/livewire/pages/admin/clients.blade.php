@@ -5,11 +5,14 @@ use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Validate;
 use Livewire\Volt\Component;
+use Livewire\WithPagination;
 
 new
 #[Layout('components.layouts.app')]
 class extends Component
 {
+    use WithPagination;
+
     public ?int $editingId = null;
 
     #[Validate('required|string|max:255')]
@@ -30,22 +33,20 @@ class extends Component
     {
         return Client::query()
             ->with(['latestAppointment.barber'])
-            ->when($this->search !== '', function ($query) {
-                $term = '%'.$this->search.'%';
-                $query->where(function ($q) use ($term) {
-                    $q->where('name', 'like', $term)
-                        ->orWhere('phone', 'like', $term);
-                });
-            })
+            ->search($this->search)
             ->orderByDesc('id')
-            ->limit(100)
-            ->get();
+            ->paginate(25);
     }
 
     #[Computed]
     public function totalClients(): int
     {
         return Client::count();
+    }
+
+    public function updatedSearch(): void
+    {
+        $this->resetPage();
     }
 
     public function openCreate(): void
@@ -235,5 +236,9 @@ class extends Component
                 </tbody>
             </table>
         </div>
+    </div>
+
+    <div class="mt-6">
+        {{ $this->clients->links() }}
     </div>
 </div>

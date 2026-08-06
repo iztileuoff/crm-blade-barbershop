@@ -110,6 +110,29 @@ trait HasCashRegisterAmounts
     }
 
     /**
+     * Сумма непогашенных остатков по отфильтрованному набору — одним запросом.
+     *
+     * С пагинацией сумму нельзя считать по загруженной коллекции: шапка
+     * показывала бы долг одной страницы вместо всех.
+     *
+     * @param  Builder<static>  $query
+     */
+    public function scopeSumOutstandingDebt(Builder $query): int
+    {
+        $table = $this->getTable();
+
+        return (int) $query
+            ->toBase()
+            ->selectRaw(
+                "coalesce(sum({$table}.debt_amount - coalesce((select sum(amount) from debt_payments
+                    where debt_payments.payable_type = ?
+                      and debt_payments.payable_id = {$table}.id), 0)), 0) as aggregate",
+                [$this->getMorphClass()],
+            )
+            ->value('aggregate');
+    }
+
+    /**
      * Сколько из выданного долга уже погашено.
      *
      * Использует withSum('debtPayments as debt_paid_total', 'amount'), если он

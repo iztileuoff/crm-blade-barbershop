@@ -25,6 +25,8 @@ return [
     'action' => 'Amal',
     'pay' => 'Toʻlash',
 
+    'search_placeholder' => 'Mijoz ismi yoki telefoni',
+    'search_empty' => 'Bu soʻrov boʻyicha qarzdorlar yoʻq',
     'no_debts' => 'Qarzlar yoʻq',
     'all_paid' => 'Barcha mijozlar hisoblarini toʻlagan',
 
