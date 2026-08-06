@@ -6,6 +6,7 @@ use App\Models\Appointment;
 use App\Models\Barber;
 use App\Models\Client;
 use App\Models\Order;
+use App\Models\Service;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -601,4 +602,239 @@ it('computes the cash register remainder per barber for the month', function () 
         ->and((int) $instance->monthlyBarberStats()->sum('remainder'))->toBe(90000);
 
     Carbon::setTestNow();
+});
+
+/*
+|--------------------------------------------------------------------------
+| Full mix: pins every dashboard KPI to a hand-computed constant (#66)
+|--------------------------------------------------------------------------
+|
+| One day (2026-05-12) carries every payment shape at once — cash sale, card
+| sale, a valid "both" split, a broken "both" split (empty), a sale partly on
+| debt, a serviced appointment with a debt, and a second (later deactivated)
+| barber's earnings. The debt is repaid on 2026-05-20 — a later day in the
+| same month. Both tabs are asserted against numbers computed by hand in the
+| comments below, so the SQL-aggregate rewrite of #66 cannot silently drift
+| a KPI.
+*/
+
+/**
+ * @return array{admin: User, barberA: Barber, barberB: Barber}
+ */
+function seedFullMixScenario(): array
+{
+    $admin = kassaAdmin();
+    $barberA = Barber::factory()->create(['salary_percent' => 50, 'price' => 100000]);
+    $barberB = Barber::factory()->create(['salary_percent' => 40, 'price' => 80000]);
+    $client = Client::factory()->create();
+
+    Carbon::setTestNow(Carbon::parse('2026-05-12 09:00:00', 'Asia/Tashkent'));
+
+    // Products: cash sale, card sale, valid "both" split, empty "both" split
+    // (broken), and a sale partly on debt.
+    Order::create(['client_id' => $client->id, 'total_price' => 40000, 'payment_type' => 'cash']);
+    Order::create(['client_id' => $client->id, 'total_price' => 50000, 'payment_type' => 'card']);
+    Order::create(['client_id' => $client->id, 'total_price' => 70000, 'payment_type' => 'both', 'cash_amount' => 30000, 'card_amount' => 40000]);
+    Order::create(['client_id' => $client->id, 'total_price' => 90000, 'payment_type' => 'both']);
+    Order::create(['client_id' => $client->id, 'total_price' => 60000, 'payment_type' => 'cash', 'debt_amount' => 25000]);
+
+    // Appointment with services and a debt, completed by the active barber.
+    $appointmentWithDebt = Appointment::create([
+        'client_id' => $client->id,
+        'barber_id' => $barberA->id,
+        'starts_at' => now()->setTime(10, 0),
+        'ends_at' => now()->setTime(11, 0),
+        'status' => AppointmentStatus::Completed,
+        'price' => 100000,
+        'payment_type' => 'cash',
+        'debt_amount' => 40000,
+    ]);
+    $appointmentWithDebt->services()->attach(Service::factory()->create()->id, ['amount' => 100000]);
+
+    // Second barber earns the same day, and is deactivated afterwards — the
+    // earnings must survive the deactivation in both reports.
+    Appointment::create([
+        'client_id' => $client->id,
+        'barber_id' => $barberB->id,
+        'starts_at' => now()->setTime(12, 0),
+        'ends_at' => now()->setTime(13, 0),
+        'status' => AppointmentStatus::Completed,
+        'price' => 80000,
+        'payment_type' => 'card',
+    ]);
+
+    // Noise that must NOT leak into any completed-only KPI.
+    Appointment::create([
+        'client_id' => $client->id,
+        'barber_id' => $barberA->id,
+        'starts_at' => now()->setTime(14, 0),
+        'ends_at' => now()->setTime(15, 0),
+        'status' => AppointmentStatus::Pending,
+        'price' => 200000,
+        'payment_type' => 'cash',
+    ]);
+    Appointment::create([
+        'client_id' => $client->id,
+        'barber_id' => $barberB->id,
+        'starts_at' => now()->setTime(16, 0),
+        'ends_at' => now()->setTime(17, 0),
+        'status' => AppointmentStatus::Cancelled,
+        'price' => 150000,
+        'payment_type' => 'cash',
+    ]);
+
+    $barberB->update(['is_active' => false]);
+
+    // Repayment lands 8 days later — same month, a different day.
+    Carbon::setTestNow(Carbon::parse('2026-05-20 10:00:00', 'Asia/Tashkent'));
+    Livewire::actingAs($admin)
+        ->test('pages.admin.debts')
+        ->call('openPayAppointment', $appointmentWithDebt->id)
+        ->set('payAmount', 40000)
+        ->call('payAppointmentDebt');
+
+    Carbon::setTestNow();
+
+    return ['admin' => $admin, 'barberA' => $barberA, 'barberB' => $barberB];
+}
+
+it('pins every daily KPI to a hand-computed constant across a full mix of operations (#66)', function () {
+    $scenario = seedFullMixScenario();
+    $instance = dashboard($scenario['admin'], '2026-05-12');
+
+    // 4 записей за день: завершённые A1 (барбер A, с долгом) и A2 (барбер B),
+    // плюс "шум" — одна ожидающая и одна отменённая.
+    expect($instance->totalAppointments())->toBe(4)
+        ->and($instance->pendingCount())->toBe(1)
+        ->and($instance->completedCount())->toBe(2)
+        ->and($instance->cancelledCount())->toBe(1)
+        // начислено по услугам: 100000 + 80000 = 180000
+        ->and($instance->confirmedAmount())->toBe(180000)
+        // начислено по товарам: 40000 + 50000 + 70000 + 90000 + 60000 = 310000
+        ->and($instance->productSalesAmount())->toBe(310000)
+        ->and($instance->totalRevenue())->toBe(490000)
+        // получено по услугам: (100000-40000) + (80000-0) = 60000 + 80000 = 140000
+        ->and($instance->serviceReceived())->toBe(140000)
+        // получено по товарам: 40000+50000+70000+90000+(60000-25000) = 285000
+        ->and($instance->productReceived())->toBe(285000)
+        // долг гасится позже (20 мая) — сегодня с погашений в кассу ничего не пришло
+        ->and($instance->debtRepaidToday())->toBe(0)
+        // нал: услуга 60000 + товары (40000+0+30000+90000+35000=195000) = 255000
+        ->and($instance->cashTotal())->toBe(255000)
+        // карта: услуга 80000 + товары (0+50000+40000+0+0=90000) = 170000
+        ->and($instance->cardTotal())->toBe(170000)
+        ->and($instance->receivedTotal())->toBe(425000)
+        // долг выдан: 40000 (услуга) + 25000 (товар) = 65000
+        ->and($instance->debtIssuedToday())->toBe(65000)
+        // единственная битая строка — заказ с пустой разбивкой "оба"
+        ->and($instance->brokenOperationsCount())->toBe(1);
+
+    $barberARow = $instance->barberStats()->firstWhere('id', $scenario['barberA']->id);
+    $barberBRow = $instance->barberStats()->firstWhere('id', $scenario['barberB']->id);
+
+    // Барбер A: выручка 100000, получено 60000 (долг ещё не погашен сегодня),
+    // ЗП 50% от полученного = 30000, остаток в кассе = 30000.
+    expect($barberARow->revenue)->toBe(100000)
+        ->and($barberARow->received)->toBe(60000)
+        ->and($barberARow->cashRevenue)->toBe(60000)
+        ->and($barberARow->cardRevenue)->toBe(0)
+        ->and($barberARow->debt)->toBe(40000)
+        ->and($barberARow->salary)->toBe(30000)
+        ->and($barberARow->salaryPercent)->toBe(50)
+        ->and($barberARow->remainder)->toBe(30000)
+        ->and($barberARow->count)->toBe(2)
+        ->and($barberARow->cancelled_count)->toBe(0);
+
+    // Барбер B: выручка 80000, ЗП 40% = 32000, остаток 48000; уже деактивирован,
+    // но заработок дня не должен пропасть из отчёта.
+    expect($barberBRow->revenue)->toBe(80000)
+        ->and($barberBRow->received)->toBe(80000)
+        ->and($barberBRow->cashRevenue)->toBe(0)
+        ->and($barberBRow->cardRevenue)->toBe(80000)
+        ->and($barberBRow->debt)->toBe(0)
+        ->and($barberBRow->salary)->toBe(32000)
+        ->and($barberBRow->salaryPercent)->toBe(40)
+        ->and($barberBRow->remainder)->toBe(48000)
+        ->and($barberBRow->count)->toBe(2)
+        ->and($barberBRow->cancelled_count)->toBe(1)
+        ->and($barberBRow->isActive)->toBeFalse();
+
+    // Сумма по строкам сходится с кассовыми итогами по мастерам за день.
+    expect((int) $instance->barberStats()->sum('salary'))->toBe(62000)
+        ->and((int) $instance->barberStats()->sum('remainder'))->toBe(78000);
+});
+
+it('pins every monthly KPI and the daily chart to a hand-computed constant across a full mix of operations (#66)', function () {
+    $scenario = seedFullMixScenario();
+
+    $instance = Livewire::actingAs($scenario['admin'])
+        ->test('pages.admin.dashboard')
+        ->set('activeTab', 'month')
+        ->set('month', '2026-05')
+        ->instance();
+
+    // начислено: услуги 180000 + товары 310000 = 490000
+    expect($instance->monthlyServiceRevenue())->toBe(180000)
+        ->and($instance->monthlyProductRevenue())->toBe(310000)
+        ->and($instance->monthlyTotalRevenue())->toBe(490000)
+        // нал: услуги 60000 + товары 195000 + погашение долга (нал) 40000 = 295000
+        ->and($instance->monthlyCashTotal())->toBe(295000)
+        // карта: услуги 80000 + товары 90000 + погашение 0 = 170000
+        ->and($instance->monthlyCardTotal())->toBe(170000)
+        // получено: 140000 (услуги) + 285000 (товары) + 40000 (погашение) = 465000
+        ->and($instance->monthlyReceivedTotal())->toBe(465000)
+        // выданный долг не уменьшается от погашения: 40000 + 25000 = 65000
+        ->and($instance->monthlyDebtIssued())->toBe(65000)
+        ->and($instance->monthlyBrokenOperationsCount())->toBe(1)
+        // не собрано: долг барбера A погашен целиком (0) + долг заказа #5 нетронут (25000)
+        ->and($instance->monthlyNotCollected())->toBe(25000)
+        // ЗП: барбер A 30000 (с визита) + 20000 (с погашения, 40000*50%) + барбер B 32000 = 82000
+        ->and($instance->monthlyTotalSalary())->toBe(82000)
+        // прибыль по обороту: 490000 - 82000 = 408000
+        ->and($instance->companyProfit())->toBe(408000)
+        // прибыль в кассе: 465000 - 82000 = 383000
+        ->and($instance->companyProfitInCash())->toBe(383000);
+
+    $barberARow = $instance->monthlyBarberStats()->firstWhere('id', $scenario['barberA']->id);
+    $barberBRow = $instance->monthlyBarberStats()->firstWhere('id', $scenario['barberB']->id);
+
+    // Барбер A за месяц: получено с визита 60000 + с погашения 40000 = 100000;
+    // ЗП 30000 (с визита) + 20000 (с погашения) = 50000; остаток 50000.
+    expect($barberARow->revenue)->toBe(100000)
+        ->and($barberARow->received)->toBe(100000)
+        ->and($barberARow->cashRevenue)->toBe(60000)
+        ->and($barberARow->cardRevenue)->toBe(0)
+        ->and($barberARow->debt)->toBe(40000)
+        ->and($barberARow->salary)->toBe(50000)
+        ->and($barberARow->salaryPercent)->toBe(50)
+        ->and($barberARow->remainder)->toBe(50000)
+        ->and($barberARow->count)->toBe(1);
+
+    // Барбер B за месяц — то же, что и за день (долгов и погашений не было);
+    // деактивирован, но остаётся в месячном отчёте.
+    expect($barberBRow->revenue)->toBe(80000)
+        ->and($barberBRow->received)->toBe(80000)
+        ->and($barberBRow->salary)->toBe(32000)
+        ->and($barberBRow->salaryPercent)->toBe(40)
+        ->and($barberBRow->remainder)->toBe(48000)
+        ->and($barberBRow->count)->toBe(1)
+        ->and($barberBRow->isActive)->toBeFalse();
+
+    expect((int) $instance->monthlyBarberStats()->sum('salary'))->toBe(82000)
+        ->and((int) $instance->monthlyBarberStats()->sum('remainder'))->toBe(98000);
+
+    // График: обороты есть только 12 мая (услуги 180000 + товары 310000 = 490000);
+    // остальные 30 дней — нули, включая 20 мая — день ПОГАШЕНИЯ долга, которое
+    // в оборот дня не входит (это касса, а не начисление).
+    $chart = $instance->dailyChartData();
+
+    expect($chart)->toHaveCount(31)
+        ->and($chart[11])->toBe(['day' => 12, 'date' => '2026-05-12', 'service' => 180000, 'product' => 310000, 'total' => 490000])
+        ->and($chart[19]['date'])->toBe('2026-05-20')
+        ->and($chart[19]['service'])->toBe(0)
+        ->and($chart[19]['product'])->toBe(0)
+        ->and($chart[19]['total'])->toBe(0)
+        ->and(collect($chart)->sum('service'))->toBe(180000)
+        ->and(collect($chart)->sum('product'))->toBe(310000)
+        ->and(collect($chart)->sum('total'))->toBe(490000);
 });

@@ -194,8 +194,10 @@ class extends Component
     {
         $day = $this->dayStart();
 
+        // 'services' шаблоном не читается нигде — только лишний pivot-запрос
+        // на каждый poll.
         return Appointment::query()
-            ->with(['barber', 'services'])
+            ->with(['barber'])
             ->whereBetween('starts_at', [$day, $day->copy()->endOfDay()])
             ->get();
     }
@@ -536,6 +538,12 @@ class extends Component
             ->get();
     }
 
+    /**
+     * Суммы считаются по уже загруженным коллекциям намеренно. Отдельный
+     * SQL-агрегат выглядит дешевле, но эти коллекции всё равно гидрируются —
+     * без них не построить зарплатную таблицу, разбивку нал/карта и график, —
+     * поэтому агрегат добавлял бы запрос, ничего не убирая.
+     */
     #[Computed]
     public function monthlyServiceRevenue(): int
     {
@@ -582,6 +590,10 @@ class extends Component
             + (int) $this->monthlyDebtPayments->sum('amount');
     }
 
+    /**
+     * SQL-агрегат: 'debt_amount' — та же простая колонка, что и выше, sum()
+     * уже трактует NULL/пусто как 0 (Builder::sum() возвращает 0, а не null).
+     */
     #[Computed]
     public function monthlyDebtIssued(): int
     {
@@ -644,32 +656,33 @@ class extends Component
             + (int) $this->monthlyOrders->sum(fn ($o) => $o->outstandingDebt);
     }
 
+    /**
+     * Кормим уже загруженными $this->monthlyAppointments/$this->monthlyOrders
+     * (те же диапазон и фильтр, что были у собственных запросов здесь; они и
+     * так гидрированы ради зарплатной таблицы) — вместо повторного похода в
+     * БД. Группируем по дате один раз, а не фильтруем всю коллекцию на
+     * каждый из ~31 дня: casts уже дают Carbon, повторный parse не нужен.
+     */
     #[Computed]
     public function dailyChartData(): array
     {
         $start = $this->monthStart();
         $end = $start->copy()->endOfMonth();
 
-        $appointments = Appointment::query()
-            ->where('status', AppointmentStatus::Completed)
-            ->whereBetween('starts_at', [$start, $end])
-            ->get(['starts_at', 'price']);
+        $serviceByDate = $this->monthlyAppointments
+            ->groupBy(fn ($a) => $a->starts_at->toDateString())
+            ->map(fn ($group) => (int) $group->sum('price'));
 
-        $orders = Order::query()
-            ->whereBetween('created_at', [$start, $end])
-            ->get(['created_at', 'total_price']);
+        $productByDate = $this->monthlyOrders
+            ->groupBy(fn ($o) => $o->created_at->toDateString())
+            ->map(fn ($group) => (int) $group->sum('total_price'));
 
         $days = [];
         for ($day = 1; $day <= $end->day; $day++) {
             $date = $start->format('Y-m').'-'.str_pad((string) $day, 2, '0', STR_PAD_LEFT);
 
-            $serviceRev = (int) $appointments
-                ->filter(fn ($a) => Carbon::parse($a->starts_at)->toDateString() === $date)
-                ->sum('price');
-
-            $productRev = (int) $orders
-                ->filter(fn ($o) => Carbon::parse($o->created_at)->toDateString() === $date)
-                ->sum('total_price');
+            $serviceRev = (int) ($serviceByDate[$date] ?? 0);
+            $productRev = (int) ($productByDate[$date] ?? 0);
 
             $days[] = [
                 'day' => $day,
@@ -687,9 +700,20 @@ class extends Component
     {
         return number_format($value, 0, '.', ' ').' '.__('common.currency');
     }
+
+    /**
+     * Время серверного рендера. В пипе показываем именно его, а не голое
+     * обещание «обновляется каждые 60с»: если запрос не дошёл (планшет
+     * офлайн), метка честно не сдвинется, а не будет пульсировать как ни в
+     * чём не бывало.
+     */
+    public function renderedAt(): string
+    {
+        return Carbon::now('Asia/Tashkent')->format('H:i');
+    }
 }; ?>
 
-<div class="animate-fade-in-up" wire:poll.60s>
+<div class="animate-fade-in-up">
     {{-- Header --}}
     <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>
@@ -769,14 +793,18 @@ class extends Component
                 >
                     {{ __('common.today') }}
                 </button>
+
+                <svg wire:loading wire:target="date,month,switchTab,previousPeriod,nextPeriod,goToToday" class="h-4 w-4 shrink-0 animate-spin text-content/40" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
             </div>
 
-            <div class="flex items-center gap-2 rounded-xl border border-success/20 bg-success/10 px-3 py-1.5 text-xs font-bold text-success">
+            {{-- Пип показывает время последнего успешного рендера, а не голое
+                 обещание «обновляется каждые 60с»: офлайн — метка не сдвинется. --}}
+            <div class="flex items-center gap-2 rounded-xl border border-success/20 bg-success/10 px-3 py-1.5 text-xs font-bold text-success" title="{{ __('dashboard.auto_refresh') }}">
                 <span class="relative flex h-2 w-2">
                     <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75"></span>
                     <span class="relative inline-flex h-2 w-2 rounded-full bg-success"></span>
                 </span>
-                {{ __('dashboard.auto_refresh') }}
+                {{ __('dashboard.updated_at', ['time' => $this->renderedAt()]) }}
             </div>
         </div>
     </div>
@@ -786,12 +814,19 @@ class extends Component
     {{-- ═══════════════════════════════════════════════════════════════════ --}}
     @if ($activeTab === 'day')
 
-        {{-- Cash register — received money for the day --}}
-        <div class="mb-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        {{-- Cash register — received money for the day. Poll живёт только
+             здесь: элемент существует лишь на вкладке "День", и .visible
+             сам ставит его на паузу, когда карточки не в вьюпорте. --}}
+        <div
+            wire:poll.60s.visible
+            wire:loading.class="opacity-40 pointer-events-none"
+            wire:target="date,month,switchTab,previousPeriod,nextPeriod,goToToday"
+            class="mb-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4"
+        >
             {{-- Received total (cash + card) --}}
             <div class="sm:col-span-2 overflow-hidden rounded-2xl border border-royal/20 bg-gradient-to-br from-royal/10 to-royal/[0.02] p-6 shadow-xl backdrop-blur-md">
                 <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold uppercase tracking-widest text-royal/70">{{ __('dashboard.received_total') }}</span>
+                    <span class="text-xs font-bold uppercase tracking-widest text-royal/70" title="{{ __('dashboard.received_total_hint') }}">{{ __('dashboard.received_total') }}</span>
                     <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-royal/15 text-royal">
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z" /></svg>
                     </div>
@@ -809,7 +844,7 @@ class extends Component
             {{-- Cash --}}
             <div class="overflow-hidden rounded-2xl border border-success/20 bg-gradient-to-br from-success/10 to-success/[0.02] p-6 shadow-xl backdrop-blur-md">
                 <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold uppercase tracking-widest text-success/70">{{ __('dashboard.cash_total') }}</span>
+                    <span class="text-xs font-bold uppercase tracking-widest text-success/70" title="{{ __('dashboard.cash_total_hint') }}">{{ __('dashboard.cash_total') }}</span>
                     <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-success/15 text-success">
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z" /></svg>
                     </div>
@@ -821,7 +856,7 @@ class extends Component
             {{-- Card --}}
             <div class="overflow-hidden rounded-2xl border border-info/20 bg-gradient-to-br from-info/10 to-info/[0.02] p-6 shadow-xl backdrop-blur-md">
                 <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold uppercase tracking-widest text-info/70">{{ __('dashboard.card_total') }}</span>
+                    <span class="text-xs font-bold uppercase tracking-widest text-info/70" title="{{ __('dashboard.card_total_hint') }}">{{ __('dashboard.card_total') }}</span>
                     <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-info/15 text-info">
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Z" /></svg>
                     </div>
@@ -833,7 +868,11 @@ class extends Component
 
         {{-- Broken operations: split or debt does not reconcile with the price --}}
         @if ($this->brokenOperationsCount > 0)
-            <div class="mb-8 flex flex-wrap items-center gap-3 rounded-2xl border border-danger/30 bg-danger/[0.07] px-6 py-4 shadow-xl backdrop-blur-md">
+            <div
+                wire:loading.class="opacity-40 pointer-events-none"
+                wire:target="date,month,switchTab,previousPeriod,nextPeriod,goToToday"
+                class="mb-8 flex flex-wrap items-center gap-3 rounded-2xl border border-danger/30 bg-danger/[0.07] px-6 py-4 shadow-xl backdrop-blur-md"
+            >
                 <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-danger/15 text-danger">
                     <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" /></svg>
                 </div>
@@ -846,13 +885,17 @@ class extends Component
 
         {{-- Debt issued today (not part of the cash register) --}}
         @if ($this->debtIssuedToday > 0)
-            <div class="mb-8 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-danger/20 bg-gradient-to-br from-danger/10 to-danger/[0.02] px-6 py-4 shadow-xl backdrop-blur-md">
+            <div
+                wire:loading.class="opacity-40 pointer-events-none"
+                wire:target="date,month,switchTab,previousPeriod,nextPeriod,goToToday"
+                class="mb-8 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-danger/20 bg-gradient-to-br from-danger/10 to-danger/[0.02] px-6 py-4 shadow-xl backdrop-blur-md"
+            >
                 <div class="flex items-center gap-3">
                     <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-danger/15 text-danger">
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" /></svg>
                     </div>
                     <div>
-                        <div class="text-xs font-bold uppercase tracking-widest text-danger/70">{{ __('dashboard.debt_issued_today') }}</div>
+                        <div class="text-xs font-bold uppercase tracking-widest text-danger/70" title="{{ __('dashboard.debt_not_in_register_hint') }}">{{ __('dashboard.debt_issued_today') }}</div>
                         <div class="mt-0.5 font-display text-2xl font-bold tabular-nums text-content">{{ $this->formatSum($this->debtIssuedToday) }}</div>
                     </div>
                 </div>
@@ -863,7 +906,11 @@ class extends Component
         @endif
 
         {{-- Appointment Stats Row --}}
-        <div class="mb-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div
+            wire:loading.class="opacity-40 pointer-events-none"
+            wire:target="date,month,switchTab,previousPeriod,nextPeriod,goToToday"
+            class="mb-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4"
+        >
             {{-- Total appointments --}}
             <div class="overflow-hidden rounded-2xl border border-content/[0.06] bg-gradient-to-br from-content/[0.04] to-content/[0.01] p-6 shadow-xl backdrop-blur-md">
                 <div class="flex items-center justify-between">
@@ -915,7 +962,11 @@ class extends Component
 
         {{-- Product sales summary --}}
         @if ($this->productOrders->isNotEmpty())
-            <div class="mb-8 overflow-hidden rounded-2xl border border-content/[0.06] bg-content/[0.03] shadow-xl backdrop-blur-md">
+            <div
+                wire:loading.class="opacity-40 pointer-events-none"
+                wire:target="date,month,switchTab,previousPeriod,nextPeriod,goToToday"
+                class="mb-8 overflow-hidden rounded-2xl border border-content/[0.06] bg-content/[0.03] shadow-xl backdrop-blur-md"
+            >
                 <div class="flex items-center justify-between border-b border-content/[0.06] bg-content/[0.03] px-6 py-4">
                     <div>
                         <h3 class="text-sm font-bold text-content">{{ __('dashboard.product_sales_day') }}</h3>
@@ -972,7 +1023,11 @@ class extends Component
         @endif
 
         {{-- Barber Performance (daily) --}}
-        <div class="overflow-hidden rounded-2xl border border-content/[0.06] bg-content/[0.03] shadow-xl backdrop-blur-md">
+        <div
+            wire:loading.class="opacity-40 pointer-events-none"
+            wire:target="date,month,switchTab,previousPeriod,nextPeriod,goToToday"
+            class="overflow-hidden rounded-2xl border border-content/[0.06] bg-content/[0.03] shadow-xl backdrop-blur-md"
+        >
             <div class="flex items-center justify-between border-b border-content/[0.06] bg-content/[0.03] px-6 py-4">
                 <div>
                     <h3 class="text-sm font-bold text-content">{{ __('dashboard.barber_performance') }}</h3>
@@ -1122,12 +1177,21 @@ class extends Component
     {{-- ═══════════════════════════════════════════════════════════════════ --}}
     @if ($activeTab === 'month')
 
-        {{-- Monthly KPI cards --}}
-        <div class="mb-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        {{-- Начислено: полная стоимость по прайсу, включая ещё не собранные
+             долги — отдельная группа от того, что реально лежит в кассе. --}}
+        <div class="mb-3">
+            <h2 class="text-xs font-bold uppercase tracking-widest text-content/50">{{ __('dashboard.accrued_heading') }}</h2>
+            <p class="mt-0.5 text-xs text-content/30">{{ __('dashboard.accrued_heading_hint') }}</p>
+        </div>
+        <div
+            wire:loading.class="opacity-40 pointer-events-none"
+            wire:target="date,month,switchTab,previousPeriod,nextPeriod,goToToday"
+            class="mb-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3"
+        >
             {{-- Total monthly revenue --}}
             <div class="overflow-hidden rounded-2xl border border-royal/20 bg-gradient-to-br from-royal/10 to-royal/[0.02] p-6 shadow-xl backdrop-blur-md">
                 <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold uppercase tracking-widest text-royal/70">{{ __('dashboard.turnover_month') }}</span>
+                    <span class="text-xs font-bold uppercase tracking-widest text-royal/70" title="{{ __('dashboard.turnover_month_hint') }}">{{ __('dashboard.turnover_month') }}</span>
                     <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-royal/15 text-royal">
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" /></svg>
                     </div>
@@ -1142,7 +1206,7 @@ class extends Component
             {{-- Monthly service revenue --}}
             <div class="overflow-hidden rounded-2xl border border-success/20 bg-gradient-to-br from-success/10 to-success/[0.02] p-6 shadow-xl backdrop-blur-md">
                 <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold uppercase tracking-widest text-success/70">{{ __('dashboard.services_month') }}</span>
+                    <span class="text-xs font-bold uppercase tracking-widest text-success/70" title="{{ __('dashboard.services_month_hint') }}">{{ __('dashboard.services_month') }}</span>
                     <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-success/15 text-success">
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z" /></svg>
                     </div>
@@ -1154,7 +1218,7 @@ class extends Component
             {{-- Monthly product revenue --}}
             <div class="overflow-hidden rounded-2xl border border-brass/20 bg-gradient-to-br from-brass/10 to-brass/[0.02] p-6 shadow-xl backdrop-blur-md">
                 <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold uppercase tracking-widest text-brass-ink/70">{{ __('dashboard.products_month') }}</span>
+                    <span class="text-xs font-bold uppercase tracking-widest text-brass-ink/70" title="{{ __('dashboard.products_month_hint') }}">{{ __('dashboard.products_month') }}</span>
                     <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-brass/15 text-brass-ink">
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007Z" /></svg>
                     </div>
@@ -1164,12 +1228,20 @@ class extends Component
             </div>
         </div>
 
-        {{-- Received cash/card/debt for the month --}}
-        <div class="mb-8 grid gap-5 sm:grid-cols-3">
+        {{-- Получено: деньги, реально дошедшие до кассы за месяц. --}}
+        <div class="mb-3">
+            <h2 class="text-xs font-bold uppercase tracking-widest text-content/50">{{ __('dashboard.received_heading') }}</h2>
+            <p class="mt-0.5 text-xs text-content/30">{{ __('dashboard.received_heading_hint') }}</p>
+        </div>
+        <div
+            wire:loading.class="opacity-40 pointer-events-none"
+            wire:target="date,month,switchTab,previousPeriod,nextPeriod,goToToday"
+            class="mb-8 grid gap-5 sm:grid-cols-3"
+        >
             {{-- Cash --}}
             <div class="overflow-hidden rounded-2xl border border-success/20 bg-gradient-to-br from-success/10 to-success/[0.02] p-6 shadow-xl backdrop-blur-md">
                 <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold uppercase tracking-widest text-success/70">{{ __('dashboard.cash_total') }}</span>
+                    <span class="text-xs font-bold uppercase tracking-widest text-success/70" title="{{ __('dashboard.cash_total_hint') }}">{{ __('dashboard.cash_total') }}</span>
                     <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-success/15 text-success">
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z" /></svg>
                     </div>
@@ -1181,7 +1253,7 @@ class extends Component
             {{-- Card --}}
             <div class="overflow-hidden rounded-2xl border border-info/20 bg-gradient-to-br from-info/10 to-info/[0.02] p-6 shadow-xl backdrop-blur-md">
                 <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold uppercase tracking-widest text-info/70">{{ __('dashboard.card_total') }}</span>
+                    <span class="text-xs font-bold uppercase tracking-widest text-info/70" title="{{ __('dashboard.card_total_hint') }}">{{ __('dashboard.card_total') }}</span>
                     <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-info/15 text-info">
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Z" /></svg>
                     </div>
@@ -1201,7 +1273,7 @@ class extends Component
                         'text-xs font-bold uppercase tracking-widest',
                         'text-danger/70' => $this->monthlyDebtIssued > 0,
                         'text-content/40' => $this->monthlyDebtIssued === 0,
-                    ])>{{ __('dashboard.debt_month') }}</span>
+                    ]) title="{{ __('dashboard.debt_not_in_register_hint') }}">{{ __('dashboard.debt_month') }}</span>
                     <div @class([
                         'flex h-10 w-10 items-center justify-center rounded-xl',
                         'bg-danger/15 text-danger' => $this->monthlyDebtIssued > 0,
@@ -1217,7 +1289,11 @@ class extends Component
 
         {{-- Broken operations for the month --}}
         @if ($this->monthlyBrokenOperationsCount > 0)
-            <div class="mb-8 flex flex-wrap items-center gap-3 rounded-2xl border border-danger/30 bg-danger/[0.07] px-6 py-4 shadow-xl backdrop-blur-md">
+            <div
+                wire:loading.class="opacity-40 pointer-events-none"
+                wire:target="date,month,switchTab,previousPeriod,nextPeriod,goToToday"
+                class="mb-8 flex flex-wrap items-center gap-3 rounded-2xl border border-danger/30 bg-danger/[0.07] px-6 py-4 shadow-xl backdrop-blur-md"
+            >
                 <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-danger/15 text-danger">
                     <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" /></svg>
                 </div>
@@ -1229,7 +1305,11 @@ class extends Component
         @endif
 
         {{-- Salary & Profit row --}}
-        <div class="mb-8 grid gap-5 sm:grid-cols-2">
+        <div
+            wire:loading.class="opacity-40 pointer-events-none"
+            wire:target="date,month,switchTab,previousPeriod,nextPeriod,goToToday"
+            class="mb-8 grid gap-5 sm:grid-cols-2"
+        >
             {{-- Total salary --}}
             <div class="overflow-hidden rounded-2xl border border-info/20 bg-gradient-to-br from-info/10 to-info/[0.02] p-6 shadow-xl backdrop-blur-md">
                 <div class="flex items-center justify-between">
@@ -1288,7 +1368,11 @@ class extends Component
         </div>
 
         {{-- Daily Revenue Chart --}}
-        <div class="mb-8 overflow-hidden rounded-2xl border border-content/[0.06] bg-content/[0.03] shadow-xl backdrop-blur-md">
+        <div
+            wire:loading.class="opacity-40 pointer-events-none"
+            wire:target="date,month,switchTab,previousPeriod,nextPeriod,goToToday"
+            class="mb-8 overflow-hidden rounded-2xl border border-content/[0.06] bg-content/[0.03] shadow-xl backdrop-blur-md"
+        >
             <div class="border-b border-content/[0.06] bg-content/[0.03] px-6 py-4">
                 <h3 class="text-sm font-bold text-content">{{ __('dashboard.revenue_by_day') }}</h3>
                 <p class="mt-0.5 text-xs text-content/30">{{ $this->monthString }} — {{ __('dashboard.revenue_by_day_sub') }}</p>
@@ -1386,7 +1470,11 @@ class extends Component
         </div>
 
         {{-- Monthly Barber Stats --}}
-        <div class="overflow-hidden rounded-2xl border border-content/[0.06] bg-content/[0.03] shadow-xl backdrop-blur-md">
+        <div
+            wire:loading.class="opacity-40 pointer-events-none"
+            wire:target="date,month,switchTab,previousPeriod,nextPeriod,goToToday"
+            class="overflow-hidden rounded-2xl border border-content/[0.06] bg-content/[0.03] shadow-xl backdrop-blur-md"
+        >
             <div class="flex items-center justify-between border-b border-content/[0.06] bg-content/[0.03] px-6 py-4">
                 <div>
                     <h3 class="text-sm font-bold text-content">{{ __('dashboard.salary_month_title') }}</h3>
