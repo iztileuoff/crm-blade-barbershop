@@ -1,7 +1,9 @@
 <?php
 
+use App\Models\Client;
 use App\Models\SmsMessage;
 use App\Services\SmsService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
@@ -17,6 +19,12 @@ class extends Component
     public string $status = '';
 
     public string $context = '';
+
+    public string $search = '';
+
+    public string $from = '';
+
+    public string $to = '';
 
     /** @return array<string, string> */
     public function contextLabels(): array
@@ -43,16 +51,72 @@ class extends Component
     #[Computed]
     public function messages()
     {
-        return SmsMessage::query()
-            ->with('client')
-            ->when($this->status !== '', function ($q) {
+        return $this->applyFilters(SmsMessage::query()->with('client'))
+            ->latest()
+            ->paginate(25);
+    }
+
+    /**
+     * Все фильтры аудита в одном месте: статус, тип, получатель и период.
+     *
+     * @param  Builder<SmsMessage>  $query
+     * @return Builder<SmsMessage>
+     */
+    private function applyFilters(Builder $query): Builder
+    {
+        $term = trim($this->search);
+        $digits = $term !== '' ? Client::searchDigits($term) : null;
+        $from = $this->dateBound($this->from);
+        $to = $this->dateBound($this->to);
+
+        return $query
+            ->when($this->status !== '', function (Builder $q) {
                 return in_array($this->status, ['sent', 'failed'], true)
                     ? $q->where('status', $this->status)
                     : $q->where('delivery_status', $this->status);
             })
-            ->when($this->context !== '', fn ($q) => $q->where('context', $this->context))
-            ->latest()
-            ->paginate(25);
+            ->when($this->context !== '', fn (Builder $q) => $q->where('context', $this->context))
+            ->when($term !== '', function (Builder $q) use ($term, $digits) {
+                $q->where(function (Builder $inner) use ($term, $digits) {
+                    $inner->whereHas('client', fn (Builder $c) => $c->where('name', 'like', '%'.$term.'%'));
+
+                    if ($digits !== null) {
+                        $inner->orWhere('phone', 'like', '%'.$digits.'%');
+                    }
+                });
+            })
+            ->when($from !== null, fn (Builder $q) => $q->where('created_at', '>=', $from->copy()->startOfDay()))
+            ->when($to !== null, fn (Builder $q) => $q->where('created_at', '<=', $to->copy()->endOfDay()));
+    }
+
+    /**
+     * Граница периода. Поля дат клиентские, поэтому разбор защищён: кривое
+     * значение должно просто не фильтровать, а не ронять страницу аудита.
+     */
+    private function dateBound(string $value): ?Carbon
+    {
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $value) !== 1) {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($value);
+        } catch (Exception) {
+            return null;
+        }
+    }
+
+    public function resetFilters(): void
+    {
+        $this->reset(['search', 'status', 'context', 'from', 'to']);
+        $this->resetPage();
+    }
+
+    #[Computed]
+    public function hasFilters(): bool
+    {
+        return trim($this->search) !== '' || $this->status !== '' || $this->context !== ''
+            || $this->from !== '' || $this->to !== '';
     }
 
     #[Computed]
@@ -156,6 +220,21 @@ class extends Component
     {
         $this->resetPage();
     }
+
+    public function updatedSearch(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedFrom(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedTo(): void
+    {
+        $this->resetPage();
+    }
 }; ?>
 
 <div class="animate-fade-in-up">
@@ -169,7 +248,12 @@ class extends Component
                 · {{ __('sms.errors_label') }}: <span class="font-bold text-danger">{{ $this->failedCount }}</span>
             </p>
         </div>
-        <div class="flex items-center gap-3">
+        <div class="flex flex-wrap items-center gap-3">
+            <div class="relative">
+                <svg class="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-content/20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
+                <input type="text" wire:model.live.debounce.300ms="search" placeholder="{{ __('sms.search_placeholder') }}"
+                       class="w-56 rounded-xl border border-content/[0.08] bg-content/[0.04] py-2.5 pl-10 pr-4 text-sm text-content placeholder-content/20 outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
+            </div>
             <select wire:model.live="context"
                     class="rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-2.5 text-sm text-content outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20 dark:[color-scheme:dark]">
                 <option value="">{{ __('sms.all_types') }}</option>
@@ -189,7 +273,33 @@ class extends Component
         </div>
     </div>
 
-    {{-- Метрики по периодам --}}
+    {{-- Период: без него аудит «дошла ли SMS во вторник?» невозможен --}}
+    <div class="mb-6 flex flex-wrap items-end gap-3">
+        <div>
+            <label for="sms-from" class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('sms.period_from') }}</label>
+            <input id="sms-from" type="date" wire:model.live="from" max="{{ $to ?: null }}"
+                   class="rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-2.5 text-sm text-content outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20 dark:[color-scheme:dark]">
+        </div>
+        <div>
+            <label for="sms-to" class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('sms.period_to') }}</label>
+            <input id="sms-to" type="date" wire:model.live="to" min="{{ $from ?: null }}"
+                   class="rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-2.5 text-sm text-content outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20 dark:[color-scheme:dark]">
+        </div>
+        @if ($this->hasFilters)
+            <button type="button" wire:click="resetFilters"
+                    class="rounded-xl border border-content/[0.08] px-4 py-2.5 text-sm font-bold text-content/50 transition hover:bg-content/[0.06] hover:text-content">
+                {{ __('sms.reset_filters') }}
+            </button>
+        @endif
+        <div wire:loading.delay wire:target="search,status,context,from,to" class="flex items-center gap-2 pb-1 text-xs text-content/40">
+            <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+            {{ __('common.loading') }}
+        </div>
+    </div>
+
+    {{-- Метрики по периодам. Считаются по всем отправкам: они про расход SMS,
+         а не про выборку — и это должно быть написано, а не угадываться. --}}
+    <p class="mb-2 text-xs text-content/30">{{ __('sms.metrics_scope') }}</p>
     <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
         @foreach(['today' => __('sms.period_today'), 'week' => __('sms.period_7days'), 'month' => __('sms.period_30days')] as $key => $label)
             <div class="rounded-2xl border border-content/[0.06] bg-content/[0.03] p-5 shadow-xl backdrop-blur-md">
@@ -253,6 +363,8 @@ class extends Component
                             <td class="whitespace-nowrap px-6 py-4">
                                 <div class="font-bold text-content">{{ $message->client?->name ?? '—' }}</div>
                                 <div class="text-xs text-brass-ink/60">{{ \App\Models\Client::formatPhone($message->phone) }}</div>
+                                {{-- На телефоне колонка даты скрыта, а это главное на странице аудита --}}
+                                <div class="text-[10px] text-content/40 sm:hidden">{{ $message->created_at?->format('d.m H:i') }}</div>
                             </td>
                             <td class="max-w-md px-6 py-4 text-content/60">{{ $message->message }}</td>
                             <td class="hidden whitespace-nowrap px-6 py-4 text-content/40 sm:table-cell">
@@ -279,7 +391,9 @@ class extends Component
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="px-6 py-12 text-center text-content/20">{{ __('sms.empty_history') }}</td>
+                            <td colspan="5" class="px-6 py-12 text-center text-content/20">
+                                {{ $this->hasFilters ? __('common.nothing_found') : __('sms.empty_history') }}
+                            </td>
                         </tr>
                     @endforelse
                 </tbody>
