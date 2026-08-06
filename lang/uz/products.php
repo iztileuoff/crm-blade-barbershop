@@ -10,5 +10,11 @@ return [
     'selling_price' => 'Sotuv narxi',
     'stock' => 'Qoldiq',
     'delete_confirm' => '«:name» mahsuloti oʻchirilsinmi?',
+    'search_placeholder' => 'Mahsulot nomi',
+    'filter_low' => 'Kam',
+    'filter_none' => 'Tugagan',
+    'receive' => 'Qabul',
+    'receive_placeholder' => '+ dona',
+    'err_receive_quantity' => '1 dan :max gacha son kiriting.',
     'empty' => 'Mahsulotlar qoʻshilmagan',
 ];

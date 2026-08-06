@@ -35,6 +35,7 @@ return [
     'note' => 'Заметка',
     'active' => 'Активен',
     'inactive' => 'Неактивен',
+    'show_inactive' => 'Показывать неактивных',
     'currency' => 'сум',
     'barber' => 'Мастер',
     'client' => 'Клиент',

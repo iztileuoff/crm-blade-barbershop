@@ -25,11 +25,15 @@ class extends Component
 
     public bool $showForm = false;
 
+    /** Показывать ли деактивированные позиции: по умолчанию они спрятаны. */
+    public bool $showInactive = false;
+
     #[Computed]
     public function services()
     {
         return Service::query()
             ->withCount('appointments')
+            ->when(! $this->showInactive, fn ($q) => $q->where('is_active', true))
             ->ordered()
             ->get();
     }
@@ -122,11 +126,19 @@ class extends Component
             <h1 class="font-display text-4xl font-semibold uppercase tracking-tight text-content">{{ __('common.services') }}</h1>
             <p class="mt-1 text-sm text-content/40">{{ __('services.subtitle') }}</p>
         </div>
-        <button type="button" wire:click="openCreate"
-                class="flex items-center gap-2 rounded-xl bg-gradient-to-r from-brass to-brass px-5 py-2.5 text-sm font-bold text-black shadow-lg shadow-brass/20 transition-all hover:scale-[1.02] hover:shadow-brass/30 active:scale-[0.98]">
-            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-            {{ __('services.add') }}
-        </button>
+        <div class="flex flex-wrap items-center gap-4">
+            {{-- Деактивированные позиции никуда не деваются: их можно спрятать --}}
+            <label class="relative inline-flex cursor-pointer items-center">
+                <input type="checkbox" wire:model.live="showInactive" class="peer sr-only">
+                <div class="h-6 w-11 rounded-full bg-content/10 transition-colors peer-checked:bg-brass after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-content after:transition-all peer-checked:after:translate-x-full"></div>
+                <span class="ml-3 text-sm font-medium text-content/60">{{ __('common.show_inactive') }}</span>
+            </label>
+            <button type="button" wire:click="openCreate"
+                    class="flex items-center gap-2 rounded-xl bg-gradient-to-r from-brass to-brass px-5 py-2.5 text-sm font-bold text-black shadow-lg shadow-brass/20 transition-all hover:scale-[1.02] hover:shadow-brass/30 active:scale-[0.98]">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                {{ __('services.add') }}
+            </button>
+        </div>
     </div>
 
     @if ($showForm)

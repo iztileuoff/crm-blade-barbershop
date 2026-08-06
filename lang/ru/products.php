@@ -10,5 +10,11 @@ return [
     'selling_price' => 'Цена продажи',
     'stock' => 'Остаток',
     'delete_confirm' => 'Удалить товар «:name»?',
+    'search_placeholder' => 'Название товара',
+    'filter_low' => 'Мало',
+    'filter_none' => 'Нет в наличии',
+    'receive' => 'Приёмка',
+    'receive_placeholder' => '+ шт',
+    'err_receive_quantity' => 'Введите количество от 1 до :max.',
     'empty' => 'Товары не добавлены',
 ];

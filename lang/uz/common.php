@@ -35,6 +35,7 @@ return [
     'note' => 'Izoh',
     'active' => 'Faol',
     'inactive' => 'Nofaol',
+    'show_inactive' => 'Nofaollarni koʻrsatish',
     'currency' => 'soʻm',
     'barber' => 'Barber',
     'client' => 'Mijoz',

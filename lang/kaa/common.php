@@ -34,6 +34,7 @@ return [
     'comment' => 'Pikir',
     'note' => 'Eskertpe',
     'active' => 'Aktiv',
+    'show_inactive' => 'Belsendi emeslerdi kórsetiw',
     'inactive' => 'Aktiv emes',
     'currency' => 'sum',
     'barber' => 'Barber',

@@ -1,15 +1,32 @@
 <?php
 
 use App\Models\Product;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Validate;
 use Livewire\Volt\Component;
+use Livewire\WithPagination;
 
 new
 #[Layout('components.layouts.app')]
 class extends Component
 {
+    use WithPagination;
+
+    private const STOCK_FILTERS = ['all', 'low', 'none'];
+
+    /** Разумный потолок разовой приёмки: защита от опечатки в поле количества. */
+    private const MAX_RECEIVE = 9999;
+
+    public string $search = '';
+
+    public string $stockFilter = 'all';
+
+    /** @var array<int, int|string|null> количество к приёмке по id товара */
+    public array $receiveQty = [];
+
     public ?int $editingId = null;
 
     #[Validate('required|string|max:255')]
@@ -27,15 +44,43 @@ class extends Component
     public bool $showForm = false;
 
     #[Computed]
-    public function products()
+    public function products(): LengthAwarePaginator
     {
-        return Product::orderBy('name')->get();
+        return Product::query()
+            ->when(trim($this->search) !== '', fn (Builder $q) => $q->where('name', 'like', '%'.trim($this->search).'%'))
+            ->when($this->stockFilter === 'low', fn (Builder $q) => $q->whereBetween('stock', [1, Product::LOW_STOCK]))
+            ->when($this->stockFilter === 'none', fn (Builder $q) => $q->where('stock', '<=', 0))
+            ->orderBy('name')
+            ->paginate(25);
     }
 
     #[Computed]
     public function totalProducts(): int
     {
         return Product::count();
+    }
+
+    #[Computed]
+    public function lowStockCount(): int
+    {
+        return Product::whereBetween('stock', [1, Product::LOW_STOCK])->count();
+    }
+
+    #[Computed]
+    public function outOfStockCount(): int
+    {
+        return Product::where('stock', '<=', 0)->count();
+    }
+
+    public function updatedSearch(): void
+    {
+        $this->resetPage();
+    }
+
+    public function setStockFilter(string $filter): void
+    {
+        $this->stockFilter = in_array($filter, self::STOCK_FILTERS, true) ? $filter : 'all';
+        $this->resetPage();
     }
 
     public function openCreate(): void
@@ -82,7 +127,29 @@ class extends Component
         $product = Product::findOrFail($id);
         $newStock = max(0, $product->stock + $delta);
         $product->update(['stock' => $newStock]);
-        unset($this->products);
+
+        unset($this->products, $this->lowStockCount, $this->outOfStockCount);
+    }
+
+    /**
+     * Приёмка партии одной операцией: степпером −1/+1 партия в 30 бутылок
+     * стоила 30 запросов, а перезапись остатка в форме молча затирала
+     * параллельные продажи. Здесь остаток двигается дельтой.
+     */
+    public function receiveStock(int $id): void
+    {
+        $quantity = (int) ($this->receiveQty[$id] ?? 0);
+
+        if ($quantity < 1 || $quantity > self::MAX_RECEIVE) {
+            $this->addError('receiveQty.'.$id, __('products.err_receive_quantity', ['max' => self::MAX_RECEIVE]));
+
+            return;
+        }
+
+        $this->resetErrorBag('receiveQty.'.$id);
+        $this->adjustStock($id, $quantity);
+
+        unset($this->receiveQty[$id]);
     }
 
     public function delete(int $id): void
@@ -111,11 +178,36 @@ class extends Component
             <h1 class="font-display text-4xl font-semibold uppercase tracking-tight text-content">{{ __('products.title') }}</h1>
             <p class="mt-1 text-sm text-content/40">{{ __('products.subtitle') }} · {{ __('common.total_count') }}: <span class="font-bold text-content/70">{{ $this->totalProducts }}</span></p>
         </div>
-        <button type="button" wire:click="openCreate"
-                class="flex items-center gap-2 rounded-xl bg-gradient-to-r from-brass to-brass px-5 py-2.5 text-sm font-bold text-black shadow-lg shadow-brass/20 transition-all hover:scale-[1.02] hover:shadow-brass/30 active:scale-[0.98]">
-            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-            {{ __('products.add') }}
-        </button>
+        <div class="flex flex-wrap items-center gap-3">
+            <div class="relative">
+                <svg class="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-content/20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
+                <input type="text" wire:model.live.debounce.300ms="search" placeholder="{{ __('products.search_placeholder') }}"
+                       class="w-56 rounded-xl border border-content/[0.08] bg-content/[0.04] py-2.5 pl-10 pr-4 text-sm text-content placeholder-content/20 outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
+            </div>
+            <button type="button" wire:click="openCreate"
+                    class="flex items-center gap-2 rounded-xl bg-gradient-to-r from-brass to-brass px-5 py-2.5 text-sm font-bold text-black shadow-lg shadow-brass/20 transition-all hover:scale-[1.02] hover:shadow-brass/30 active:scale-[0.98]">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                {{ __('products.add') }}
+            </button>
+        </div>
+    </div>
+
+    {{-- Фильтр остатков: «что заканчивается» — главный вопрос к этой странице --}}
+    <div class="mb-6 flex flex-wrap gap-2">
+        @foreach ([
+            'all' => __('common.all').' ('.$this->totalProducts.')',
+            'low' => __('products.filter_low').' ('.$this->lowStockCount.')',
+            'none' => __('products.filter_none').' ('.$this->outOfStockCount.')',
+        ] as $key => $label)
+            <button type="button" wire:click="setStockFilter('{{ $key }}')" wire:key="stock-filter-{{ $key }}"
+                    @class([
+                        'rounded-xl border px-4 py-2 text-sm font-bold transition',
+                        'border-brass bg-brass text-on-brass' => $stockFilter === $key,
+                        'border-content/[0.08] bg-content/[0.04] text-content/50 hover:bg-content/[0.08] hover:text-content' => $stockFilter !== $key,
+                    ])>
+                {{ $label }}
+            </button>
+        @endforeach
     </div>
 
     @if ($showForm)
@@ -179,27 +271,48 @@ class extends Component
                 </thead>
                 <tbody class="divide-y divide-content/[0.04]">
                     @forelse ($this->products as $product)
-                        <tr class="transition-colors hover:bg-content/[0.02]">
+                        @php($stockTarget = 'adjustStock('.$product->id.', -1),adjustStock('.$product->id.', 1),receiveStock('.$product->id.')')
+                        <tr class="transition-colors hover:bg-content/[0.02]" wire:key="product-{{ $product->id }}">
                             <td class="px-6 py-4">
                                 <div class="font-bold text-content">{{ $product->name }}</div>
                             </td>
                             <td class="px-6 py-4">
                                 <div class="flex items-center justify-center gap-2">
                                     <button type="button" wire:click="adjustStock({{ $product->id }}, -1)"
-                                            class="flex h-7 w-7 items-center justify-center rounded-lg border border-content/[0.06] text-content/40 transition hover:border-danger/30 hover:text-danger">
+                                            wire:loading.attr="disabled" wire:target="{{ $stockTarget }}"
+                                            class="flex h-7 w-7 items-center justify-center rounded-lg border border-content/[0.06] text-content/40 transition hover:border-danger/30 hover:text-danger disabled:opacity-40">
                                         <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14" /></svg>
                                     </button>
                                     <span @class([
                                         'min-w-[2.5rem] text-center text-sm font-extrabold tabular-nums',
-                                        'text-success' => $product->stock > 5,
-                                        'text-brass-ink' => $product->stock > 0 && $product->stock <= 5,
-                                        'text-danger' => $product->stock === 0,
+                                        'text-success' => $product->stock > \App\Models\Product::LOW_STOCK,
+                                        'text-brass-ink' => $product->stock > 0 && $product->stock <= \App\Models\Product::LOW_STOCK,
+                                        'text-danger' => $product->stock <= 0,
                                     ])>{{ $product->stock }}</span>
                                     <button type="button" wire:click="adjustStock({{ $product->id }}, 1)"
-                                            class="flex h-7 w-7 items-center justify-center rounded-lg border border-content/[0.06] text-content/40 transition hover:border-success/30 hover:text-success">
+                                            wire:loading.attr="disabled" wire:target="{{ $stockTarget }}"
+                                            class="flex h-7 w-7 items-center justify-center rounded-lg border border-content/[0.06] text-content/40 transition hover:border-success/30 hover:text-success disabled:opacity-40">
                                         <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
                                     </button>
                                 </div>
+
+                                {{-- Приёмка партии: одна операция вместо тридцати тапов --}}
+                                <form wire:submit="receiveStock({{ $product->id }})" class="mt-2 flex items-center justify-center gap-1.5">
+                                    <input type="number" min="1" max="9999" inputmode="numeric"
+                                           wire:model="receiveQty.{{ $product->id }}"
+                                           placeholder="{{ __('products.receive_placeholder') }}"
+                                           aria-label="{{ __('products.receive') }}"
+                                           class="w-16 rounded-lg border border-content/[0.08] bg-content/[0.04] px-2 py-1.5 text-center text-xs text-content placeholder-content/20 outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
+                                    <button type="submit" title="{{ __('products.receive') }}"
+                                            wire:loading.attr="disabled" wire:target="{{ $stockTarget }}"
+                                            class="flex h-7 items-center gap-1 rounded-lg border border-success/20 bg-success/10 px-2 text-[10px] font-bold text-success transition hover:bg-success hover:text-black disabled:opacity-40">
+                                        <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                                        {{ __('products.receive') }}
+                                    </button>
+                                </form>
+                                @error('receiveQty.'.$product->id)
+                                    <p class="mt-1 text-center text-[10px] text-danger">{{ $message }}</p>
+                                @enderror
                             </td>
                             <td class="px-6 py-4 text-right">
                                 <span class="font-bold text-brass-ink tabular-nums">{{ $product->formattedPrice }}</span>
@@ -233,11 +346,17 @@ class extends Component
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="px-6 py-12 text-center text-content/20">{{ __('products.empty') }}</td>
+                            <td colspan="5" class="px-6 py-12 text-center text-content/20">
+                                {{ trim($search) !== '' || $stockFilter !== 'all' ? __('common.nothing_found') : __('products.empty') }}
+                            </td>
                         </tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
+    </div>
+
+    <div class="mt-6">
+        {{ $this->products->links() }}
     </div>
 </div>
