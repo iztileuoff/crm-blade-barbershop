@@ -22,8 +22,19 @@ return [
     'message_label' => 'Текст сообщения',
     'message_placeholder' => 'Например: Завтра работаем с 10:00. Ждём вас!',
     'send' => 'Отправить рассылку',
-    'broadcast_confirm' => 'Отправить рассылку всем выбранным получателям? Действие нельзя отменить.',
+    'broadcast_confirm' => 'Отправить :count получателям (:audience)? Действие нельзя отменить.',
     'err_no_recipients' => 'Нет получателей с привязанным Telegram.',
+    'queue_stalled' => 'Очередь не разгребается: заданий в ожидании — :count, самое старое ждёт уже :minutes мин. Проверьте queue-воркер.',
+
+    // Recent broadcasts card
+    'recent_broadcasts_title' => 'Последние рассылки',
+    'col_audience' => 'Аудитория',
+    'col_message' => 'Сообщение',
+    'col_result' => 'Результат',
+    'sent_label' => 'отправлено',
+    'errors_label' => 'ошибок',
+    'status_processing' => 'Обрабатывается',
+    'empty_broadcasts' => 'Рассылок пока нет',
 
     // Templates page
     'templates_title' => 'Telegram · Шаблоны',

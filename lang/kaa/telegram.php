@@ -22,8 +22,19 @@ return [
     'message_label' => 'Xabar teksti',
     'message_placeholder' => 'Mısalı: Erteń 10:00 den islaymiz. Kútemiz!',
     'send' => 'Tarqatıwdı jiberiw',
-    'broadcast_confirm' => 'Tarqatıw barlıq saylanǵan qabıl etiwshilerge jiberilsinbe? Bul ámeldi biykarlaw múmkin emes.',
+    'broadcast_confirm' => ':count qabıl etiwshige (:audience) jiberilsinbe? Bul ámeldi biykarlaw múmkin emes.',
     'err_no_recipients' => 'Telegram baylanısqan qabıl etiwshiler joq.',
+    'queue_stalled' => 'Gezek islenbey atır: kútip atırǵan wazıypalar — :count, eń eskisi :minutes minut kútip atır. Queue-workerdi tekseriń.',
+
+    // Recent broadcasts card
+    'recent_broadcasts_title' => 'Aqırǵı tarqatıwlar',
+    'col_audience' => 'Auditoriya',
+    'col_message' => 'Xabar',
+    'col_result' => 'Nátiyje',
+    'sent_label' => 'jiberildi',
+    'errors_label' => 'qátelik',
+    'status_processing' => 'Islenip atır',
+    'empty_broadcasts' => 'Hazirshe tarqatıwlar joq',
 
     // Templates page
     'templates_title' => 'Telegram · Shablonlar',
