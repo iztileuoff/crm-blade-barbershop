@@ -93,3 +93,94 @@ it('builds the daily chart for the fallback month, not for 1969', function () {
         ->and($chart[0]['date'])->toBe('2026-08-01')
         ->and(collect($chart)->sum('product'))->toBe(50000);
 });
+
+/*
+|--------------------------------------------------------------------------
+| Navigation: day/month stay in sync, "forward" never outruns today (#64)
+|--------------------------------------------------------------------------
+*/
+
+it('moves the month with the day when the date picker changes', function () {
+    $component = Livewire::actingAs(monthAdmin())
+        ->test('pages.admin.dashboard')
+        ->set('date', '2026-05-15');
+
+    expect($component->get('month'))->toBe('2026-05');
+});
+
+it('falls back to today when the date field arrives empty or impossible', function (string $value) {
+    // Carbon::parse('0000-00-00') не бросает, а тихо даёт -0001 год — и он
+    // утекал бы и в шапку дня, и в $month следующей же строкой.
+    $component = Livewire::actingAs(monthAdmin())
+        ->test('pages.admin.dashboard')
+        ->set('date', $value);
+
+    expect($component->get('date'))->toBe('2026-08-06')
+        ->and($component->get('month'))->toBe('2026-08');
+
+    $component->assertOk()->assertSee(Str::ucfirst(Carbon::parse('2026-08-06')->translatedFormat('j F Y')));
+})->with(['empty' => [''], 'zero date' => ['0000-00-00'], 'garbage' => ['not-a-date'], 'impossible day' => ['2026-02-31']]);
+
+it('crosses the month boundary when stepping the day backwards past the 1st', function () {
+    Carbon::setTestNow(Carbon::parse('2026-08-01 10:00:00', 'Asia/Tashkent'));
+
+    $component = Livewire::actingAs(monthAdmin())
+        ->test('pages.admin.dashboard')
+        ->call('previousPeriod');
+
+    expect($component->get('date'))->toBe('2026-07-31')
+        ->and($component->get('month'))->toBe('2026-07');
+});
+
+it('snaps the day tab into whichever month the month tab was left on', function () {
+    // На вкладке "Месяц" стрелками ушли в июль, а $date всё ещё в августе —
+    // возврат на "День" должен показать день из уже выбранного месяца.
+    $component = Livewire::actingAs(monthAdmin())
+        ->test('pages.admin.dashboard')
+        ->set('activeTab', 'month')
+        ->call('previousPeriod')
+        ->call('switchTab', 'day');
+
+    expect($component->get('activeTab'))->toBe('day')
+        ->and($component->get('date'))->toBe('2026-07-01')
+        ->and($component->get('month'))->toBe('2026-07');
+});
+
+it('does not disturb an already-synced day when switching tabs', function () {
+    $component = Livewire::actingAs(monthAdmin())
+        ->test('pages.admin.dashboard')
+        ->set('date', '2026-08-20')
+        ->set('activeTab', 'month')
+        ->call('switchTab', 'day');
+
+    expect($component->get('date'))->toBe('2026-08-20')
+        ->and($component->get('month'))->toBe('2026-08');
+});
+
+it('refuses to step the day tab past today even when nextPeriod is called directly', function () {
+    // Кнопка «вперёд» дисейблится в разметке, но сюда её можно и обойти.
+    $component = Livewire::actingAs(monthAdmin())
+        ->test('pages.admin.dashboard')
+        ->call('nextPeriod');
+
+    expect($component->get('date'))->toBe('2026-08-06');
+});
+
+it('refuses to step the month tab past the current month even when nextPeriod is called directly', function () {
+    $component = Livewire::actingAs(monthAdmin())
+        ->test('pages.admin.dashboard')
+        ->set('activeTab', 'month')
+        ->call('nextPeriod');
+
+    expect($component->get('month'))->toBe('2026-08');
+});
+
+it('lets nextPeriod step forward again once a past day has been selected', function () {
+    // Сама проверка не залипла навсегда: шаг назад открывает шаг вперёд.
+    $component = Livewire::actingAs(monthAdmin())
+        ->test('pages.admin.dashboard')
+        ->call('previousPeriod')
+        ->call('nextPeriod');
+
+    expect($component->get('date'))->toBe('2026-08-06');
+});

@@ -37,6 +37,10 @@ return [
     'complete' => 'Yakunlash',
     'cancel_action' => 'Bekor qilish',
     'delete_confirm' => 'Yozuv oʻchirilsinmi?',
+    'cancel_confirm' => 'Yozuv bekor qilinsinmi?',
+    'complete_confirm' => 'Yozuv yakunlansinmi?',
+    'return_to_confirmed' => 'Tasdiqlanganga qaytarish',
+    'discard_confirm' => 'Saqlamasdan yopilsinmi?',
 
     // Validation
     'err_end_after_start' => 'Tugash vaqti boshlanish vaqtidan keyin boʻlishi kerak.',

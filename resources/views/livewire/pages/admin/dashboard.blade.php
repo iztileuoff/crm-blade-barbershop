@@ -30,16 +30,21 @@ class extends Component
     }
 
     /**
-     * Начало выбранного дня. $date — клиентское поле, поэтому разбор защищён
-     * здесь один раз, а не повторяется без try/catch по вызовам.
+     * Начало выбранного дня. $date — клиентское поле, и одного try/catch мало:
+     * `Carbon::parse('0000-00-00')` не бросает, а молча даёт -0001 год, который
+     * дальше уезжает и в шапку, и в $month. Поэтому формат проверяется до
+     * разбора — ровно как у месяца ниже.
      */
     private function dayStart(): Carbon
     {
-        try {
-            return Carbon::parse($this->date ?: 'now', 'Asia/Tashkent')->startOfDay();
-        } catch (Exception) {
-            return Carbon::now('Asia/Tashkent')->startOfDay();
+        if (
+            preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $this->date, $parts) === 1
+            && checkdate((int) $parts[2], (int) $parts[3], (int) $parts[1])
+        ) {
+            return Carbon::create((int) $parts[1], (int) $parts[2], (int) $parts[3], 0, 0, 0, 'Asia/Tashkent');
         }
+
+        return Carbon::now('Asia/Tashkent')->startOfDay();
     }
 
     #[Computed]
@@ -71,6 +76,115 @@ class extends Component
     public function monthString(): string
     {
         return Str::ucfirst($this->monthStart()->translatedFormat('F Y'));
+    }
+
+    /**
+     * Месяц следует за днём: где бы день ни менялся — пикером (см.
+     * updatedDate()) или стрелками ниже — вкладка "Месяц" должна открыть
+     * тот же период, а не молча остаться на текущем месяце.
+     */
+    private function syncMonthWithDate(): void
+    {
+        $this->month = $this->dayStart()->format('Y-m');
+    }
+
+    public function updatedDate(): void
+    {
+        // Кривое значение нормализуем сразу, а не только при чтении: иначе оно
+        // останется в пикере и уедет в $month следующей же строкой.
+        $this->date = $this->dayStart()->toDateString();
+        $this->syncMonthWithDate();
+    }
+
+    /**
+     * Смена вкладки. День и месяц — независимые поля: если месяц двигали
+     * стрелками на вкладке "Месяц", а $date остался в другом месяце,
+     * возврат на "День" должен показать день из уже выбранного месяца, а
+     * не тихо разъехаться с шапкой.
+     */
+    public function switchTab(string $tab): void
+    {
+        $this->activeTab = $tab === 'month' ? 'month' : 'day';
+
+        if ($this->activeTab !== 'day') {
+            return;
+        }
+
+        $month = $this->monthStart();
+
+        if ($this->dayStart()->format('Y-m') === $month->format('Y-m')) {
+            return;
+        }
+
+        $now = Carbon::now('Asia/Tashkent');
+
+        // Текущий месяц — логичнее показать "сегодня"; для прошлого или
+        // будущего месяца "сегодня" в нём не существует, поэтому берём
+        // первое число — это удивит кассира меньше всего.
+        $this->date = $month->isSameMonth($now)
+            ? $now->toDateString()
+            : $month->toDateString();
+    }
+
+    /**
+     * Не Computed — читается внутри previousPeriod()/nextPeriod() до их
+     * же мутации $date/$month, и там нужен свежий, а не запомненный за
+     * запрос результат. Проверка дешёвая, кешировать её незачем.
+     */
+    public function isLatestPeriod(): bool
+    {
+        $now = Carbon::now('Asia/Tashkent');
+
+        return $this->activeTab === 'month'
+            ? $this->monthStart()->isSameMonth($now)
+            : $this->dayStart()->isSameDay($now);
+    }
+
+    public function previousPeriod(): void
+    {
+        if ($this->activeTab === 'month') {
+            $this->month = $this->monthStart()->subMonth()->format('Y-m');
+
+            return;
+        }
+
+        $this->date = $this->dayStart()->subDay()->toDateString();
+        $this->syncMonthWithDate();
+    }
+
+    /**
+     * Дальше текущего периода идти некуда — заглянуть в завтрашнюю кассу
+     * нельзя, там ещё нет данных. Дисейбл в разметке — подсказка; реальная
+     * граница здесь, потому что кнопку можно дёрнуть и в обход разметки.
+     */
+    public function nextPeriod(): void
+    {
+        if ($this->isLatestPeriod()) {
+            return;
+        }
+
+        if ($this->activeTab === 'month') {
+            $this->month = $this->monthStart()->addMonth()->format('Y-m');
+
+            return;
+        }
+
+        $this->date = $this->dayStart()->addDay()->toDateString();
+        $this->syncMonthWithDate();
+    }
+
+    public function goToToday(): void
+    {
+        $now = Carbon::now('Asia/Tashkent');
+
+        if ($this->activeTab === 'month') {
+            $this->month = $now->format('Y-m');
+
+            return;
+        }
+
+        $this->date = $now->toDateString();
+        $this->syncMonthWithDate();
     }
 
     // ─── Daily computed ───────────────────────────────────────────────────────
@@ -593,7 +707,7 @@ class extends Component
             {{-- Tab toggle --}}
             <div class="flex items-center rounded-xl border border-content/10 bg-content/[0.04] p-1">
                 <button
-                    wire:click="$set('activeTab', 'day')"
+                    wire:click="switchTab('day')"
                     @class([
                         'rounded-lg px-4 py-1.5 text-xs font-bold transition-all',
                         'bg-brass text-on-brass shadow' => $activeTab === 'day',
@@ -603,7 +717,7 @@ class extends Component
                     {{ __('dashboard.tab_day') }}
                 </button>
                 <button
-                    wire:click="$set('activeTab', 'month')"
+                    wire:click="switchTab('month')"
                     @class([
                         'rounded-lg px-4 py-1.5 text-xs font-bold transition-all',
                         'bg-brass text-on-brass shadow' => $activeTab === 'month',
@@ -614,20 +728,48 @@ class extends Component
                 </button>
             </div>
 
-            {{-- Date / Month picker --}}
-            @if ($activeTab === 'day')
-                <input
-                    type="date"
-                    wire:model.live="date"
-                    class="rounded-xl border border-content/10 bg-content/5 px-4 py-2 text-sm text-content shadow-sm transition-colors focus:border-brass focus:outline-none focus:ring-1 focus:ring-brass dark:[color-scheme:dark]"
+            {{-- Date / Month picker with step controls, как в ленте записей --}}
+            <div class="flex items-center gap-2">
+                <button
+                    wire:click="previousPeriod"
+                    class="flex h-10 w-10 items-center justify-center rounded-xl border border-content/[0.06] text-content/40 transition hover:border-content/10 hover:text-content"
                 >
-            @else
-                <input
-                    type="month"
-                    wire:model.live="month"
-                    class="rounded-xl border border-content/10 bg-content/5 px-4 py-2 text-sm text-content shadow-sm transition-colors focus:border-brass focus:outline-none focus:ring-1 focus:ring-brass dark:[color-scheme:dark]"
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" /></svg>
+                </button>
+
+                @if ($activeTab === 'day')
+                    <input
+                        type="date"
+                        wire:model.live="date"
+                        class="rounded-xl border border-content/10 bg-content/5 px-4 py-2 text-sm text-content shadow-sm transition-colors focus:border-brass focus:outline-none focus:ring-1 focus:ring-brass dark:[color-scheme:dark]"
+                    >
+                @else
+                    <input
+                        type="month"
+                        wire:model.live="month"
+                        class="rounded-xl border border-content/10 bg-content/5 px-4 py-2 text-sm text-content shadow-sm transition-colors focus:border-brass focus:outline-none focus:ring-1 focus:ring-brass dark:[color-scheme:dark]"
+                    >
+                @endif
+
+                <button
+                    wire:click="nextPeriod"
+                    @disabled($this->isLatestPeriod())
+                    class="flex h-10 w-10 items-center justify-center rounded-xl border border-content/[0.06] text-content/40 transition hover:border-content/10 hover:text-content disabled:cursor-not-allowed disabled:opacity-30"
                 >
-            @endif
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" /></svg>
+                </button>
+
+                <button
+                    wire:click="goToToday"
+                    @class([
+                        'rounded-xl px-3 py-2 text-xs font-bold transition',
+                        'bg-brass text-on-brass' => $this->isLatestPeriod(),
+                        'border border-content/10 bg-content/5 text-content/60 hover:border-brass/30 hover:text-content' => ! $this->isLatestPeriod(),
+                    ])
+                >
+                    {{ __('common.today') }}
+                </button>
+            </div>
 
             <div class="flex items-center gap-2 rounded-xl border border-success/20 bg-success/10 px-3 py-1.5 text-xs font-bold text-success">
                 <span class="relative flex h-2 w-2">

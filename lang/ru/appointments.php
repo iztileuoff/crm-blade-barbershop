@@ -37,6 +37,10 @@ return [
     'complete' => 'Завершить',
     'cancel_action' => 'Отменить',
     'delete_confirm' => 'Удалить запись?',
+    'cancel_confirm' => 'Отменить запись?',
+    'complete_confirm' => 'Завершить запись?',
+    'return_to_confirmed' => 'Вернуть в подтверждённые',
+    'discard_confirm' => 'Закрыть без сохранения?',
 
     // Validation
     'err_end_after_start' => 'Время окончания должно быть позже времени начала.',

@@ -37,6 +37,10 @@ return [
     'complete' => 'Juwmaqlaw',
     'cancel_action' => 'Biykarlaw',
     'delete_confirm' => 'Jazılıw óshirilsinbe?',
+    'cancel_confirm' => 'Jazılıw biykarlansınba?',
+    'complete_confirm' => 'Jazılıw juwmaqlansınba?',
+    'return_to_confirmed' => 'Tastıyıqlanǵanǵa qaytarıw',
+    'discard_confirm' => 'Saqlamay jabılsınba?',
 
     // Validation
     'err_end_after_start' => 'Tamamlanıw waqtı baslanıw waqtınan keyin bolıwı kerek.',

@@ -152,6 +152,15 @@ class extends Component
         return $user?->isBarber() ? $user->barber?->id : null;
     }
 
+    /**
+     * Признак «на экране сегодня» — подсветка кнопки «Сегодня» в дате-строке.
+     */
+    #[Computed]
+    public function isToday(): bool
+    {
+        return $this->date === Carbon::now('Asia/Tashkent')->toDateString();
+    }
+
     #[Computed]
     public function filteredClients()
     {
@@ -263,6 +272,17 @@ class extends Component
             $start->addMinutes($this->timeStep);
         }
 
+        // Сетка строится по $timeStep, а выбранное время может ему не кратно
+        // (например 45-минутная услуга даёт 10:45 при шаге в час) — без этого
+        // <select> рендерит пустое значение и форма падает в необъяснимую ошибку.
+        foreach ([$this->form_start_time, $this->form_end_time] as $value) {
+            if (preg_match('/^\d{2}:\d{2}$/', $value) && ! in_array($value, $slots, true)) {
+                $slots[] = $value;
+            }
+        }
+
+        sort($slots);
+
         return $slots;
     }
 
@@ -276,6 +296,28 @@ class extends Component
     {
         $this->date = $date;
         $this->form_date = $date;
+    }
+
+    /**
+     * $date приходит из <input type="date">: поле может быть очищено или
+     * содержать синтаксически похожую, но невозможную дату вроде
+     * «0000-00-00» — Carbon её разберёт без ошибки и утянет страницу в
+     * 1969-й или в отрицательный год. checkdate() отсекает и то, и другое.
+     */
+    public function updatedDate($value): void
+    {
+        if (
+            ! preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', (string) $value, $matches) ||
+            ! checkdate((int) $matches[2], (int) $matches[3], (int) $matches[1])
+        ) {
+            $this->date = Carbon::now('Asia/Tashkent')->toDateString();
+            $this->form_date = $this->date;
+
+            return;
+        }
+
+        $this->date = $value;
+        $this->form_date = $value;
     }
 
     public function nextDay(): void
@@ -304,7 +346,37 @@ class extends Component
     {
         $this->abortIfBarber();
         $this->resetForm();
+
+        // Мастер под активным фильтром — вероятная цель новой записи, но
+        // только если это реальный мастер из списка, который можно выбрать
+        // в самой форме, а не устаревший или чужой id в фильтре.
+        if ($this->barberFilter && $this->barbers->contains('id', $this->barberFilter)) {
+            $this->barber_id = $this->barberFilter;
+        }
+
+        $this->form_start_time = $this->suggestedStartTime();
         $this->showForm = true;
+    }
+
+    /**
+     * Разумное время начала для новой записи: если открываемый день —
+     * сегодня, это ближайшая наступившая граница слота, иначе первый слот
+     * дня. Округление — по активному $timeStep, часовой пояс — как в
+     * dayStart().
+     */
+    private function suggestedStartTime(): string
+    {
+        $step = in_array($this->timeStep, [15, 30, 60], true) ? $this->timeStep : 60;
+        $now = Carbon::now('Asia/Tashkent');
+
+        if (! $this->dayStart()->isSameDay($now)) {
+            return '00:00';
+        }
+
+        $minutesSinceMidnight = min($now->hour * 60 + $now->minute, 23 * 60);
+        $rounded = min((int) (ceil($minutesSinceMidnight / $step) * $step), 23 * 60);
+
+        return Carbon::createFromTime(0, 0)->addMinutes($rounded)->format('H:i');
     }
 
     public function edit(int $id): void
@@ -620,6 +692,28 @@ class extends Component
         $this->resetErrorBag('delete');
     }
 
+    /**
+     * Есть что терять при закрытии формы: выбранный клиент, добавленная
+     * услуга, ненулевая цена или текст заметки. Пустую форму закрывают
+     * без вопросов, непустую — только через подтверждение.
+     */
+    #[Computed]
+    public function formHasContent(): bool
+    {
+        if ($this->client_id !== null) {
+            return true;
+        }
+
+        $hasService = collect($this->selectedServices)
+            ->contains(fn ($row) => ! empty($row['service_id']));
+
+        if ($hasService || ($this->price ?? 0) > 0) {
+            return true;
+        }
+
+        return trim($this->note) !== '';
+    }
+
     public function cancel(): void
     {
         $this->resetForm();
@@ -665,18 +759,32 @@ class extends Component
     </div>
 
     {{-- Date Selector --}}
-    <div class="mb-8 flex items-center justify-between gap-4 rounded-2xl border border-content/[0.06] bg-content/[0.03] p-4 backdrop-blur-md">
-        <button wire:click="prevDay" class="flex h-10 w-10 items-center justify-center rounded-xl border border-content/[0.06] text-content/40 transition hover:border-content/10 hover:text-content">
-            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" /></svg>
-        </button>
+    <div class="mb-8 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-content/[0.06] bg-content/[0.03] p-4 backdrop-blur-md">
+        <div class="flex items-center gap-3">
+            <button wire:click="prevDay" class="flex h-10 w-10 items-center justify-center rounded-xl border border-content/[0.06] text-content/40 transition hover:border-content/10 hover:text-content">
+                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" /></svg>
+            </button>
+
+            <input type="date" wire:model.live="date"
+                   class="rounded-xl border border-content/10 bg-content/5 px-4 py-2 text-sm text-content shadow-sm transition-colors focus:border-brass focus:outline-none focus:ring-1 focus:ring-brass dark:[color-scheme:dark]">
+
+            <button wire:click="nextDay" class="flex h-10 w-10 items-center justify-center rounded-xl border border-content/[0.06] text-content/40 transition hover:border-content/10 hover:text-content">
+                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" /></svg>
+            </button>
+        </div>
 
         <div class="flex flex-col items-center">
             <span class="text-xs font-bold uppercase tracking-widest text-brass-ink/60">{{ Carbon::parse($date)->translatedFormat('l') }}</span>
             <span class="text-lg font-extrabold text-content">{{ Carbon::parse($date)->translatedFormat('d F Y') }}</span>
         </div>
 
-        <button wire:click="nextDay" class="flex h-10 w-10 items-center justify-center rounded-xl border border-content/[0.06] text-content/40 transition hover:border-content/10 hover:text-content">
-            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" /></svg>
+        <button type="button" wire:click="setDate('{{ Carbon::now('Asia/Tashkent')->toDateString() }}')"
+                @class([
+                    'rounded-xl px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition',
+                    'bg-brass text-on-brass' => $this->isToday,
+                    'border border-content/[0.06] text-content/40 hover:border-content/10 hover:text-content' => ! $this->isToday,
+                ])>
+            {{ __('common.today') }}
         </button>
     </div>
 
@@ -696,12 +804,14 @@ class extends Component
     @if ($showForm && ! $isBarberView)
         <div class="fixed inset-0 z-50 flex items-center justify-center p-4"
              x-data
-             x-on:keydown.escape.window="$wire.cancel()">
-            <div class="absolute inset-0 bg-surface/80 backdrop-blur-sm" wire:click="cancel"></div>
+             x-on:keydown.escape.window="@if ($this->formHasContent) confirm(@js(__('appointments.discard_confirm'))) && @endif $wire.cancel()">
+            {{-- Без wire:click: случайный тап рядом с модалкой на планшете не должен стирать заполненную форму --}}
+            <div class="absolute inset-0 bg-surface/80 backdrop-blur-sm"></div>
             <div class="relative z-10 flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-content/[0.12] bg-surface-raised shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_32px_64px_rgba(0,0,0,0.8)]">
                 <div class="flex items-center justify-between border-b border-content/[0.06] px-6 py-4">
                     <h3 class="text-sm font-bold text-content">{{ $editingId ? __('appointments.edit_title') : __('appointments.create_title') }}</h3>
                     <button type="button" wire:click="cancel"
+                            @if ($this->formHasContent) wire:confirm="{{ __('appointments.discard_confirm') }}" @endif
                             class="flex h-8 w-8 items-center justify-center rounded-lg text-content/30 transition hover:bg-content/[0.06] hover:text-content">
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
                     </button>
@@ -981,6 +1091,7 @@ class extends Component
                     </div>
                     <div class="flex items-center justify-end gap-3 border-t border-content/[0.06] px-6 py-4">
                         <button type="button" wire:click="cancel"
+                                @if ($this->formHasContent) wire:confirm="{{ __('appointments.discard_confirm') }}" @endif
                                 class="rounded-xl border border-content/[0.08] px-5 py-2.5 text-sm font-bold text-content/60 transition hover:bg-content/[0.06] hover:text-content">
                             {{ __('common.cancel') }}
                         </button>
@@ -1111,20 +1222,29 @@ class extends Component
                                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
                                         </button>
                                         <button type="button" wire:click="markCancelled({{ $appointment->id }})"
+                                                wire:confirm="{{ __('appointments.cancel_confirm') }}"
                                                 title="{{ __('appointments.cancel_action') }}"
                                                 class="flex h-8 w-8 items-center justify-center rounded-lg bg-danger/10 text-danger transition hover:bg-danger hover:text-black">
                                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
                                         </button>
                                     @elseif ($appointment->status === AppointmentStatus::Confirmed)
                                         <button type="button" wire:click="markCompleted({{ $appointment->id }})"
+                                                wire:confirm="{{ __('appointments.complete_confirm') }}"
                                                 title="{{ __('appointments.complete') }}"
                                                 class="flex h-8 w-8 items-center justify-center rounded-lg bg-success/10 text-success transition hover:bg-success hover:text-black">
                                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
                                         </button>
                                         <button type="button" wire:click="markCancelled({{ $appointment->id }})"
+                                                wire:confirm="{{ __('appointments.cancel_confirm') }}"
                                                 title="{{ __('appointments.cancel_action') }}"
                                                 class="flex h-8 w-8 items-center justify-center rounded-lg bg-danger/10 text-danger transition hover:bg-danger hover:text-black">
                                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+                                        </button>
+                                    @else
+                                        <button type="button" wire:click="markConfirmed({{ $appointment->id }})"
+                                                title="{{ __('appointments.return_to_confirmed') }}"
+                                                class="flex h-8 w-8 items-center justify-center rounded-lg bg-content/[0.04] text-content/40 transition hover:bg-brass/10 hover:text-brass-ink">
+                                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" /></svg>
                                         </button>
                                     @endif
                                     <button type="button" wire:click="edit({{ $appointment->id }})"

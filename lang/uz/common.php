@@ -5,6 +5,7 @@ return [
     'save' => 'Saqlash',
     'saving' => 'Saqlanmoqda…',
     'saved' => 'Saqlandi',
+    'today' => 'Bugun',
     'cancel' => 'Bekor qilish',
     'delete' => 'Oʻchirish',
     'edit' => 'Tahrirlash',

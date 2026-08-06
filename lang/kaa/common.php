@@ -5,6 +5,7 @@ return [
     'save' => 'Saqlaw',
     'saving' => 'Saqlanbaqta…',
     'saved' => 'Saqlandı',
+    'today' => 'Búgin',
     'cancel' => 'Biykarlaw',
     'delete' => 'Óshiriw',
     'edit' => 'Ózgertiw',
