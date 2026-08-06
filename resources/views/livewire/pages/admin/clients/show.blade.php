@@ -14,15 +14,151 @@ new
 #[Layout('components.layouts.app')]
 class extends Component
 {
+    /** Сколько строк истории показываем за раз и потолок для «показать ещё». */
+    private const HISTORY_PAGE = 20;
+
+    private const HISTORY_MAX = 500;
+
+    private const TABS = ['appointments', 'orders', 'sms'];
+
     public Client $client;
 
     #[Validate('nullable|string|max:5000')]
     public string $notes = '';
 
+    /** Активная вкладка истории: панель рендерится и квepится только одна. */
+    public string $tab = 'appointments';
+
+    public int $historyLimit = self::HISTORY_PAGE;
+
+    public bool $editing = false;
+
+    public string $name = '';
+
+    public string $phone = '';
+
+    public string $birth_date = '';
+
     public function mount(Client $client): void
     {
         $this->client = $client;
         $this->notes = $client->notes ?? '';
+        $this->fillProfileForm();
+    }
+
+    private function fillProfileForm(): void
+    {
+        $this->name = $this->client->name;
+        $this->phone = $this->client->formattedPhone ?: $this->client->phone;
+        $this->birth_date = $this->client->birth_date?->format('Y-m-d') ?? '';
+    }
+
+    public function showTab(string $tab): void
+    {
+        $this->tab = in_array($tab, self::TABS, true) ? $tab : 'appointments';
+        $this->historyLimit = self::HISTORY_PAGE;
+    }
+
+    public function showMoreHistory(): void
+    {
+        $this->historyLimit = $this->historyRows() + self::HISTORY_PAGE;
+
+        unset($this->appointmentHistory, $this->orderHistory, $this->smsHistory);
+    }
+
+    /**
+     * Сколько строк истории грузить. `$historyLimit` — публичное свойство, то
+     * есть клиентское: без потолка крафченый запрос вытянул бы всю историю.
+     */
+    private function historyRows(): int
+    {
+        return max(self::HISTORY_PAGE, min($this->historyLimit, self::HISTORY_MAX));
+    }
+
+    #[Computed]
+    public function hasMoreHistory(): bool
+    {
+        $total = match ($this->tab) {
+            'orders' => $this->ordersCount,
+            'sms' => $this->smsCount,
+            default => $this->appointmentsCount,
+        };
+
+        return $total > $this->historyRows();
+    }
+
+    #[Computed]
+    public function appointmentsCount(): int
+    {
+        return $this->client->appointments()->count();
+    }
+
+    #[Computed]
+    public function ordersCount(): int
+    {
+        return $this->client->orders()->count();
+    }
+
+    #[Computed]
+    public function smsCount(): int
+    {
+        return $this->client->smsMessages()->count();
+    }
+
+    public function edit(): void
+    {
+        $this->fillProfileForm();
+        $this->resetErrorBag();
+        $this->editing = true;
+    }
+
+    public function cancelEdit(): void
+    {
+        $this->fillProfileForm();
+        $this->resetErrorBag();
+        $this->editing = false;
+    }
+
+    /**
+     * Правка карточки прямо здесь: раньше за опечаткой в имени приходилось
+     * возвращаться в список и искать клиента заново.
+     */
+    public function saveProfile(): void
+    {
+        $this->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'phone' => ['required', 'string'],
+            'birth_date' => ['nullable', 'date'],
+        ]);
+
+        $normalized = Client::normalizePhone($this->phone);
+
+        if ($normalized === null) {
+            $this->addError('phone', __('clients.err_phone_format'));
+
+            return;
+        }
+
+        $duplicate = Client::query()
+            ->where('phone', $normalized)
+            ->whereKeyNot($this->client->id)
+            ->exists();
+
+        if ($duplicate) {
+            $this->addError('phone', __('clients.err_duplicate'));
+
+            return;
+        }
+
+        $this->client->update([
+            'name' => $this->name,
+            'phone' => $normalized,
+            'birth_date' => $this->birth_date ?: null,
+        ]);
+
+        $this->fillProfileForm();
+        $this->editing = false;
+        $this->dispatch('profile-saved');
     }
 
     #[Computed]
@@ -117,12 +253,18 @@ class extends Component
             ->get();
     }
 
+    /**
+     * Истории режутся лимитом и живут за серверными вкладками: у лояльного
+     * клиента их сотни, а раньше все три квepились и уезжали в HTML на каждый
+     * рендер — даже скрытые.
+     */
     #[Computed]
     public function appointmentHistory(): Collection
     {
         return $this->client->appointments()
             ->with(['barber', 'services'])
             ->orderByDesc('starts_at')
+            ->limit($this->historyRows())
             ->get();
     }
 
@@ -133,6 +275,7 @@ class extends Component
             ->with('items.product')
             ->withSum('debtPayments as debt_paid_total', 'amount')
             ->orderByDesc('created_at')
+            ->limit($this->historyRows())
             ->get();
     }
 
@@ -141,6 +284,7 @@ class extends Component
     {
         return $this->client->smsMessages()
             ->orderByDesc('created_at')
+            ->limit($this->historyRows())
             ->get();
     }
 
@@ -167,7 +311,9 @@ class extends Component
     </a>
 
     {{-- Header --}}
-    <div class="mb-8 flex flex-wrap items-start justify-between gap-4">
+    <div class="mb-8 flex flex-wrap items-start justify-between gap-4"
+         x-data="{ saved: false }"
+         x-on:profile-saved.window="saved = true; clearTimeout($el._t); $el._t = setTimeout(() => saved = false, 2500)">
         <div>
             <h1 class="font-display text-4xl font-semibold uppercase tracking-tight text-content">{{ $client->name }}</h1>
             <div class="mt-2 flex flex-wrap items-center gap-3 text-sm">
@@ -178,9 +324,70 @@ class extends Component
                         Telegram
                     </span>
                 @endif
+                <span x-show="saved" x-cloak x-transition
+                      class="inline-flex items-center gap-1.5 rounded-full bg-success/10 px-3 py-1 text-xs font-bold text-success">
+                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+                    {{ __('clients.profile_saved') }}
+                </span>
             </div>
         </div>
+
+        {{-- Самое частое действие после открытия карточки — записать на визит --}}
+        <div class="flex items-center gap-3">
+            <button type="button" wire:click="edit"
+                    class="inline-flex items-center gap-2 rounded-xl border border-content/[0.08] px-4 py-2.5 text-sm font-bold text-content/60 transition hover:bg-content/[0.06] hover:text-content">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" /></svg>
+                {{ __('common.edit') }}
+            </button>
+            <a href="{{ route('admin.appointments', ['client' => $client->id]) }}" wire:navigate
+               class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-brass to-brass px-5 py-2.5 text-sm font-bold text-black shadow-lg shadow-brass/20 transition-all hover:scale-[1.02] hover:shadow-brass/30 active:scale-[0.98]">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                {{ __('clients.book_visit') }}
+            </a>
+        </div>
     </div>
+
+    {{-- Inline profile edit --}}
+    @if ($editing)
+        <div class="mb-6 overflow-hidden rounded-2xl border border-brass/20 bg-content/[0.03] shadow-xl backdrop-blur-md">
+            <div class="border-b border-content/[0.06] bg-content/[0.03] px-6 py-4">
+                <h3 class="text-sm font-bold text-content">{{ __('clients.edit_title') }}</h3>
+            </div>
+            <form wire:submit="saveProfile" class="p-6">
+                <div class="grid gap-6 sm:grid-cols-3">
+                    <div>
+                        <label for="client-name" class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('common.name') }}</label>
+                        <input id="client-name" type="text" wire:model="name" placeholder="{{ __('clients.name_placeholder') }}"
+                               class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content placeholder-content/20 outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
+                        @error('name') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
+                    </div>
+                    <div>
+                        <label for="client-phone" class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('common.phone') }}</label>
+                        <input id="client-phone" type="text" wire:model="phone" placeholder="+998 90 123 45 67"
+                               class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content placeholder-content/20 outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
+                        @error('phone') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
+                    </div>
+                    <div>
+                        <label for="client-birth" class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('common.birth_date') }}</label>
+                        <input id="client-birth" type="date" wire:model="birth_date"
+                               class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20 dark:[color-scheme:dark]">
+                        @error('birth_date') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
+                    </div>
+                </div>
+                <div class="mt-8 flex items-center justify-end gap-3 border-t border-content/[0.06] pt-6">
+                    <button type="button" wire:click="cancelEdit"
+                            class="rounded-xl border border-content/[0.08] px-5 py-2.5 text-sm font-bold text-content/60 transition hover:bg-content/[0.06] hover:text-content">
+                        {{ __('common.cancel') }}
+                    </button>
+                    <button type="submit" wire:loading.attr="disabled" wire:target="saveProfile"
+                            class="rounded-xl bg-brass px-6 py-2.5 text-sm font-bold text-black transition-all hover:bg-brass-bright active:scale-[0.98] disabled:opacity-60">
+                        <span wire:loading.remove wire:target="saveProfile">{{ __('common.save_changes') }}</span>
+                        <span wire:loading wire:target="saveProfile">{{ __('common.saving') }}</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    @endif
 
     {{-- Profile facts --}}
     <div class="mb-6 grid gap-4 rounded-2xl border border-content/[0.06] bg-content/[0.03] p-6 shadow-xl backdrop-blur-md sm:grid-cols-2 lg:grid-cols-4">
@@ -257,29 +464,28 @@ class extends Component
         </form>
     </div>
 
-    {{-- History tabs --}}
-    <div x-data="{ tab: 'appointments' }"
-         class="overflow-hidden rounded-2xl border border-content/[0.06] bg-content/[0.03] shadow-xl backdrop-blur-md">
+    {{-- History tabs. Вкладки серверные: скрытая история не должна квepиться --}}
+    <div class="overflow-hidden rounded-2xl border border-content/[0.06] bg-content/[0.03] shadow-xl backdrop-blur-md">
         <div class="flex flex-wrap gap-1 border-b border-content/[0.06] bg-content/[0.03] p-2">
-            <button type="button" x-on:click="tab = 'appointments'"
-                    :class="tab === 'appointments' ? 'bg-brass text-black' : 'text-content/50 hover:bg-content/[0.06] hover:text-content'"
-                    class="rounded-lg px-4 py-2 text-sm font-bold transition">
-                {{ __('clients.tab_appointments') }} ({{ $this->appointmentHistory->count() }})
-            </button>
-            <button type="button" x-on:click="tab = 'orders'"
-                    :class="tab === 'orders' ? 'bg-brass text-black' : 'text-content/50 hover:bg-content/[0.06] hover:text-content'"
-                    class="rounded-lg px-4 py-2 text-sm font-bold transition">
-                {{ __('clients.tab_orders') }} ({{ $this->orderHistory->count() }})
-            </button>
-            <button type="button" x-on:click="tab = 'sms'"
-                    :class="tab === 'sms' ? 'bg-brass text-black' : 'text-content/50 hover:bg-content/[0.06] hover:text-content'"
-                    class="rounded-lg px-4 py-2 text-sm font-bold transition">
-                {{ __('clients.tab_sms') }} ({{ $this->smsHistory->count() }})
-            </button>
+            @foreach ([
+                'appointments' => __('clients.tab_appointments').' ('.$this->appointmentsCount.')',
+                'orders' => __('clients.tab_orders').' ('.$this->ordersCount.')',
+                'sms' => __('clients.tab_sms').' ('.$this->smsCount.')',
+            ] as $key => $label)
+                <button type="button" wire:click="showTab('{{ $key }}')" wire:key="tab-{{ $key }}"
+                        @class([
+                            'rounded-lg px-4 py-2 text-sm font-bold transition',
+                            'bg-brass text-on-brass' => $tab === $key,
+                            'text-content/50 hover:bg-content/[0.06] hover:text-content' => $tab !== $key,
+                        ])>
+                    {{ $label }}
+                </button>
+            @endforeach
         </div>
 
         {{-- Appointments --}}
-        <div x-show="tab === 'appointments'" class="overflow-x-auto">
+        @if ($tab === 'appointments')
+        <div class="overflow-x-auto">
             <table class="w-full text-left text-sm">
                 <thead>
                     <tr class="border-b border-content/[0.06] text-xs font-bold uppercase tracking-wider text-content/30">
@@ -308,8 +514,11 @@ class extends Component
             </table>
         </div>
 
+        @endif
+
         {{-- Orders --}}
-        <div x-show="tab === 'orders'" x-cloak class="overflow-x-auto">
+        @if ($tab === 'orders')
+        <div class="overflow-x-auto">
             <table class="w-full text-left text-sm">
                 <thead>
                     <tr class="border-b border-content/[0.06] text-xs font-bold uppercase tracking-wider text-content/30">
@@ -338,8 +547,11 @@ class extends Component
             </table>
         </div>
 
+        @endif
+
         {{-- SMS --}}
-        <div x-show="tab === 'sms'" x-cloak class="overflow-x-auto">
+        @if ($tab === 'sms')
+        <div class="overflow-x-auto">
             <table class="w-full text-left text-sm">
                 <thead>
                     <tr class="border-b border-content/[0.06] text-xs font-bold uppercase tracking-wider text-content/30">
@@ -369,5 +581,16 @@ class extends Component
                 </tbody>
             </table>
         </div>
+        @endif
+
+        @if ($this->hasMoreHistory)
+            <div class="border-t border-content/[0.06] p-4 text-center">
+                <button type="button" wire:click="showMoreHistory" wire:loading.attr="disabled" wire:target="showMoreHistory"
+                        class="inline-flex items-center gap-2 rounded-xl border border-content/[0.08] bg-content/[0.04] px-5 py-2.5 text-sm font-bold text-content/60 transition hover:bg-content/[0.08] hover:text-content disabled:opacity-60">
+                    <span wire:loading.remove wire:target="showMoreHistory">{{ __('clients.show_more') }}</span>
+                    <span wire:loading wire:target="showMoreHistory">{{ __('common.loading') }}</span>
+                </button>
+            </div>
+        @endif
     </div>
 </div>

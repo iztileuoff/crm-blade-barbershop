@@ -105,6 +105,18 @@ class extends Component
             $this->isBarberView = true;
             $this->ownBarberId = $user->barber?->id;
             $this->barberFilter = $this->ownBarberId;
+
+            return;
+        }
+
+        // Переход из карточки клиента («записать на визит»): форма открывается
+        // с уже привязанным клиентом, искать его заново не нужно.
+        $client = Client::find(request()->integer('client'));
+
+        if ($client !== null) {
+            $this->client_id = $client->id;
+            $this->clientSearch = $client->name;
+            $this->showForm = true;
         }
     }
 

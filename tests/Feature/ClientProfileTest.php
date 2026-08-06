@@ -72,16 +72,133 @@ function clientWithHistory(): array
 }
 
 it('renders the client profile with history data', function () {
-    ['client' => $client, 'barber' => $barber] = clientWithHistory();
+    ['client' => $client] = clientWithHistory();
 
-    Livewire::actingAs(clientAdmin())
+    // Вкладки серверные: в HTML уезжает только открытая история.
+    $card = Livewire::actingAs(clientAdmin())
         ->test('pages.admin.clients.show', ['client' => $client])
         ->assertOk()
         ->assertSee('Тест Клиент')
         ->assertSee('Иван Мастер')
         ->assertSee('Мужская стрижка')
+        ->assertDontSee('Помада для волос')
+        ->assertDontSee('Ваша запись завтра в 10:00');
+
+    $card->call('showTab', 'orders')
         ->assertSee('Помада для волос')
-        ->assertSee('Ваша запись завтра в 10:00');
+        ->assertDontSee('Ваша запись завтра в 10:00');
+
+    $card->call('showTab', 'sms')
+        ->assertSee('Ваша запись завтра в 10:00')
+        ->assertDontSee('Помада для волос');
+});
+
+it('ignores an unknown tab', function () {
+    ['client' => $client] = clientWithHistory();
+
+    Livewire::actingAs(clientAdmin())
+        ->test('pages.admin.clients.show', ['client' => $client])
+        ->call('showTab', 'что-угодно')
+        ->assertSet('tab', 'appointments');
+});
+
+it('cuts the history and loads more on demand', function () {
+    $client = Client::factory()->create();
+    $barber = Barber::factory()->create();
+
+    for ($i = 0; $i < 25; $i++) {
+        Appointment::create([
+            'client_id' => $client->id,
+            'barber_id' => $barber->id,
+            'starts_at' => now()->subDays($i)->setTime(10, 0),
+            'ends_at' => now()->subDays($i)->setTime(11, 0),
+            'status' => AppointmentStatus::Completed,
+            'price' => 1000,
+        ]);
+    }
+
+    $card = Livewire::actingAs(clientAdmin())
+        ->test('pages.admin.clients.show', ['client' => $client]);
+
+    expect($card->instance()->appointmentHistory)->toHaveCount(20)
+        ->and($card->instance()->hasMoreHistory)->toBeTrue();
+
+    $card->call('showMoreHistory');
+
+    expect($card->instance()->appointmentHistory)->toHaveCount(25)
+        ->and($card->instance()->hasMoreHistory)->toBeFalse();
+});
+
+it('clamps a crafted history limit', function () {
+    $client = Client::factory()->create();
+    $barber = Barber::factory()->create();
+
+    for ($i = 0; $i < 25; $i++) {
+        Appointment::create([
+            'client_id' => $client->id,
+            'barber_id' => $barber->id,
+            'starts_at' => now()->subDays($i)->setTime(10, 0),
+            'ends_at' => now()->subDays($i)->setTime(11, 0),
+            'status' => AppointmentStatus::Completed,
+            'price' => 1000,
+        ]);
+    }
+
+    // `historyLimit` — публичное свойство, то есть клиентское: и отрицательное,
+    // и огромное значение должны упереться в границы, а не в базу.
+    $card = Livewire::actingAs(clientAdmin())
+        ->test('pages.admin.clients.show', ['client' => $client])
+        ->set('historyLimit', -5)
+        ->assertOk();
+
+    expect($card->instance()->appointmentHistory)->toHaveCount(20);
+});
+
+it('edits the client card in place', function () {
+    $client = Client::factory()->create(['name' => 'Старое Имя', 'phone' => '998901112233']);
+
+    Livewire::actingAs(clientAdmin())
+        ->test('pages.admin.clients.show', ['client' => $client])
+        ->call('edit')
+        ->assertSet('editing', true)
+        ->assertSet('name', 'Старое Имя')
+        ->set('name', 'Новое Имя')
+        ->set('birth_date', '1990-05-15')
+        ->call('saveProfile')
+        ->assertHasNoErrors()
+        ->assertSet('editing', false)
+        ->assertDispatched('profile-saved')
+        ->assertSee('Новое Имя');
+
+    $client->refresh();
+
+    expect($client->name)->toBe('Новое Имя')
+        ->and($client->birth_date->toDateString())->toBe('1990-05-15');
+});
+
+it('refuses to move a phone onto another client', function () {
+    $client = Client::factory()->create(['phone' => '998901112233']);
+    Client::factory()->create(['phone' => '998909998877']);
+
+    Livewire::actingAs(clientAdmin())
+        ->test('pages.admin.clients.show', ['client' => $client])
+        ->call('edit')
+        ->set('phone', '+998 90 999 88 77')
+        ->call('saveProfile')
+        ->assertHasErrors('phone');
+
+    expect($client->fresh()->phone)->toBe('998901112233');
+});
+
+it('opens the appointment form with the client already attached', function () {
+    $client = Client::factory()->create(['name' => 'Али Валиев']);
+
+    Livewire::actingAs(clientAdmin())
+        ->withQueryParams(['client' => $client->id])
+        ->test('pages.admin.appointments')
+        ->assertSet('client_id', $client->id)
+        ->assertSet('showForm', true)
+        ->assertSeeHtml('wire:click="clearClient"');
 });
 
 it('computes client metrics correctly', function () {
