@@ -32,16 +32,13 @@ class extends Component
     #[Validate('boolean')]
     public bool $is_active = true;
 
-    #[Validate('required|array')]
-    public array $schedule = [
-        'mon' => ['09:00', '20:00'],
-        'tue' => ['09:00', '20:00'],
-        'wed' => ['09:00', '20:00'],
-        'thu' => ['09:00', '20:00'],
-        'fri' => ['09:00', '20:00'],
-        'sat' => ['10:00', '18:00'],
-        'sun' => ['10:00', '18:00'],
-    ];
+    /**
+     * Hydrated by resetForm()/edit() before the form ever renders — see
+     * {@see defaultSchedule()} — so the empty array here is never read as-is.
+     *
+     * @var array<string, array{start: ?string, end: ?string, off: bool}>
+     */
+    public array $schedule = [];
 
     #[Validate('nullable|image|max:2048')]
     public $photo;
@@ -91,13 +88,99 @@ class extends Component
         $this->price = $barber->price;
         $this->salary_percent = $barber->salary_percent;
         $this->is_active = (bool) $barber->is_active;
-        $this->schedule = $barber->schedule;
+        $this->schedule = $this->normalizeScheduleForForm($barber);
         $this->photo = null;
         $this->servicePrices = $barber->services
             ->pluck('pivot.price', 'id')
             ->map(fn ($p) => $p !== null ? (int) $p : null)
             ->toArray();
         $this->showForm = true;
+    }
+
+    /**
+     * The sensible starting schedule for a brand new barber, and the values
+     * a legacy or unreadable day falls back to in {@see normalizeScheduleForForm()}
+     * — so the form is always immediately valid to save without forcing the
+     * admin to fill in a day they never touched.
+     *
+     * @return array<string, array{start: string, end: string, off: bool}>
+     */
+    private function defaultSchedule(): array
+    {
+        return [
+            'mon' => ['start' => '09:00', 'end' => '20:00', 'off' => false],
+            'tue' => ['start' => '09:00', 'end' => '20:00', 'off' => false],
+            'wed' => ['start' => '09:00', 'end' => '20:00', 'off' => false],
+            'thu' => ['start' => '09:00', 'end' => '20:00', 'off' => false],
+            'fri' => ['start' => '09:00', 'end' => '20:00', 'off' => false],
+            'sat' => ['start' => '10:00', 'end' => '18:00', 'off' => false],
+            'sun' => ['start' => '10:00', 'end' => '18:00', 'off' => false],
+        ];
+    }
+
+    /**
+     * Hydrate the form's schedule from whatever the row holds: the live #73
+     * shape, the pre-#73 positional shape, or a day missing/unreadable
+     * entirely (read through {@see Barber::scheduleWindowForDay()} either
+     * way). An off day keeps showing default times, greyed out, in case the
+     * admin flips it back on; a missing/unreadable day gets those same
+     * defaults outright rather than a blank pair that would block saving.
+     *
+     * @return array<string, array{start: string, end: string, off: bool}>
+     */
+    private function normalizeScheduleForForm(Barber $barber): array
+    {
+        $defaults = $this->defaultSchedule();
+        $normalized = [];
+
+        foreach (Barber::WEEKDAYS as $day) {
+            // Через scheduleForForm(), а не scheduleWindowForDay(): старые
+            // позиционные значения слоты не сужают, но в форме админ должен их
+            // видеть — иначе пересохранение молча заменит их дефолтами.
+            $window = $barber->scheduleForForm($day);
+
+            $normalized[$day] = match (true) {
+                $window === 'off' => ['start' => $defaults[$day]['start'], 'end' => $defaults[$day]['end'], 'off' => true],
+                is_array($window) => ['start' => $window['start'], 'end' => $window['end'], 'off' => false],
+                default => $defaults[$day],
+            };
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * Toggling a day off clears its stale times rather than leaving them to
+     * linger unseen behind the disabled inputs — a day off should read as
+     * off in the stored data too, not as "off, but still 09:00–20:00".
+     */
+    public function updatedSchedule($value, $key): void
+    {
+        if (! str_ends_with($key, '.off') || ! $value) {
+            return;
+        }
+
+        $day = explode('.', $key)[0];
+        $this->schedule[$day]['start'] = null;
+        $this->schedule[$day]['end'] = null;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function rules(): array
+    {
+        $rules = [
+            'schedule' => 'array',
+        ];
+
+        foreach (Barber::WEEKDAYS as $day) {
+            $rules["schedule.$day.off"] = 'boolean';
+            $rules["schedule.$day.start"] = "nullable|required_if:schedule.$day.off,false|date_format:H:i";
+            $rules["schedule.$day.end"] = "nullable|required_if:schedule.$day.off,false|date_format:H:i|after:schedule.$day.start";
+        }
+
+        return $rules;
     }
 
     public function save(): void
@@ -152,9 +235,13 @@ class extends Component
 
     private function resetForm(): void
     {
-        $this->reset(['editingId', 'name', 'specialization_id', 'price', 'salary_percent', 'is_active', 'photo', 'servicePrices']);
+        $this->reset(['editingId', 'name', 'specialization_id', 'price', 'salary_percent', 'is_active', 'schedule', 'photo', 'servicePrices']);
         $this->salary_percent = 50;
         $this->is_active = true;
+        // Was left out of the reset above before #73, when the field was
+        // dead weight — now that it's read, a new barber must not silently
+        // inherit whatever the previously edited barber's schedule was.
+        $this->schedule = $this->defaultSchedule();
         $this->resetErrorBag();
     }
 }; ?>
@@ -216,6 +303,15 @@ class extends Component
                                 </div>
                                 @error('salary_percent') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                             </div>
+                            <div>
+                                <label class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('barbers.default_price') }}</label>
+                                <div class="relative">
+                                    <input type="number" wire:model="price" min="0" placeholder="0"
+                                           class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 pr-16 text-sm text-content outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
+                                    <span class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-content/30">{{ __('common.currency') }}</span>
+                                </div>
+                                @error('price') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
+                            </div>
 
                             @if ($this->allServices->isNotEmpty())
                                 <div class="sm:col-span-2">
@@ -248,20 +344,30 @@ class extends Component
                         <div>
                             <label class="mb-3 block text-xs font-semibold text-content/50">{{ __('barbers.schedule') }}</label>
                             <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                                @foreach (['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as $key)
+                                @foreach (Barber::WEEKDAYS as $key)
                                     @php($label = __('common.weekday.'.$key))
-                                    <div class="flex items-center gap-2 rounded-xl bg-content/[0.02] p-3 ring-1 ring-content/[0.06]">
-                                        <span class="w-8 text-xs font-bold text-content/40">{{ $label }}</span>
-                                        <div class="flex flex-1 items-center gap-1.5">
-                                            <input type="text" wire:model="schedule.{{ $key }}.0" placeholder="09:00"
-                                                   class="w-full bg-transparent text-center text-xs text-content outline-none">
-                                            <span class="text-content/20">—</span>
-                                            <input type="text" wire:model="schedule.{{ $key }}.1" placeholder="20:00"
-                                                   class="w-full bg-transparent text-center text-xs text-content outline-none">
+                                    @php($isOff = (bool) ($schedule[$key]['off'] ?? false))
+                                    <div wire:key="schedule-{{ $key }}" class="rounded-xl bg-content/[0.02] p-3 ring-1 ring-content/[0.06]">
+                                        <div class="flex items-center gap-2">
+                                            <span class="w-8 shrink-0 text-xs font-bold text-content/40">{{ $label }}</span>
+                                            <div @class(['flex flex-1 items-center gap-1.5 transition-opacity', 'pointer-events-none opacity-30' => $isOff])>
+                                                <input type="time" wire:model="schedule.{{ $key }}.start" @disabled($isOff)
+                                                       class="w-full rounded-lg border border-content/[0.06] bg-transparent px-1.5 py-1 text-center text-xs text-content outline-none focus:border-brass/40 focus:ring-1 focus:ring-brass/20 dark:[color-scheme:dark]">
+                                                <span class="text-content/20">—</span>
+                                                <input type="time" wire:model="schedule.{{ $key }}.end" @disabled($isOff)
+                                                       class="w-full rounded-lg border border-content/[0.06] bg-transparent px-1.5 py-1 text-center text-xs text-content outline-none focus:border-brass/40 focus:ring-1 focus:ring-brass/20 dark:[color-scheme:dark]">
+                                            </div>
+                                            <label class="relative inline-flex shrink-0 cursor-pointer items-center" title="{{ __('barbers.day_off') }}">
+                                                <input type="checkbox" wire:model.live="schedule.{{ $key }}.off" class="peer sr-only">
+                                                <div class="h-5 w-9 rounded-full bg-content/10 transition-colors peer-checked:bg-danger/60 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-content after:transition-all peer-checked:after:translate-x-4"></div>
+                                            </label>
                                         </div>
+                                        @error('schedule.'.$key.'.start') <p class="mt-1.5 text-[10px] text-danger">{{ $message }}</p> @enderror
+                                        @error('schedule.'.$key.'.end') <p class="mt-1.5 text-[10px] text-danger">{{ $message }}</p> @enderror
                                     </div>
                                 @endforeach
                             </div>
+                            <p class="mt-1.5 text-[11px] text-content/25">{{ __('barbers.schedule_hint') }}</p>
                         </div>
                     </div>
 

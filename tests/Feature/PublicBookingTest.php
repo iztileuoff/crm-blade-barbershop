@@ -486,7 +486,11 @@ it('recovers a bookable state when only the date in an otherwise valid deep link
     $this->travelTo(now()->startOfDay()->addHours(8));
 
     $service = Service::factory()->create(['duration_minutes' => 60]);
-    $barber = Barber::factory()->create();
+    // No schedule: falls back to the salon-wide hours (09:00-21:00) regardless
+    // of which weekday "today" happens to be when this test runs — the factory's
+    // default schedule starts most weekdays at 10:00, which would make 09:00
+    // unbookable and this test flaky by day of week (#73).
+    $barber = Barber::factory()->create(['schedule' => null]);
 
     // The date is sanitized to today before the time is checked against it, so
     // a still-valid time for today survives and the selection stays bookable.

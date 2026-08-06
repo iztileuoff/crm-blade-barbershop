@@ -258,7 +258,7 @@ class extends Component
     #[Computed]
     public function availableSlots(): array
     {
-        [$startHour, $endHour] = $this->workingHours();
+        [$startHour, $endHour] = $this->effectiveWorkingHours();
 
         $now = Carbon::now();
         $isToday = $this->selectedDate->isSameDay($now);
@@ -305,6 +305,59 @@ class extends Component
         }
 
         return $default;
+    }
+
+    /**
+     * Salon hours narrowed to the selected barber's own schedule for the
+     * chosen weekday (#73) — the barber's schedule only ever tightens the
+     * window {@see workingHours()} gives, never widens it. A barber with no
+     * entry for that day — including every barber whose `schedule` predates
+     * this feature — falls back to the salon hours unchanged, so existing
+     * data keeps behaving exactly as it did before. A day marked as a day
+     * off collapses to an empty (already-closed) range.
+     *
+     * @return array{0: int, 1: int}
+     */
+    private function effectiveWorkingHours(): array
+    {
+        [$salonStart, $salonEnd] = $this->workingHours();
+
+        $barber = $this->selectedBarber;
+
+        if (! $barber) {
+            return [$salonStart, $salonEnd];
+        }
+
+        $day = Barber::WEEKDAYS[$this->selectedDate->dayOfWeekIso - 1];
+        $window = $barber->scheduleWindowForDay($day);
+
+        if ($window === null) {
+            return [$salonStart, $salonEnd];
+        }
+
+        if ($window === 'off') {
+            return [$salonStart, $salonStart];
+        }
+
+        // Slots are whole hours (see availableSlots()), so the barber's own
+        // minutes round toward the narrower side: a start rounds up (not in
+        // yet at the top of that hour), an end rounds down (already gone by
+        // the top of that hour) — the same hour-only precision workingHours()
+        // already applies to the salon-wide setting.
+        $barberStart = $this->hourBoundary($window['start'], roundUp: true);
+        $barberEnd = $this->hourBoundary($window['end'], roundUp: false);
+
+        $start = max($salonStart, $barberStart);
+        $end = max($start, min($salonEnd, $barberEnd));
+
+        return [$start, $end];
+    }
+
+    private function hourBoundary(string $time, bool $roundUp): int
+    {
+        [$hour, $minute] = array_map('intval', explode(':', $time));
+
+        return $roundUp && $minute > 0 ? min($hour + 1, 24) : $hour;
     }
 
     /**
