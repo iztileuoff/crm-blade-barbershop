@@ -4,6 +4,7 @@ return [
     // Generic actions
     'save' => 'Saqlash',
     'saving' => 'Saqlanmoqda…',
+    'saved' => 'Saqlandi',
     'cancel' => 'Bekor qilish',
     'delete' => 'Oʻchirish',
     'edit' => 'Tahrirlash',

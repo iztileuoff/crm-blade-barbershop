@@ -96,6 +96,8 @@ class extends Component
         unset($this->services);
         $this->resetForm();
         $this->showForm = false;
+
+        $this->dispatch('saved');
     }
 
     public function delete(int $id): void
@@ -201,10 +203,9 @@ class extends Component
                             class="rounded-xl border border-content/[0.08] px-5 py-2.5 text-sm font-bold text-content/60 transition hover:bg-content/[0.06] hover:text-content">
                         {{ __('common.cancel') }}
                     </button>
-                    <button type="submit"
-                            class="rounded-xl bg-brass px-6 py-2.5 text-sm font-bold text-black transition-all hover:bg-brass-bright active:scale-[0.98]">
+                    <x-submit-button>
                         {{ $editingId ? __('common.save_changes') : __('services.create') }}
-                    </button>
+                    </x-submit-button>
                 </div>
             </form>
         </div>

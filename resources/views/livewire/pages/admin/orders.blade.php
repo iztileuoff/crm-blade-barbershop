@@ -279,6 +279,8 @@ class extends Component
         unset($this->orders, $this->availableProducts);
         $this->showForm = false;
         $this->resetForm();
+
+        $this->dispatch('saved');
     }
 
     public function deleteOrder(int $id): void
@@ -602,11 +604,7 @@ class extends Component
                                 class="rounded-xl border border-content/[0.08] px-5 py-2.5 text-sm font-bold text-content/60 transition hover:bg-content/[0.06] hover:text-content">
                             {{ __('common.cancel') }}
                         </button>
-                        <button type="submit" wire:loading.attr="disabled" wire:target="save"
-                                class="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brass px-6 py-2.5 text-sm font-bold text-black transition-all hover:bg-brass-bright active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50">
-                            <svg wire:loading wire:target="save" class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" /><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
-                            {{ __('orders.submit') }}
-                        </button>
+                        <x-submit-button class="flex-1">{{ __('orders.submit') }}</x-submit-button>
                     </div>
                 </div>
             </form>

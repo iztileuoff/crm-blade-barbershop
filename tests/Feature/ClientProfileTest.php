@@ -167,7 +167,7 @@ it('edits the client card in place', function () {
         ->call('saveProfile')
         ->assertHasNoErrors()
         ->assertSet('editing', false)
-        ->assertDispatched('profile-saved')
+        ->assertDispatched('saved')
         ->assertSee('Новое Имя');
 
     $client->refresh();
@@ -226,7 +226,7 @@ it('saves client notes', function () {
         ->set('notes', 'VIP клиент, любит кофе')
         ->call('saveNotes')
         ->assertHasNoErrors()
-        ->assertDispatched('notes-saved');
+        ->assertDispatched('saved');
 
     expect($client->fresh()->notes)->toBe('VIP клиент, любит кофе');
 });

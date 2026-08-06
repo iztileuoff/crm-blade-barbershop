@@ -32,7 +32,6 @@ return [
     'metric_favorite_barber' => 'Súygen usta',
 
     'notes_title' => 'Klient haqqında belgiler',
-    'notes_saved' => 'Saqlandı',
     'notes_placeholder' => 'Tańlawlar, ózgeshelikler, kelisimler…',
 
     'tab_appointments' => 'Jazılıwlar',

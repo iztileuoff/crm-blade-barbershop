@@ -571,6 +571,7 @@ class extends Component
         unset($this->appointments);
         $this->showForm = false;
         $this->resetForm();
+        $this->dispatch('saved');
     }
 
     public function markConfirmed(int $id): void
@@ -983,10 +984,7 @@ class extends Component
                                 class="rounded-xl border border-content/[0.08] px-5 py-2.5 text-sm font-bold text-content/60 transition hover:bg-content/[0.06] hover:text-content">
                             {{ __('common.cancel') }}
                         </button>
-                        <button type="submit"
-                                class="rounded-xl bg-brass px-6 py-2.5 text-sm font-bold text-black transition-all hover:bg-brass-bright active:scale-[0.98]">
-                            {{ $editingId ? __('appointments.save_changes') : __('appointments.create') }}
-                        </button>
+                        <x-submit-button>{{ $editingId ? __('appointments.save_changes') : __('appointments.create') }}</x-submit-button>
                     </div>
                 </form>
             </div>

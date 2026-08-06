@@ -21,7 +21,6 @@ return [
 
     // Dispatch toggles
     'dispatch_title' => 'Отправка SMS',
-    'dispatch_saved' => 'Сохранено',
     'toggle_reminder_label' => 'Напоминания о записи',
     'toggle_reminder_hint' => 'SMS клиенту без Telegram за 30 минут до визита.',
     'toggle_retention_label' => 'Сообщения для удержания',

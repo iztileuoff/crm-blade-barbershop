@@ -21,7 +21,6 @@ return [
 
     // Dispatch toggles
     'dispatch_title' => 'SMS jiberiw',
-    'dispatch_saved' => 'Saqlandı',
     'toggle_reminder_label' => 'Jazılıw haqqında esletpeler',
     'toggle_reminder_hint' => 'Telegramsız klientke keliwden 30 minut aldın SMS.',
     'toggle_retention_label' => 'Uslap qalıw xabarları',

@@ -4,6 +4,7 @@ return [
     // Generic actions
     'save' => 'Сохранить',
     'saving' => 'Сохранение…',
+    'saved' => 'Сохранено',
     'cancel' => 'Отмена',
     'delete' => 'Удалить',
     'edit' => 'Редактировать',

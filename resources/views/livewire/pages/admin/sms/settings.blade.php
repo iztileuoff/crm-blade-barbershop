@@ -60,19 +60,19 @@ class extends Component
         }
 
         Setting::set('sms_locale', $value);
-        $this->dispatch('toggle-saved');
+        $this->dispatch('saved');
     }
 
     public function updatedRemindersEnabled(bool $value): void
     {
         Setting::set('sms_enabled_reminder', $value ? '1' : '0');
-        $this->dispatch('toggle-saved');
+        $this->dispatch('saved');
     }
 
     public function updatedRetentionEnabled(bool $value): void
     {
         Setting::set('sms_enabled_retention', $value ? '1' : '0');
-        $this->dispatch('toggle-saved');
+        $this->dispatch('saved');
     }
 
     public function check(SmsService $sms): void
@@ -146,16 +146,9 @@ class extends Component
         </div>
     </div>
 
-    <div class="mt-6 overflow-hidden rounded-2xl border border-content/[0.06] bg-content/[0.03] shadow-xl backdrop-blur-md"
-         x-data="{ saved: false }"
-         x-on:toggle-saved.window="saved = true; clearTimeout($el._t); $el._t = setTimeout(() => saved = false, 2500)">
+    <div class="mt-6 overflow-hidden rounded-2xl border border-content/[0.06] bg-content/[0.03] shadow-xl backdrop-blur-md">
         <div class="flex items-center justify-between border-b border-content/[0.06] bg-content/[0.03] px-6 py-4">
             <h3 class="text-sm font-bold text-content">{{ __('sms.dispatch_title') }}</h3>
-            <span x-show="saved" x-cloak x-transition
-                  class="inline-flex items-center gap-1.5 rounded-full bg-success/10 px-3 py-1 text-xs font-bold text-success">
-                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
-                {{ __('sms.dispatch_saved') }}
-            </span>
         </div>
         <div class="divide-y divide-content/[0.04]">
             <div class="flex items-center justify-between gap-4 px-6 py-4">

@@ -32,7 +32,6 @@ return [
     'metric_favorite_barber' => 'Любимый мастер',
 
     'notes_title' => 'Заметки о клиенте',
-    'notes_saved' => 'Сохранено',
     'notes_placeholder' => 'Предпочтения, особенности, договорённости…',
 
     'tab_appointments' => 'Записи',

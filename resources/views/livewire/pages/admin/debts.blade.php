@@ -233,7 +233,7 @@ class extends Component
         }
 
         $this->cancelPay();
-        $this->dispatch('payment-saved');
+        $this->dispatch('saved', message: __('debts.payment_saved'));
     }
 }; ?>
 
@@ -247,16 +247,6 @@ class extends Component
             <svg class="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-content/20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
             <input type="text" wire:model.live.debounce.300ms="search" placeholder="{{ __('debts.search_placeholder') }}"
                    class="w-64 rounded-xl border border-content/[0.08] bg-content/[0.04] py-2.5 pl-10 pr-4 text-sm text-content placeholder-content/20 outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
-        </div>
-    </div>
-
-    {{-- Оплата принята: молча закрывать модалку нельзя --}}
-    <div x-data="{ saved: false }"
-         x-on:payment-saved.window="saved = true; clearTimeout($el._t); $el._t = setTimeout(() => saved = false, 2500)">
-        <div x-show="saved" x-cloak x-transition
-             class="mb-6 flex items-center gap-2 rounded-xl border border-success/20 bg-success/10 px-4 py-3 text-sm font-bold text-success">
-            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
-            {{ __('debts.payment_saved') }}
         </div>
     </div>
 
@@ -350,13 +340,7 @@ class extends Component
                                 class="rounded-xl border border-content/[0.08] px-5 py-2.5 text-sm font-bold text-content/60 transition hover:bg-content/[0.06] hover:text-content">
                             {{ __('common.cancel') }}
                         </button>
-                        <button type="submit"
-                                wire:loading.attr="disabled"
-                                wire:target="{{ $payAction }}"
-                                class="flex-1 rounded-xl bg-success px-6 py-2.5 text-sm font-bold text-black transition-all hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60">
-                            <span wire:loading.remove wire:target="{{ $payAction }}">{{ __('debts.accept_payment') }}</span>
-                            <span wire:loading wire:target="{{ $payAction }}">{{ __('common.saving') }}</span>
-                        </button>
+                        <x-submit-button target="{{ $payAction }}" variant="success" class="flex-1">{{ __('debts.accept_payment') }}</x-submit-button>
                     </div>
                 </form>
             </div>

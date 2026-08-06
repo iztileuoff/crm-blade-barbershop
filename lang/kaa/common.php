@@ -4,6 +4,7 @@ return [
     // Generic actions
     'save' => 'Saqlaw',
     'saving' => 'Saqlanbaqta…',
+    'saved' => 'Saqlandı',
     'cancel' => 'Biykarlaw',
     'delete' => 'Óshiriw',
     'edit' => 'Ózgertiw',

@@ -181,7 +181,8 @@ class extends Component
                                     <button type="button"
                                             wire:click="{{ $isBarber ? 'unlinkBarber' : 'unlinkClient' }}({{ $row->id }})"
                                             wire:confirm="{{ __('telegram.unlink_confirm', ['name' => $row->name]) }}"
-                                            class="flex items-center gap-1.5 rounded-lg border border-content/[0.06] px-3 py-2 text-xs font-bold text-danger/60 transition hover:border-danger/20 hover:text-danger">
+                                            wire:loading.attr="disabled" wire:target="{{ $isBarber ? 'unlinkBarber' : 'unlinkClient' }}({{ $row->id }})"
+                                            class="flex items-center gap-1.5 rounded-lg border border-content/[0.06] px-3 py-2 text-xs font-bold text-danger/60 transition hover:border-danger/20 hover:text-danger disabled:opacity-40">
                                         <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 10.5 21 3m0 0h-5.25M21 3v5.25M10.5 6H6.75A2.25 2.25 0 0 0 4.5 8.25v9a2.25 2.25 0 0 0 2.25 2.25h9a2.25 2.25 0 0 0 2.25-2.25V13.5" /></svg>
                                         {{ __('telegram.unlink') }}
                                     </button>

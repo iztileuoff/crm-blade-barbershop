@@ -158,7 +158,7 @@ class extends Component
 
         $this->fillProfileForm();
         $this->editing = false;
-        $this->dispatch('profile-saved');
+        $this->dispatch('saved', message: __('clients.profile_saved'));
     }
 
     #[Computed]
@@ -294,7 +294,7 @@ class extends Component
 
         $this->client->update(['notes' => $this->notes ?: null]);
 
-        $this->dispatch('notes-saved');
+        $this->dispatch('saved');
     }
 
     public function money(int $amount): string
@@ -311,9 +311,7 @@ class extends Component
     </a>
 
     {{-- Header --}}
-    <div class="mb-8 flex flex-wrap items-start justify-between gap-4"
-         x-data="{ saved: false }"
-         x-on:profile-saved.window="saved = true; clearTimeout($el._t); $el._t = setTimeout(() => saved = false, 2500)">
+    <div class="mb-8 flex flex-wrap items-start justify-between gap-4">
         <div>
             <h1 class="font-display text-4xl font-semibold uppercase tracking-tight text-content">{{ $client->name }}</h1>
             <div class="mt-2 flex flex-wrap items-center gap-3 text-sm">
@@ -324,11 +322,6 @@ class extends Component
                         Telegram
                     </span>
                 @endif
-                <span x-show="saved" x-cloak x-transition
-                      class="inline-flex items-center gap-1.5 rounded-full bg-success/10 px-3 py-1 text-xs font-bold text-success">
-                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
-                    {{ __('clients.profile_saved') }}
-                </span>
             </div>
         </div>
 
@@ -379,11 +372,7 @@ class extends Component
                             class="rounded-xl border border-content/[0.08] px-5 py-2.5 text-sm font-bold text-content/60 transition hover:bg-content/[0.06] hover:text-content">
                         {{ __('common.cancel') }}
                     </button>
-                    <button type="submit" wire:loading.attr="disabled" wire:target="saveProfile"
-                            class="rounded-xl bg-brass px-6 py-2.5 text-sm font-bold text-black transition-all hover:bg-brass-bright active:scale-[0.98] disabled:opacity-60">
-                        <span wire:loading.remove wire:target="saveProfile">{{ __('common.save_changes') }}</span>
-                        <span wire:loading wire:target="saveProfile">{{ __('common.saving') }}</span>
-                    </button>
+                    <x-submit-button target="saveProfile">{{ __('common.save_changes') }}</x-submit-button>
                 </div>
             </form>
         </div>
@@ -440,26 +429,16 @@ class extends Component
     </div>
 
     {{-- Notes --}}
-    <div class="mb-6 overflow-hidden rounded-2xl border border-content/[0.06] bg-content/[0.03] shadow-xl backdrop-blur-md"
-         x-data="{ saved: false }"
-         x-on:notes-saved.window="saved = true; clearTimeout($el._t); $el._t = setTimeout(() => saved = false, 2500)">
+    <div class="mb-6 overflow-hidden rounded-2xl border border-content/[0.06] bg-content/[0.03] shadow-xl backdrop-blur-md">
         <div class="flex items-center justify-between border-b border-content/[0.06] bg-content/[0.03] px-6 py-4">
             <h3 class="text-sm font-bold text-content">{{ __('clients.notes_title') }}</h3>
-            <span x-show="saved" x-cloak x-transition
-                  class="inline-flex items-center gap-1.5 rounded-full bg-success/10 px-3 py-1 text-xs font-bold text-success">
-                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
-                {{ __('clients.notes_saved') }}
-            </span>
         </div>
         <form wire:submit="saveNotes" class="p-6">
             <textarea wire:model="notes" rows="3" placeholder="{{ __('clients.notes_placeholder') }}"
                       class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content placeholder-content/20 outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20"></textarea>
             @error('notes') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
             <div class="mt-4 flex items-center justify-end">
-                <button type="submit"
-                        class="rounded-xl bg-brass px-6 py-2.5 text-sm font-bold text-black transition-all hover:bg-brass-bright active:scale-[0.98]">
-                    {{ __('common.save') }}
-                </button>
+                <x-submit-button target="saveNotes">{{ __('common.save') }}</x-submit-button>
             </div>
         </form>
     </div>

@@ -21,7 +21,6 @@ return [
 
     // Dispatch toggles
     'dispatch_title' => 'SMS yuborish',
-    'dispatch_saved' => 'Saqlandi',
     'toggle_reminder_label' => 'Yozuv haqida eslatmalar',
     'toggle_reminder_hint' => 'Telegramsiz mijozga tashrifdan 30 daqiqa oldin SMS.',
     'toggle_retention_label' => 'Ushlab qolish xabarlari',

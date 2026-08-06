@@ -32,7 +32,6 @@ return [
     'metric_favorite_barber' => 'Sevimli usta',
 
     'notes_title' => 'Mijoz haqida eslatmalar',
-    'notes_saved' => 'Saqlandi',
     'notes_placeholder' => 'Afzalliklar, xususiyatlar, kelishuvlar…',
 
     'tab_appointments' => 'Yozuvlar',

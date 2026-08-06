@@ -376,7 +376,7 @@ it('accepts an exact payment and confirms it', function () {
         ->set('payAmount', 50000)
         ->call('payOrderDebt')
         ->assertHasNoErrors()
-        ->assertDispatched('payment-saved')
+        ->assertDispatched('saved')
         ->assertSet('payingOrderId', null);
 
     expect(DebtPayment::count())->toBe(1)
