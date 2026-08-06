@@ -80,6 +80,57 @@ it('checks the Eskiz connection and reports the balance', function () {
         ->assertSet('balance', '12345');
 });
 
+it('shows the Eskiz balance on the settings page without requiring a manual click', function () {
+    Http::fake([
+        '*auth/login' => Http::response(['data' => ['token' => 'tok']], 200),
+        '*user/get-limit' => Http::response(['data' => ['balance' => 54321]], 200),
+    ]);
+
+    configuredSms();
+
+    Livewire::actingAs(User::factory()->create(['role' => Role::ADMIN]))
+        ->test('pages.admin.sms.settings')
+        // wire:init fires check() itself on first paint in the browser — the page
+        // must be wired for that, not depend on someone pressing "check connection".
+        ->assertSee('wire:init="check"', false)
+        ->assertDontSee('54321')
+        ->call('check')
+        ->assertOk()
+        ->assertSet('connectionOk', true)
+        ->assertSee('54321');
+});
+
+it('leaves the settings page rendering fine when Eskiz is not configured', function () {
+    Http::fake();
+    app()->forgetInstance(SmsService::class);
+
+    Livewire::actingAs(User::factory()->create(['role' => Role::ADMIN]))
+        ->test('pages.admin.sms.settings')
+        ->assertSet('configured', false)
+        ->call('check')
+        ->assertOk()
+        ->assertSet('connectionOk', false)
+        ->assertSet('balance', null);
+
+    Http::assertNothingSent();
+});
+
+it('leaves the settings page rendering fine when the Eskiz API call fails', function () {
+    Http::fake([
+        '*auth/login' => Http::response('', 500),
+    ]);
+
+    configuredSms();
+
+    Livewire::actingAs(User::factory()->create(['role' => Role::ADMIN]))
+        ->test('pages.admin.sms.settings')
+        ->assertSet('configured', true)
+        ->call('check')
+        ->assertOk()
+        ->assertSet('connectionOk', false)
+        ->assertSet('balance', null);
+});
+
 it('does not send or log when the SMS type is disabled in settings', function () {
     Http::fake([
         '*auth/login' => Http::response(['data' => ['token' => 'tok']], 200),

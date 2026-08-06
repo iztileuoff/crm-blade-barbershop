@@ -4,8 +4,10 @@ use App\Enums\Role;
 use App\Models\Client;
 use App\Models\SmsMessage;
 use App\Models\User;
+use App\Services\SmsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Http;
 use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
@@ -114,4 +116,75 @@ it('states that the metrics ignore the filters', function () {
     Livewire::actingAs(historyAdmin())
         ->test('pages.admin.sms.history')
         ->assertSee(__('sms.metrics_scope'));
+});
+
+it('loads the Eskiz balance lazily for the history metric tile', function () {
+    Http::fake([
+        '*auth/login' => Http::response(['data' => ['token' => 'tok']], 200),
+        '*user/get-limit' => Http::response(['data' => ['balance' => 5000]], 200),
+    ]);
+
+    config([
+        'services.eskiz.email' => 'shop@example.com',
+        'services.eskiz.password' => 'secret',
+        'services.eskiz.base_url' => 'https://notify.eskiz.uz/api',
+        'services.eskiz.from' => '4546',
+    ]);
+    app()->forgetInstance(SmsService::class);
+
+    Livewire::actingAs(historyAdmin())
+        ->test('pages.admin.sms.history')
+        ->assertSet('balanceChecked', false)
+        ->assertSet('balance', null)
+        ->call('loadBalance')
+        ->assertSet('balanceChecked', true)
+        ->assertSet('balance', '5000');
+});
+
+it('does not crash the balance tile when Eskiz is unreachable', function () {
+    Http::fake([
+        '*auth/login' => Http::response('', 500),
+    ]);
+
+    config([
+        'services.eskiz.email' => 'shop@example.com',
+        'services.eskiz.password' => 'secret',
+        'services.eskiz.base_url' => 'https://notify.eskiz.uz/api',
+        'services.eskiz.from' => '4546',
+    ]);
+    app()->forgetInstance(SmsService::class);
+
+    Livewire::actingAs(historyAdmin())
+        ->test('pages.admin.sms.history')
+        ->call('loadBalance')
+        ->assertOk()
+        ->assertSet('balanceChecked', true)
+        ->assertSet('balance', null);
+});
+
+it('does not crash the balance tile when Eskiz is not configured', function () {
+    Http::fake();
+    app()->forgetInstance(SmsService::class);
+
+    Livewire::actingAs(historyAdmin())
+        ->test('pages.admin.sms.history')
+        ->call('loadBalance')
+        ->assertOk()
+        ->assertSet('balanceChecked', true)
+        ->assertSet('balance', null)
+        // Honest about the outage — never a placeholder number pretending to be real.
+        ->assertSee(__('sms.balance_unavailable'));
+
+    Http::assertNothingSent();
+});
+
+it('exposes the balance tile and the loading contract for the current filters and pagination', function () {
+    SmsMessage::factory()->create();
+
+    Livewire::actingAs(historyAdmin())
+        ->test('pages.admin.sms.history')
+        ->assertSee(__('sms.balance'))
+        // The table overlay/spinner and the top-bar loading hint must track every
+        // filter plus paging action, not just search/status like before pagination shipped.
+        ->assertSee('wire:target="search,status,context,from,to,gotoPage,nextPage,previousPage"', false);
 });

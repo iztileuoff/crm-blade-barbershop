@@ -94,7 +94,7 @@ class extends Component
         <span>{{ __('sms.env_note') }}</span>
     </div>
 
-    <div class="overflow-hidden rounded-2xl border border-content/[0.06] bg-content/[0.03] shadow-xl backdrop-blur-md">
+    <div wire:init="check" class="overflow-hidden rounded-2xl border border-content/[0.06] bg-content/[0.03] shadow-xl backdrop-blur-md">
         <div class="border-b border-content/[0.06] bg-content/[0.03] px-6 py-4">
             <h3 class="text-sm font-bold text-content">{{ __('sms.integration_status') }}</h3>
         </div>

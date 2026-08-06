@@ -26,6 +26,10 @@ class extends Component
 
     public string $to = '';
 
+    public bool $balanceChecked = false;
+
+    public ?string $balance = null;
+
     /** @return array<string, string> */
     public function contextLabels(): array
     {
@@ -211,6 +215,16 @@ class extends Component
         ];
     }
 
+    /**
+     * Баланс Eskiz для плитки метрик. Грузится лениво через wire:init — а не
+     * при mount() — чтобы страница истории не ждала внешний API на первом рендере.
+     */
+    public function loadBalance(SmsService $sms): void
+    {
+        $this->balance = $sms->balance();
+        $this->balanceChecked = true;
+    }
+
     public function updatedStatus(): void
     {
         $this->resetPage();
@@ -291,7 +305,7 @@ class extends Component
                 {{ __('sms.reset_filters') }}
             </button>
         @endif
-        <div wire:loading.delay wire:target="search,status,context,from,to" class="flex items-center gap-2 pb-1 text-xs text-content/40">
+        <div wire:loading.delay wire:target="search,status,context,from,to,gotoPage,nextPage,previousPage" class="flex items-center gap-2 pb-1 text-xs text-content/40">
             <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
             {{ __('common.loading') }}
         </div>
@@ -300,7 +314,7 @@ class extends Component
     {{-- Метрики по периодам. Считаются по всем отправкам: они про расход SMS,
          а не про выборку — и это должно быть написано, а не угадываться. --}}
     <p class="mb-2 text-xs text-content/30">{{ __('sms.metrics_scope') }}</p>
-    <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+    <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         @foreach(['today' => __('sms.period_today'), 'week' => __('sms.period_7days'), 'month' => __('sms.period_30days')] as $key => $label)
             <div class="rounded-2xl border border-content/[0.06] bg-content/[0.03] p-5 shadow-xl backdrop-blur-md">
                 <p class="text-xs font-bold uppercase tracking-wider text-content/30">{{ $label }}</p>
@@ -320,6 +334,27 @@ class extends Component
                 </div>
             </div>
         @endforeach
+
+        {{-- Баланс Eskiz: грузится лениво через wire:init, чтобы не задерживать
+             первый рендер страницы — до ответа плитка показывает нейтральный плейсхолдер. --}}
+        <div wire:init="loadBalance" class="rounded-2xl border border-content/[0.06] bg-content/[0.03] p-5 shadow-xl backdrop-blur-md">
+            <p class="text-xs font-bold uppercase tracking-wider text-content/30">{{ __('sms.balance') }}</p>
+            <div class="mt-3 flex items-end justify-between gap-2">
+                <div>
+                    @if (! $balanceChecked)
+                        <p class="text-2xl font-bold text-content/20">···</p>
+                        <p class="text-xs text-content/40">{{ __('sms.checking') }}</p>
+                    @elseif ($balance !== null)
+                        <p class="text-2xl font-bold text-content">{{ $balance }}</p>
+                        <p class="text-xs text-content/40">{{ __('common.currency') }}</p>
+                    @else
+                        <p class="text-2xl font-bold text-content/30">—</p>
+                        <p class="text-xs text-content/40">{{ __('sms.balance_unavailable') }}</p>
+                    @endif
+                </div>
+                <svg wire:loading wire:target="loadBalance" class="h-4 w-4 animate-spin text-content/30" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+            </div>
+        </div>
     </div>
 
     {{-- График по дням --}}
@@ -345,7 +380,13 @@ class extends Component
         </div>
     </div>
 
-    <div class="overflow-hidden rounded-2xl border border-content/[0.06] bg-content/[0.03] shadow-xl backdrop-blur-md">
+    <div wire:loading.class="opacity-40 pointer-events-none" wire:target="search,status,context,from,to,gotoPage,nextPage,previousPage"
+         class="overflow-hidden rounded-2xl border border-content/[0.06] bg-content/[0.03] shadow-xl backdrop-blur-md">
+        <div wire:loading wire:target="search,status,context,from,to,gotoPage,nextPage,previousPage"
+             class="flex items-center gap-2 border-b border-content/[0.06] bg-content/[0.03] px-6 py-3 text-xs text-content/40">
+            <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+            {{ __('common.loading') }}
+        </div>
         <div class="overflow-x-auto">
             <table class="w-full text-left text-sm">
                 <thead>
