@@ -94,10 +94,21 @@ class extends Component
     #[Locked]
     public ?int $ownBarberId = null;
 
+    /**
+     * Баннер «раздел недоступен» — одноразовый: гасится из session()->pull()
+     * в mount() (флаг ставит RestrictBarberAccess при редиректе) и дальше
+     * живёт только в свойстве компонента, а не перечитывается из сессии.
+     */
+    public bool $showBarberRestrictedBanner = false;
+
     public function mount(): void
     {
         $this->date = Carbon::now()->toDateString();
         $this->form_date = $this->date;
+
+        // pull(), а не get(): баннер должен показаться ровно один раз, даже
+        // если этот же ответ ещё будет перечитан (например при F5 до дисмисса).
+        $this->showBarberRestrictedBanner = (bool) session()->pull('barberRestricted', false);
 
         $user = auth()->user();
 
@@ -118,6 +129,11 @@ class extends Component
             $this->clientSearch = $client->name;
             $this->showForm = true;
         }
+    }
+
+    public function dismissBarberRestrictedBanner(): void
+    {
+        $this->showBarberRestrictedBanner = false;
     }
 
     /**
@@ -150,6 +166,63 @@ class extends Component
         $user = auth()->user();
 
         return $user?->isBarber() ? $user->barber?->id : null;
+    }
+
+    /**
+     * Мастер, у которого роль есть, а профиля (barbers.id) нет. Раньше в этом
+     * случае фильтры по мастеру просто не срабатывали, и такой мастер видел
+     * весь день всех мастеров — та же категория утечки, что и #38.
+     */
+    #[Computed]
+    public function isUnlinkedBarber(): bool
+    {
+        $user = auth()->user();
+
+        return ($user?->isBarber() ?? false) && $user->barber === null;
+    }
+
+    /**
+     * Смена статуса — единственное действие, доступное мастеру, и только над
+     * своими записями. Не-мастеру (админу) ограничений здесь нет: деньги,
+     * удаление и остальной CRUD по-прежнему закрыты abortIfBarber() в своих
+     * методах. Ownership проверяется от id из сессии, а не от свойства
+     * компонента — его мастер мог бы переписать запросом.
+     */
+    private function findForStatusChange(int $id): Appointment
+    {
+        if (! (auth()->user()?->isBarber() ?? false)) {
+            return Appointment::findOrFail($id);
+        }
+
+        $barberId = $this->sessionBarberId();
+
+        // Мастеру отвечаем одинаково и на чужую запись, и на несуществующую:
+        // иначе разница между 403 и 404 сама по себе выдаёт, какие id заняты,
+        // и перебором вычитывается вся книга записей салона.
+        $appointment = $barberId === null
+            ? null
+            : Appointment::query()->whereKey($id)->where('barber_id', $barberId)->first();
+
+        abort_if($appointment === null, 403);
+
+        return $appointment;
+    }
+
+    /**
+     * Перевод статуса. Повторный перевод в тот же статус — не ошибка, но и не
+     * повод для работы: у отмены на observer'е висит уведомление клиенту, и без
+     * этой проверки мастер мог бы слать его сколько угодно раз подряд.
+     */
+    private function changeStatus(int $id, AppointmentStatus $status): void
+    {
+        $appointment = $this->findForStatusChange($id);
+
+        if ($appointment->status === $status) {
+            return;
+        }
+
+        $appointment->update(['status' => $status]);
+        unset($this->appointments);
     }
 
     /**
@@ -215,6 +288,14 @@ class extends Component
     #[Computed]
     public function appointments()
     {
+        // Мастер без привязанного профиля (barber_id = null) не должен видеть
+        // ничьи записи: без этой отсечки $ownBarberId ниже — null, и запрос
+        // проваливается во вторую ветку фильтра (по $barberFilter), который у
+        // мастера по умолчанию пуст — получаем чужой день целиком.
+        if ($this->isUnlinkedBarber) {
+            return collect();
+        }
+
         // Мастеру отдаём только его записи, и решает это сессия, а не свойство.
         $ownBarberId = $this->sessionBarberId();
         $day = $this->dayStart();
@@ -648,23 +729,17 @@ class extends Component
 
     public function markConfirmed(int $id): void
     {
-        $this->abortIfBarber();
-        Appointment::findOrFail($id)->update(['status' => AppointmentStatus::Confirmed]);
-        unset($this->appointments);
+        $this->changeStatus($id, AppointmentStatus::Confirmed);
     }
 
     public function markCompleted(int $id): void
     {
-        $this->abortIfBarber();
-        Appointment::findOrFail($id)->update(['status' => AppointmentStatus::Completed]);
-        unset($this->appointments);
+        $this->changeStatus($id, AppointmentStatus::Completed);
     }
 
     public function markCancelled(int $id): void
     {
-        $this->abortIfBarber();
-        Appointment::findOrFail($id)->update(['status' => AppointmentStatus::Cancelled]);
-        unset($this->appointments);
+        $this->changeStatus($id, AppointmentStatus::Cancelled);
     }
 
     public function delete(int $id): void
@@ -757,6 +832,19 @@ class extends Component
             </div>
         @endunless
     </div>
+
+    {{-- Мастера редиректнул сюда RestrictBarberAccess с чужой страницы — баннер
+         одноразовый, гасится либо дисмиссом, либо просто новым запросом. --}}
+    @if ($showBarberRestrictedBanner)
+        <div class="mb-6 flex items-start gap-2.5 rounded-xl border border-info/20 bg-info/10 px-4 py-3 text-sm font-bold text-info">
+            <svg class="mt-0.5 h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" /></svg>
+            <span class="flex-1">{{ __('appointments.restricted_banner') }}</span>
+            <button type="button" wire:click="dismissBarberRestrictedBanner" aria-label="{{ __('common.close') }}"
+                    class="shrink-0 rounded-lg p-0.5 text-info/60 transition hover:bg-info/15 hover:text-info">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+            </button>
+        </div>
+    @endif
 
     {{-- Date Selector --}}
     <div class="mb-8 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-content/[0.06] bg-content/[0.03] p-4 backdrop-blur-md">
@@ -1114,7 +1202,10 @@ class extends Component
                             @endif
                         </th>
                         <th class="px-6 py-4">{{ __('appointments.client_note') }}</th>
-                        <th class="hidden px-6 py-4 md:table-cell">{{ __('common.barber') }}</th>
+                        {{-- В своей же таблице мастер и так знает, кто мастер --}}
+                        @unless ($isBarberView)
+                            <th class="hidden px-6 py-4 md:table-cell">{{ __('common.barber') }}</th>
+                        @endunless
                         <th class="hidden px-6 py-4 md:table-cell">{{ __('appointments.services_total') }}</th>
                         <th class="cursor-pointer px-6 py-4 transition hover:text-content" wire:click="sortBy('status')">
                             {{ __('common.status') }}
@@ -1122,9 +1213,7 @@ class extends Component
                                 <span class="ml-1">{{ $sortDirection === 'asc' ? '↑' : '↓' }}</span>
                             @endif
                         </th>
-                        @unless ($isBarberView)
-                            <th class="px-6 py-4 text-right">{{ __('common.actions') }}</th>
-                        @endunless
+                        <th class="px-6 py-4 text-right">{{ __('common.actions') }}</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-content/[0.04]">
@@ -1144,9 +1233,13 @@ class extends Component
                                     </div>
                                 @endif
                                 <div class="mt-1 text-[10px] text-content/30 md:hidden">
-                                    {{ $appointment->barber?->name }} · {{ $appointment->services->pluck('name')->join(', ') }}
+                                    @unless ($isBarberView)
+                                        {{ $appointment->barber?->name }} ·
+                                    @endunless
+                                    {{ $appointment->services->pluck('name')->join(', ') }}
                                 </div>
                             </td>
+                            @unless ($isBarberView)
                             <td class="hidden px-6 py-4 md:table-cell">
                                 <div class="flex items-center gap-2">
                                     @if ($appointment->barber?->photoUrl)
@@ -1155,6 +1248,7 @@ class extends Component
                                     <span class="font-medium text-content/60">{{ $appointment->barber?->name }}</span>
                                 </div>
                             </td>
+                            @endunless
                             <td class="hidden px-6 py-4 md:table-cell">
                                 <div class="space-y-0.5">
                                     @foreach ($appointment->services as $service)
@@ -1212,7 +1306,8 @@ class extends Component
                                     {{ $label }}
                                 </span>
                             </td>
-                            @unless ($isBarberView)
+                            {{-- Статусные кнопки доступны и мастеру (только для своих строк — им и
+                                 отдаёт appointments() выше), редактирование/удаление — только админу. --}}
                             <td class="px-6 py-4">
                                 <div class="flex items-center justify-end gap-1.5">
                                     @if ($appointment->status === AppointmentStatus::Pending)
@@ -1247,22 +1342,29 @@ class extends Component
                                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" /></svg>
                                         </button>
                                     @endif
-                                    <button type="button" wire:click="edit({{ $appointment->id }})"
-                                            class="flex h-8 w-8 items-center justify-center rounded-lg border border-content/[0.06] text-content/40 transition hover:border-content/10 hover:text-content">
-                                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" /></svg>
-                                    </button>
-                                    <button type="button" wire:click="delete({{ $appointment->id }})"
-                                            wire:confirm="{{ __('appointments.delete_confirm') }}"
-                                            class="flex h-8 w-8 items-center justify-center rounded-lg border border-content/[0.06] text-content/20 transition hover:text-danger">
-                                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" /></svg>
-                                    </button>
+                                    @unless ($isBarberView)
+                                        <button type="button" wire:click="edit({{ $appointment->id }})"
+                                                class="flex h-8 w-8 items-center justify-center rounded-lg border border-content/[0.06] text-content/40 transition hover:border-content/10 hover:text-content">
+                                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" /></svg>
+                                        </button>
+                                        <button type="button" wire:click="delete({{ $appointment->id }})"
+                                                wire:confirm="{{ __('appointments.delete_confirm') }}"
+                                                class="flex h-8 w-8 items-center justify-center rounded-lg border border-content/[0.06] text-content/20 transition hover:text-danger">
+                                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" /></svg>
+                                        </button>
+                                    @endunless
                                 </div>
                             </td>
-                            @endunless
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="{{ $isBarberView ? 5 : 6 }}" class="px-6 py-12 text-center text-content/20">{{ __('appointments.empty') }}</td>
+                            <td colspan="{{ $isBarberView ? 5 : 6 }}" class="px-6 py-12 text-center text-content/20">
+                                @if ($this->isUnlinkedBarber)
+                                    {{ __('appointments.barber_unlinked') }}
+                                @else
+                                    {{ __('appointments.empty') }}
+                                @endif
+                            </td>
                         </tr>
                     @endforelse
                 </tbody>

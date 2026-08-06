@@ -216,9 +216,28 @@ it('returns a completed appointment back to confirmed through markConfirmed', fu
     expect($completed->fresh()->status)->toBe(AppointmentStatus::Confirmed);
 });
 
-it('forbids a barber from calling any status-changing action', function () {
+// Issue #74: a barber may change the status of THEIR OWN appointments — the
+// blanket ban is gone, replaced by an ownership guard derived from the session.
+it('lets a barber complete and cancel their own appointment', function () {
     [$user, $barber] = navBarberUser();
-    $appointment = statusAppointment($barber, AppointmentStatus::Confirmed);
+    $toComplete = statusAppointment($barber, AppointmentStatus::Confirmed);
+    $toCancel = statusAppointment($barber, AppointmentStatus::Pending);
+
+    Livewire::actingAs($user)
+        ->test('pages.admin.appointments')
+        ->call('markCompleted', $toComplete->id)
+        ->assertOk()
+        ->call('markCancelled', $toCancel->id)
+        ->assertOk();
+
+    expect($toComplete->fresh()->status)->toBe(AppointmentStatus::Completed)
+        ->and($toCancel->fresh()->status)->toBe(AppointmentStatus::Cancelled);
+});
+
+it('forbids a barber from changing the status of another barber appointment', function () {
+    [$user] = navBarberUser();
+    $other = Barber::factory()->create();
+    $appointment = statusAppointment($other, AppointmentStatus::Confirmed);
 
     foreach (['markCompleted', 'markCancelled', 'markConfirmed'] as $method) {
         Livewire::actingAs($user)
@@ -226,6 +245,20 @@ it('forbids a barber from calling any status-changing action', function () {
             ->call($method, $appointment->id)
             ->assertForbidden();
     }
+
+    expect($appointment->fresh()->status)->toBe(AppointmentStatus::Confirmed);
+});
+
+it('forbids a barber with no linked profile from changing any appointment status', function () {
+    // Ни своих записей у него нет, ни исключений из ownership-guard.
+    $user = User::factory()->create(['role' => Role::BARBER]);
+    $barber = Barber::factory()->create();
+    $appointment = statusAppointment($barber, AppointmentStatus::Confirmed);
+
+    Livewire::actingAs($user)
+        ->test('pages.admin.appointments')
+        ->call('markCompleted', $appointment->id)
+        ->assertForbidden();
 
     expect($appointment->fresh()->status)->toBe(AppointmentStatus::Confirmed);
 });

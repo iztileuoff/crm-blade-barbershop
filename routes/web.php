@@ -33,6 +33,7 @@ Route::post('/logout', function () {
 Route::prefix('admin')->name('admin.')->middleware(['auth', RestrictBarberAccess::class])->group(function () {
     Volt::route('/', 'pages.admin.dashboard')->name('dashboard');
     Volt::route('/appointments', 'pages.admin.appointments')->name('appointments');
+    Volt::route('/earnings', 'pages.admin.earnings')->name('earnings');
     Volt::route('/specializations', 'pages.admin.specializations')->name('specializations');
     Volt::route('/barbers', 'pages.admin.barbers')->name('barbers');
     Volt::route('/services', 'pages.admin.services')->name('services');

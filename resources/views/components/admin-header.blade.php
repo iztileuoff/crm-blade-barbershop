@@ -1,6 +1,7 @@
 @php($links = [
     ['route' => 'admin.dashboard', 'label' => __('nav.dashboard'), 'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z" />'],
     ['route' => 'admin.appointments', 'label' => __('nav.appointments'), 'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />'],
+    ['route' => 'admin.earnings', 'label' => __('nav.earnings'), 'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z" />'],
     ['route' => 'booking', 'label' => __('nav.booking'), 'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />'],
     ['route' => 'admin.barbers', 'label' => __('nav.barbers'), 'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M7.848 8.25l1.536.887M7.848 8.25a3 3 0 1 1-5.196-3 3 3 0 0 1 5.196 3zm1.536.887a2.165 2.165 0 0 1 1.083 1.839c.005.351.054.695.14 1.024M9.384 9.137l10.062 5.808M9.708 6.075 6.684 11.27m12.348 5.872-7.371-4.255-.715-.41m0 0a3 3 0 1 0-3.522 4.84 3 3 0 0 0 3.522-4.84zm.715-.41-3.024-5.193m6.043 1.385L11.97 12.43m7.371-4.255a3 3 0 1 0 5.196-3 3 3 0 0 0-5.196 3z" />'],
     ['route' => 'admin.services', 'label' => __('nav.services'), 'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456Z" />'],
@@ -33,15 +34,16 @@
     @php($links[] = ['route' => 'admin.users', 'label' => __('nav.users'), 'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" />'])
 @endif
 
-{{-- Barbers only ever see their own appointments --}}
+{{-- Barbers only ever see their own appointments and their own earnings --}}
 @if(auth()->user()?->isBarber())
-    @php($links = array_values(array_filter($links, fn ($link) => ($link['route'] ?? null) === 'admin.appointments')))
+    @php($links = array_values(array_filter($links, fn ($link) => in_array($link['route'] ?? null, ['admin.appointments', 'admin.earnings'], true))))
 @endif
 
 <div>
     {{-- Mobile top bar --}}
     <div class="sticky top-0 z-30 flex items-center justify-between border-b border-content/[0.06] bg-surface/80 px-4 py-3 backdrop-blur-xl lg:hidden">
-        <a href="{{ route('booking') }}" class="flex items-center gap-2.5">
+        {{-- Мастеру некуда идти на публичную бронь — лого ведёт на его единственную страницу --}}
+        <a href="{{ auth()->user()?->isBarber() ? route('admin.appointments') : route('booking') }}" class="flex items-center gap-2.5">
             <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-brass-bright to-brass text-sm font-extrabold text-on-brass">B</div>
             <div class="leading-none">
                 <div class="font-display text-base font-semibold uppercase tracking-[0.18em] text-content">Blade</div>
@@ -71,7 +73,7 @@
            class="fixed inset-y-0 left-0 z-50 flex w-64 -translate-x-full flex-col border-r border-content/[0.06] bg-surface-raised transition-all duration-300 ease-in-out lg:translate-x-0">
         {{-- Logo --}}
         <div class="flex items-center justify-between px-5 py-5" :class="{ 'lg:justify-center lg:px-3': collapsed }">
-            <a href="{{ route('booking') }}" class="flex items-center gap-2.5 group">
+            <a href="{{ auth()->user()?->isBarber() ? route('admin.appointments') : route('booking') }}" class="flex items-center gap-2.5 group">
                 <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brass-bright to-brass text-sm font-extrabold text-on-brass transition-transform group-hover:scale-105">B</div>
                 <div class="leading-none" :class="{ 'lg:hidden': collapsed }">
                     <div class="font-display text-base font-semibold uppercase tracking-[0.18em] text-content">Blade</div>

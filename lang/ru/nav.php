@@ -7,6 +7,7 @@ return [
 
     'dashboard' => 'Касса',
     'appointments' => 'Записи',
+    'earnings' => 'Заработок',
     'booking' => 'Новая запись',
     'barbers' => 'Мастера',
     'services' => 'Услуги',

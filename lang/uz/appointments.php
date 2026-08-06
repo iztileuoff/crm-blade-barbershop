@@ -6,6 +6,8 @@ return [
     'all_barbers' => 'Barcha barberlar',
     'new' => 'Yangi yozuv',
     'empty' => 'Bu kunga yozuvlar yoʻq',
+    'barber_unlinked' => 'Hisobingizga barber profili bogʻlanmagan — administratorga murojaat qiling.',
+    'restricted_banner' => 'Bu boʻlim sizning rolingiz uchun mavjud emas.',
 
     // Modal
     'edit_title' => 'Yozuvni tahrirlash',

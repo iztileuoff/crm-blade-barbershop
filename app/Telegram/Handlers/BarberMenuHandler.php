@@ -5,7 +5,7 @@ namespace App\Telegram\Handlers;
 use App\Enums\AppointmentStatus;
 use App\Models\Appointment;
 use App\Models\Barber;
-use App\Models\DebtPayment;
+use App\Support\BarberEarnings;
 use App\Telegram\AppointmentFormatter;
 use App\Telegram\TelegramLinker;
 use Illuminate\Support\Carbon;
@@ -13,11 +13,6 @@ use SergiX44\Nutgram\Nutgram;
 
 class BarberMenuHandler
 {
-    /**
-     * Тот же дефолт, что и у колонки barbers.salary_percent в БД.
-     */
-    private const DEFAULT_SALARY_PERCENT = 50;
-
     public function __construct(private readonly TelegramLinker $linker) {}
 
     public function today(Nutgram $bot): void
@@ -38,39 +33,21 @@ class BarberMenuHandler
             return;
         }
 
-        $percent = $barber->salary_percent ?? self::DEFAULT_SALARY_PERCENT;
+        $percent = $barber->salary_percent ?? BarberEarnings::DEFAULT_SALARY_PERCENT;
 
-        // Формула зарплаты живёт на моделях — иначе бот и дашборд разъезжаются.
-        // Доля с погашения начисляется в день платежа, поэтому периоды считаются
-        // ровно так же, как в дашборде, и «Сегодня» всегда входит в «За месяц».
-        $share = function (Carbon $from, Carbon $to) use ($barber, $percent): int {
-            $fromVisits = Appointment::query()
-                ->where('barber_id', $barber->id)
-                ->where('status', AppointmentStatus::Completed->value)
-                ->whereBetween('starts_at', [$from, $to])
-                ->get()
-                ->sum(fn (Appointment $a) => $a->salaryShare($percent));
-
-            $fromDebts = DebtPayment::query()
-                ->betweenDates($from, $to)
-                ->whereHasMorph('payable', [Appointment::class], fn ($q) => $q->where('barber_id', $barber->id))
-                ->with('payable')
-                ->get()
-                ->sum(fn (DebtPayment $p) => $p->salaryShare);
-
-            return (int) ($fromVisits + $fromDebts);
-        };
-
-        // Периоды берутся целиком: визит, закрытый заранее на конец недели, сразу
-        // виден в «За неделю», и «Сегодня» гарантированно входит в оба периода.
+        // Формула зарплаты живёт в App\Support\BarberEarnings — та же точка
+        // входа, что и у страницы «Мой заработок» в CRM, иначе экраны
+        // разъезжаются в цифрах. Периоды берутся целиком: визит, закрытый
+        // заранее на конец недели, сразу виден в «За неделю», и «Сегодня»
+        // гарантированно входит в оба периода.
         $now = Carbon::now();
 
         $text = sprintf(
             "💰 <b>Ваш заработок</b> (доля %d%%)\n\nСегодня: <b>%s</b>\nЗа неделю: <b>%s</b>\nЗа месяц: <b>%s</b>",
             $percent,
-            $this->money($share($now->copy()->startOfDay(), $now->copy()->endOfDay())),
-            $this->money($share($now->copy()->startOfWeek(), $now->copy()->endOfWeek())),
-            $this->money($share($now->copy()->startOfMonth(), $now->copy()->endOfMonth())),
+            $this->money(BarberEarnings::periodShare($barber, $now->copy()->startOfDay(), $now->copy()->endOfDay())),
+            $this->money(BarberEarnings::periodShare($barber, $now->copy()->startOfWeek(), $now->copy()->endOfWeek())),
+            $this->money(BarberEarnings::periodShare($barber, $now->copy()->startOfMonth(), $now->copy()->endOfMonth())),
         );
 
         $bot->sendMessage($text, parse_mode: 'HTML');

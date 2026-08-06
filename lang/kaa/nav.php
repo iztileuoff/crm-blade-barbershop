@@ -7,6 +7,7 @@ return [
 
     'dashboard' => 'Kassa',
     'appointments' => 'Jazılıwlar',
+    'earnings' => 'Daramatım',
     'booking' => 'Jańa jazılıw',
     'barbers' => 'Barberler',
     'services' => 'Xızmetler',

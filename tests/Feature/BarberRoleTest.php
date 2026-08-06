@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\AppointmentStatus;
 use App\Enums\Role;
 use App\Models\Appointment;
 use App\Models\Barber;
@@ -64,19 +65,101 @@ it('lets an admin see every barber appointment', function () {
         ->assertSee('Client B');
 });
 
-it('forbids a barber from mutating appointments', function () {
+it('forbids a barber from creating appointments', function () {
+    [$user] = barberUser();
+
+    Livewire::actingAs($user)
+        ->test('pages.admin.appointments')
+        ->call('openCreate')
+        ->assertForbidden();
+});
+
+// Issue #74: the blanket ban on status changes is gone — a barber may now
+// change the status of THEIR OWN appointments. CRUD (openCreate/edit/delete/
+// save) stays admin-only, covered above and below.
+it('lets a barber change the status of their own appointment', function () {
     [$user, $barber] = barberUser();
     $appointment = appointmentFor($barber, 'My Client');
 
     Livewire::actingAs($user)
         ->test('pages.admin.appointments')
         ->call('markCompleted', $appointment->id)
-        ->assertForbidden();
+        ->assertOk();
+
+    expect($appointment->fresh()->status)->toBe(AppointmentStatus::Completed);
+});
+
+it('lets a barber confirm and cancel their own appointment too, not just complete it', function () {
+    [$user, $barber] = barberUser();
+
+    $toConfirm = appointmentFor($barber, 'Confirm Me');
+    $toCancel = appointmentFor($barber, 'Cancel Me');
 
     Livewire::actingAs($user)
         ->test('pages.admin.appointments')
-        ->call('openCreate')
-        ->assertForbidden();
+        ->call('markConfirmed', $toConfirm->id)
+        ->assertOk()
+        ->call('markCancelled', $toCancel->id)
+        ->assertOk();
+
+    expect($toConfirm->fresh()->status)->toBe(AppointmentStatus::Confirmed)
+        ->and($toCancel->fresh()->status)->toBe(AppointmentStatus::Cancelled);
+});
+
+it('forbids a barber from changing another barber appointment status, even after forging the filter or the locked role properties', function () {
+    [$user] = barberUser();
+    $other = Barber::factory()->create();
+    $theirAppointment = appointmentFor($other, 'Their Client');
+
+    // Попытка №1: подделать незапертый barberFilter — источник прав не он, а сессия.
+    // Свежий инстанс на каждый вызов: после 403 снимок компонента не переиспользуется.
+    foreach (['markConfirmed', 'markCompleted', 'markCancelled'] as $method) {
+        Livewire::actingAs($user)
+            ->test('pages.admin.appointments')
+            ->set('barberFilter', $other->id)
+            ->call($method, $theirAppointment->id)
+            ->assertForbidden();
+    }
+
+    // Попытка №2: подделать запертые isBarberView/ownBarberId — Livewire не даёт вовсе.
+    expect(fn () => Livewire::actingAs($user)
+        ->test('pages.admin.appointments')
+        ->set('ownBarberId', $other->id)
+    )->toThrow(CannotUpdateLockedPropertyException::class);
+
+    expect($theirAppointment->fresh()->status)->toBe(AppointmentStatus::Pending);
+});
+
+it('answers a barber the same way for a foreign appointment and a missing one', function () {
+    // Разница между 403 и 404 сама по себе выдаёт, какие id заняты: перебором
+    // мастер вычитал бы всю книгу записей салона, не видя ни одной строки.
+    [$user] = barberUser();
+    $foreign = appointmentFor(Barber::factory()->create(), 'Чужой Клиент');
+
+    foreach ([$foreign->id, 999999] as $id) {
+        Livewire::actingAs($user)
+            ->test('pages.admin.appointments')
+            ->call('markCompleted', $id)
+            ->assertForbidden();
+    }
+});
+
+it('does not repeat a status change that changes nothing', function () {
+    // На отмене висит уведомление клиенту: повторный перевод в тот же статус
+    // не должен слать его снова.
+    [$user, $barber] = barberUser();
+    $appointment = appointmentFor($barber, 'Постоянный Клиент');
+    $appointment->update(['status' => AppointmentStatus::Cancelled]);
+    $updatedAt = $appointment->fresh()->updated_at;
+
+    $this->travelTo(now()->addMinute());
+
+    Livewire::actingAs($user)
+        ->test('pages.admin.appointments')
+        ->call('markCancelled', $appointment->id)
+        ->assertOk();
+
+    expect($appointment->fresh()->updated_at->equalTo($updatedAt))->toBeTrue();
 });
 
 it('refuses to let the client rewrite the role properties at all', function () {
@@ -91,12 +174,13 @@ it('refuses to let the client rewrite the role properties at all', function () {
     }
 });
 
-it('blocks every mutating method for a barber regardless of component state', function () {
-    // Второй рубеж: страж берёт роль из сессии, а не из свойства.
+it('blocks every CRUD method for a barber regardless of component state', function () {
+    // Второй рубеж: страж берёт роль из сессии, а не из свойства. Деньги и
+    // удаление остаются админскими даже для собственной записи мастера.
     [$user, $barber] = barberUser();
     $appointment = appointmentFor($barber, 'My Client');
 
-    foreach (['markCompleted', 'markConfirmed', 'markCancelled', 'delete', 'edit'] as $method) {
+    foreach (['delete', 'edit'] as $method) {
         Livewire::actingAs($user)
             ->test('pages.admin.appointments')
             ->call($method, $appointment->id)
@@ -155,7 +239,7 @@ it('forbids a barber from reaching the debts screen', function () {
         ->assertForbidden();
 });
 
-it('redirects a barber away from non-appointment admin pages', function () {
+it('redirects a barber away from non-appointment admin pages but lets them through to their earnings', function () {
     [$user] = barberUser();
 
     $this->actingAs($user)
@@ -165,6 +249,70 @@ it('redirects a barber away from non-appointment admin pages', function () {
     $this->actingAs($user)
         ->get(route('admin.appointments'))
         ->assertOk();
+
+    $this->actingAs($user)
+        ->get(route('admin.earnings'))
+        ->assertOk();
+});
+
+it('flags the appointments page with a one-shot banner when a barber is redirected off a restricted page', function () {
+    [$user] = barberUser();
+
+    $this->actingAs($user)
+        ->followingRedirects()
+        ->get(route('admin.debts'))
+        ->assertOk()
+        ->assertSee(__('appointments.restricted_banner'));
+
+    // Одноразовый: обычный визит без предшествующего редиректа баннер не показывает.
+    $this->actingAs($user)
+        ->get(route('admin.appointments'))
+        ->assertOk()
+        ->assertDontSee(__('appointments.restricted_banner'));
+});
+
+it('lets the barber dismiss the restricted-section banner', function () {
+    [$user] = barberUser();
+    session(['barberRestricted' => true]);
+
+    Livewire::actingAs($user)
+        ->test('pages.admin.appointments')
+        ->assertSee(__('appointments.restricted_banner'))
+        ->call('dismissBarberRestrictedBanner')
+        ->assertDontSee(__('appointments.restricted_banner'));
+});
+
+it('hides the barber column from a barber own table but keeps it for an admin', function () {
+    [$user, $barber] = barberUser();
+    appointmentFor($barber, 'My Client');
+
+    Livewire::actingAs($user)
+        ->test('pages.admin.appointments')
+        ->assertDontSee(__('common.barber'));
+
+    $admin = User::factory()->create(['role' => Role::ADMIN]);
+
+    Livewire::actingAs($admin)
+        ->test('pages.admin.appointments')
+        ->assertSee(__('common.barber'));
+});
+
+it('shows an explicit empty state and no appointments for a barber with no linked profile', function () {
+    // Роль есть, а профиля мастера (barbers.user_id) нет — уникальная утечка из #74.
+    $user = User::factory()->create(['role' => Role::BARBER]);
+    $barberA = Barber::factory()->create();
+    $barberB = Barber::factory()->create();
+
+    appointmentFor($barberA, 'Client A');
+    appointmentFor($barberB, 'Client B');
+
+    $component = Livewire::actingAs($user)
+        ->test('pages.admin.appointments')
+        ->assertDontSee('Client A')
+        ->assertDontSee('Client B')
+        ->assertSee(__('appointments.barber_unlinked'));
+
+    expect($component->instance()->appointments())->toHaveCount(0);
 });
 
 it('links the chosen barber when saving a barber user', function () {

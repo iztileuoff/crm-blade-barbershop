@@ -6,6 +6,8 @@ return [
     'all_barbers' => 'Barlıq barberler',
     'new' => 'Jańa jazılıw',
     'empty' => 'Bul kúnge jazılıwlar joq',
+    'barber_unlinked' => 'Akkauntıńızǵa barber profili baylanıspaǵan — administratorǵa jolıǵıń.',
+    'restricted_banner' => 'Bul bólim sizdiń rolińiz ushın qol jetimli emes.',
 
     // Modal
     'edit_title' => 'Jazılıwdı ózgertiw',
