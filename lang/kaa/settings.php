@@ -12,4 +12,5 @@ return [
     'work_start' => 'Jumıs baslanıwı',
     'work_end' => 'Jumıs tamamlanıwı',
     'save' => 'Sazlamalardı saqlaw',
+    'err_work_end_before_start' => 'Jumıs tamamlanıwı baslanıwınan keyin bolıwı kerek',
 ];

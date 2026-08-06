@@ -42,7 +42,7 @@ return [
         'name_placeholder' => 'Ismingiz nima?',
         'phone' => 'Telefon',
         'phone_hint' => 'Avval telefon raqamini kiriting',
-        'client_found' => 'Mijoz topildi — maʼlumotlar bazadan olindi',
+        'client_found' => 'Bu raqam bazada bor — ismingizni tasdiqlang',
         'birth_date' => 'Tugʻilgan sana',
         'optional' => '(ixtiyoriy)',
         'submit' => 'Yozuvni tasdiqlash',
@@ -67,5 +67,6 @@ return [
         'invalid_phone' => 'Toʻgʻri raqam kiriting: 998XXXXXXXXX',
         'reselect' => 'Xizmat va ustani qaytadan tanlang.',
         'too_many' => 'Juda koʻp soʻrov. Bir daqiqadan soʻng urinib koʻring.',
+        'slot_taken' => 'Bu vaqt band boʻlib qoldi. Boshqa vaqtni tanlang.',
     ],
 ];

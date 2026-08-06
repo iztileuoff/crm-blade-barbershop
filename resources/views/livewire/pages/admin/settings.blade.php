@@ -45,6 +45,13 @@ class extends Component
             'telegram' => 'nullable|string|max:255',
         ]);
 
+        // Zero-padded HH:MM compares correctly as a string.
+        if ($this->work_start !== '' && $this->work_end !== '' && $this->work_end <= $this->work_start) {
+            $this->addError('work_end', __('settings.err_work_end_before_start'));
+
+            return;
+        }
+
         Setting::set('shop_name', $this->shop_name ?: null);
         Setting::set('shop_phone', $this->phone ?: null);
         Setting::set('shop_address', $this->address ?: null);

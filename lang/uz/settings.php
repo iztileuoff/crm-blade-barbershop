@@ -12,4 +12,5 @@ return [
     'work_start' => 'Ish boshlanishi',
     'work_end' => 'Ish tugashi',
     'save' => 'Sozlamalarni saqlash',
+    'err_work_end_before_start' => 'Ish tugashi ish boshlanishidan keyin boʻlishi kerak',
 ];

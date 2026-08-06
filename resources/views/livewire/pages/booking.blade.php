@@ -5,7 +5,10 @@ use App\Models\Appointment;
 use App\Models\Barber;
 use App\Models\Client;
 use App\Models\Service;
+use App\Models\Setting;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\RateLimiter;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
@@ -16,6 +19,14 @@ class extends Component
 {
     /** Max booking submissions accepted per client IP within the decay window. */
     private const MAX_BOOKINGS_PER_MINUTE = 5;
+
+    /** Max phone lookups accepted per client IP within the decay window. */
+    private const MAX_LOOKUPS_PER_MINUTE = 20;
+
+    /** Working hours used when the settings are missing or malformed. */
+    private const DEFAULT_WORK_START_HOUR = 9;
+
+    private const DEFAULT_WORK_END_HOUR = 21;
 
     public int $step = 1;
 
@@ -36,9 +47,6 @@ class extends Component
     /** True when the last phone lookup matched an existing client. */
     public bool $clientFound = false;
 
-    /** True when name/birth currently hold values we pulled from the database. */
-    public bool $autofilled = false;
-
     public ?int $confirmedAppointmentId = null;
 
     public function mount(): void
@@ -56,44 +64,35 @@ class extends Component
     }
 
     /**
-     * Look up the client by phone and (de)activate the name/birth fields. When the
-     * client exists its stored details are pulled in; when the phone points to
-     * nobody, any values we previously auto-filled are cleared so stale data from
-     * a different client never lingers. Values the user typed by hand are kept.
+     * Record whether the phone already belongs to a client — nothing more.
+     *
+     * The stored name and birth date must never reach the browser: this page is
+     * public and unauthenticated, so anyone could type a stranger's number and
+     * read their card. Merging with the saved client happens server-side in
+     * {@see confirm()}. The lookup is throttled per IP so the flag alone cannot
+     * be used to enumerate which numbers are in the base.
      */
     public function updatedPhone(): void
     {
         $normalized = Client::normalizePhone($this->phone);
 
         if ($normalized === null) {
-            $this->clearAutofill();
             $this->clientFound = false;
 
             return;
         }
 
-        $client = Client::where('phone', $normalized)->first();
+        $throttleKey = 'booking-lookup:'.request()->ip();
 
-        if (! $client) {
-            $this->clearAutofill();
+        if (RateLimiter::tooManyAttempts($throttleKey, self::MAX_LOOKUPS_PER_MINUTE)) {
             $this->clientFound = false;
 
             return;
         }
 
-        $this->name = (string) $client->name;
-        $this->birth_date = $client->birth_date?->toDateString() ?? '';
-        $this->autofilled = true;
-        $this->clientFound = true;
-    }
+        RateLimiter::hit($throttleKey, 60);
 
-    private function clearAutofill(): void
-    {
-        if ($this->autofilled) {
-            $this->name = '';
-            $this->birth_date = '';
-            $this->autofilled = false;
-        }
+        $this->clientFound = Client::where('phone', $normalized)->exists();
     }
 
     #[Computed]
@@ -105,7 +104,7 @@ class extends Component
     #[Computed]
     public function barbers()
     {
-        return Barber::active()->with(['specialization', 'media'])->orderBy('name')->get();
+        return Barber::active()->with(['specialization', 'media', 'services'])->orderBy('name')->get();
     }
 
     #[Computed]
@@ -121,18 +120,95 @@ class extends Component
     }
 
     /**
+     * Price of the service being booked with this barber — the very number that
+     * lands in the appointment. Showing the barber's base `price` instead would
+     * quote one sum on screen and charge another in the chair.
+     */
+    #[Computed]
+    public function quotedPrice(): ?int
+    {
+        return $this->selectedBarber?->priceForService($this->serviceId);
+    }
+
+    #[Computed]
+    public function formattedQuotedPrice(): ?string
+    {
+        $price = $this->quotedPrice;
+
+        return $price === null ? null : number_format($price, 0, '.', ' ').' '.__('common.currency');
+    }
+
+    /**
+     * The chosen day, guarded. `$date` is a client-writable field, so a crafted
+     * value would otherwise crash Carbon::parse while rendering the slot grid.
+     */
+    #[Computed]
+    public function selectedDate(): Carbon
+    {
+        try {
+            return Carbon::parse($this->date)->startOfDay();
+        } catch (Throwable) {
+            return Carbon::now()->startOfDay();
+        }
+    }
+
+    /**
+     * Hourly slots inside the shop's working hours. For today every hour that
+     * has already started is dropped — the grid must never offer a time that
+     * has gone by.
+     *
      * @return array<int, array{value: string, label: string}>
      */
     #[Computed]
     public function availableSlots(): array
     {
+        [$startHour, $endHour] = $this->workingHours();
+
+        $now = Carbon::now();
+        $isToday = $this->selectedDate->isSameDay($now);
+
         $slots = [];
-        for ($h = 0; $h <= 23; $h++) {
+        for ($h = $startHour; $h < $endHour; $h++) {
+            if ($isToday && $h <= $now->hour) {
+                continue;
+            }
+
             $time = sprintf('%02d:00', $h);
             $slots[] = ['value' => $time, 'label' => $time];
         }
 
         return $slots;
+    }
+
+    /**
+     * Opening and closing hour from the settings. A slot must start early enough
+     * to be served before closing, hence the range is half-open: `work_end` is
+     * itself never offered. An inverted or malformed range falls back to the
+     * defaults so a broken setting cannot empty the booking page.
+     *
+     * @return array{0: int, 1: int}
+     */
+    private function workingHours(): array
+    {
+        $start = $this->settingHour('work_start', self::DEFAULT_WORK_START_HOUR);
+        $end = $this->settingHour('work_end', self::DEFAULT_WORK_END_HOUR);
+
+        if ($end <= $start) {
+            return [self::DEFAULT_WORK_START_HOUR, self::DEFAULT_WORK_END_HOUR];
+        }
+
+        return [$start, $end];
+    }
+
+    private function settingHour(string $key, int $default): int
+    {
+        $value = (string) Setting::get($key, '');
+
+        if (preg_match('/^(\d{1,2}):\d{2}$/', $value, $matches) && (int) $matches[1] <= 23) {
+            return (int) $matches[1];
+        }
+
+        return $default;
     }
 
     /**
@@ -153,12 +229,12 @@ class extends Component
         $appointments = Appointment::query()
             ->where('barber_id', $this->barberId)
             ->active()
-            ->forDay(Carbon::parse($this->date))
+            ->forDay($this->selectedDate)
             ->get(['starts_at', 'ends_at']);
 
         $taken = [];
         foreach ($this->availableSlots as $slot) {
-            $slotStart = Carbon::parse($this->date.' '.$slot['value']);
+            $slotStart = $this->selectedDate->copy()->setTimeFromTimeString($slot['value']);
             $slotEnd = $slotStart->copy()->addMinutes($duration);
 
             foreach ($appointments as $appointment) {
@@ -186,8 +262,26 @@ class extends Component
 
     public function selectTime(string $time): void
     {
+        if (! $this->isSelectableSlot($time)) {
+            return;
+        }
+
         $this->time = $time;
         $this->step = 4;
+    }
+
+    /**
+     * A slot may be picked only while it is still offered (inside the working
+     * hours and in the future) and still free for the chosen barber.
+     */
+    private function isSelectableSlot(?string $time): bool
+    {
+        if ($time === null) {
+            return false;
+        }
+
+        return in_array($time, array_column($this->availableSlots, 'value'), true)
+            && ! in_array($time, $this->takenSlots, true);
     }
 
     public function back(): void
@@ -239,38 +333,57 @@ class extends Component
             return;
         }
 
-        $startsAt = Carbon::parse($this->date.' '.$this->time);
+        if (! $this->isSelectableSlot($this->time)) {
+            $this->rejectSlot();
+
+            return;
+        }
+
+        $startsAt = $this->selectedDate->copy()->setTimeFromTimeString($this->time);
         $endsAt = $startsAt->copy()->addMinutes((int) $service->duration_minutes);
-
-        $client = Client::firstOrCreate(
-            ['phone' => $normalized],
-            ['name' => $this->name, 'birth_date' => $this->birth_date ?: null],
-        );
-
-        $updates = [];
-        if ($client->name !== $this->name && $this->name !== '') {
-            $updates['name'] = $this->name;
-        }
-        if ($this->birth_date && $client->birth_date === null) {
-            $updates['birth_date'] = $this->birth_date;
-        }
-        if ($updates !== []) {
-            $client->forceFill($updates)->save();
-        }
 
         $servicePrice = $barber->priceForService($service->id) ?? $barber->price ?? 0;
 
-        $appointment = Appointment::create([
-            'client_id' => $client->id,
-            'barber_id' => $barber->id,
-            'price' => $servicePrice,
-            'starts_at' => $startsAt,
-            'ends_at' => $endsAt,
-            'status' => AppointmentStatus::Pending,
-            'notified_30min' => false,
-        ]);
+        $appointment = DB::transaction(function () use ($barber, $service, $servicePrice, $normalized, $startsAt, $endsAt): ?Appointment {
+            $isTaken = Appointment::query()
+                ->where('barber_id', $barber->id)
+                ->active()
+                ->where('starts_at', '<', $endsAt)
+                ->where('ends_at', '>', $startsAt)
+                ->lockForUpdate()
+                ->exists();
 
-        $appointment->services()->sync([$service->id => ['amount' => $servicePrice]]);
+            if ($isTaken) {
+                return null;
+            }
+
+            $client = Client::firstOrCreate(
+                ['phone' => $normalized],
+                ['name' => $this->name, 'birth_date' => $this->birth_date ?: null],
+            );
+
+            $this->fillClientGaps($client);
+
+            $appointment = Appointment::create([
+                'client_id' => $client->id,
+                'barber_id' => $barber->id,
+                'price' => $servicePrice,
+                'starts_at' => $startsAt,
+                'ends_at' => $endsAt,
+                'status' => AppointmentStatus::Pending,
+                'notified_30min' => false,
+            ]);
+
+            $appointment->services()->sync([$service->id => ['amount' => $servicePrice]]);
+
+            return $appointment;
+        });
+
+        if ($appointment === null) {
+            $this->rejectSlot();
+
+            return;
+        }
 
         RateLimiter::hit($throttleKey, 60);
 
@@ -278,9 +391,44 @@ class extends Component
         $this->step = 5;
     }
 
+    /**
+     * Send the guest back to the time grid: the slot was booked, closed or ran
+     * out from under them between picking it and confirming.
+     */
+    private function rejectSlot(): void
+    {
+        $this->time = null;
+        $this->step = 3;
+        $this->addError('time', __('booking.validation.slot_taken'));
+
+        unset($this->availableSlots, $this->takenSlots);
+    }
+
+    /**
+     * Fill only what the client's card is missing. The public form no longer
+     * shows what we already store, so a guest's typing must not overwrite the
+     * name or birth date of an existing client.
+     */
+    private function fillClientGaps(Client $client): void
+    {
+        $updates = [];
+
+        if ((string) $client->name === '' && $this->name !== '') {
+            $updates['name'] = $this->name;
+        }
+
+        if ($client->birth_date === null && $this->birth_date !== '') {
+            $updates['birth_date'] = $this->birth_date;
+        }
+
+        if ($updates !== []) {
+            $client->forceFill($updates)->save();
+        }
+    }
+
     public function reset_flow(): void
     {
-        $this->reset(['serviceId', 'barberId', 'time', 'name', 'phone', 'birth_date', 'clientFound', 'autofilled', 'confirmedAppointmentId']);
+        $this->reset(['serviceId', 'barberId', 'time', 'name', 'phone', 'birth_date', 'clientFound', 'confirmedAppointmentId']);
         $this->step = 1;
     }
 }; ?>
@@ -319,6 +467,9 @@ class extends Component
         <div class="animate-fade-in-up">
             <h2 class="mb-1 text-lg font-bold">{{ __('booking.service.title') }}</h2>
             <p class="mb-5 text-sm text-content/40">{{ __('booking.service.subtitle') }}</p>
+            @error('serviceId')
+                <div class="mb-4 rounded-xl border border-danger/20 bg-danger/10 px-4 py-3 text-sm font-medium text-danger">{{ $message }}</div>
+            @enderror
             <div class="space-y-2.5">
                 @forelse ($this->services as $service)
                     <button type="button" wire:key="bk-service-{{ $service->id }}"
@@ -373,8 +524,9 @@ class extends Component
                         @endif
                         <div class="text-sm font-semibold">{{ $barber->name }}</div>
                         <div class="mt-0.5 text-[11px] text-content/35">{{ $barber->specialization?->name }}</div>
-                        @if ($barber->price)
-                            <div class="mt-1 text-xs font-bold text-brass-ink">{{ $barber->formattedPrice }}</div>
+                        @php($barberPrice = $barber->priceForService($serviceId))
+                        @if ($barberPrice)
+                            <div class="mt-1 text-xs font-bold text-brass-ink">{{ number_format($barberPrice, 0, '.', ' ') }} {{ __('common.currency') }}</div>
                         @endif
                     </button>
                 @empty
@@ -395,6 +547,9 @@ class extends Component
             </button>
             <h2 class="mb-1 text-lg font-bold">{{ __('booking.datetime.title') }}</h2>
             <p class="mb-5 text-sm text-content/40">{{ __('booking.datetime.subtitle') }}</p>
+            @error('time')
+                <div class="mb-4 rounded-xl border border-danger/20 bg-danger/10 px-4 py-3 text-sm font-medium text-danger">{{ $message }}</div>
+            @enderror
 
             {{-- Horizontal date picker --}}
             <div class="hide-scrollbar -mx-4 mb-5 flex gap-2 overflow-x-auto px-4 pb-1">
@@ -425,22 +580,24 @@ class extends Component
             </div>
 
             {{-- Time slots --}}
-            @if (count($this->availableSlots) === 0)
+            @php($takenSlots = $this->takenSlots)
+            @php($freeSlots = array_diff(array_column($this->availableSlots, 'value'), $takenSlots))
+            @if (count($freeSlots) === 0)
                 <div class="rounded-2xl border border-brass/10 bg-brass/5 p-5 text-center text-sm text-brass-ink/60">
                     {{ __('booking.datetime.no_slots') }}
                 </div>
             @else
-                @php($takenSlots = $this->takenSlots)
                 <div class="grid grid-cols-3 gap-2 sm:grid-cols-4">
                     @foreach ($this->availableSlots as $slot)
                         @php($isTaken = in_array($slot['value'], $takenSlots, true))
                         <button type="button" wire:key="bk-slot-{{ $slot['value'] }}"
                                 wire:click="selectTime('{{ $slot['value'] }}')"
+                                @disabled($isTaken)
                                 @if ($isTaken) title="{{ __('booking.datetime.taken') }}" @endif
                                 @class([
-                                    'rounded-xl border px-3 py-2.5 text-sm font-semibold transition-all duration-200 active:scale-95',
-                                    'border-danger/40 bg-danger/10 text-danger hover:bg-danger/20' => $isTaken,
-                                    'border-content/[0.06] bg-content/[0.03] hover:border-brass/40 hover:bg-brass/10 hover:text-brass-ink' => ! $isTaken,
+                                    'rounded-xl border px-3 py-2.5 text-sm font-semibold transition-all duration-200',
+                                    'cursor-not-allowed border-danger/30 bg-danger/10 text-danger/60 line-through' => $isTaken,
+                                    'border-content/[0.06] bg-content/[0.03] hover:border-brass/40 hover:bg-brass/10 hover:text-brass-ink active:scale-95' => ! $isTaken,
                                 ])>
                             {{ $slot['label'] }}
                         </button>
@@ -467,8 +624,8 @@ class extends Component
                         <div class="text-sm font-semibold">{{ $this->selectedService?->name }}</div>
                         <div class="text-xs text-content/35">{{ $this->selectedService?->duration_minutes }} {{ __('booking.minutes_short') }}</div>
                     </div>
-                    @if ($this->selectedBarber?->price)
-                        <div class="text-sm font-bold text-brass-ink">{{ $this->selectedBarber?->formattedPrice }}</div>
+                    @if ($this->quotedPrice)
+                        <div class="text-sm font-bold text-brass-ink">{{ $this->formattedQuotedPrice }}</div>
                     @endif
                 </div>
                 <div class="flex items-center gap-3 pt-3">
@@ -485,7 +642,7 @@ class extends Component
                         <div class="text-xs text-content/35">{{ $this->selectedBarber?->specialization?->name }}</div>
                     </div>
                     <div class="text-right">
-                        <div class="text-sm font-semibold">{{ \Illuminate\Support\Carbon::parse($date)->translatedFormat('d M') }}</div>
+                        <div class="text-sm font-semibold">{{ $this->selectedDate->translatedFormat('d M') }}</div>
                         <div class="text-xs text-brass-ink">{{ $time }}</div>
                     </div>
                 </div>
@@ -558,7 +715,7 @@ class extends Component
             <h2 class="mb-2 text-xl font-bold">{{ __('booking.success.title') }}</h2>
             <p class="mx-auto max-w-xs text-sm text-content/40">
                 {{ __('booking.success.message', [
-                    'date' => \Illuminate\Support\Carbon::parse($date)->translatedFormat('d M'),
+                    'date' => $this->selectedDate->translatedFormat('d M'),
                     'time' => $time,
                     'barber' => $this->selectedBarber?->name,
                 ]) }}
@@ -572,7 +729,7 @@ class extends Component
                 </div>
                 <div class="mt-2 flex items-center justify-between">
                     <span class="text-content/40">{{ __('booking.success.price') }}</span>
-                    <span class="font-semibold text-brass-ink">{{ $this->selectedBarber?->formattedPrice ?: '—' }}</span>
+                    <span class="font-semibold text-brass-ink">{{ $this->formattedQuotedPrice ?: '—' }}</span>
                 </div>
             </div>
 

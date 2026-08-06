@@ -42,7 +42,7 @@ return [
         'name_placeholder' => 'Atıńız kim?',
         'phone' => 'Telefon',
         'phone_hint' => 'Aldın telefon nomerin kiritiń',
-        'client_found' => 'Klient tabıldı — maǵlıwmatlar bazadan alındı',
+        'client_found' => 'Bul nomer bazada bar — atıńızdı tastıyıqlań',
         'birth_date' => 'Tuwılǵan sáne',
         'optional' => '(májbúriy emes)',
         'submit' => 'Jazılıwdı tastıyıqlaw',
@@ -67,5 +67,6 @@ return [
         'invalid_phone' => 'Durıs nomer kiritiń: 998XXXXXXXXX',
         'reselect' => 'Xızmet hám ustanı qaytadan saylań.',
         'too_many' => 'Júdá kóp arza. Bir minuttan keyin qaytadan urınıp kóriń.',
+        'slot_taken' => 'Bul waqıt bánt bolıp qaldı. Basqa waqıttı saylań.',
     ],
 ];
