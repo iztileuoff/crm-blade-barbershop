@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Url;
 use Livewire\Volt\Component;
 
 new
@@ -28,14 +29,39 @@ class extends Component
 
     private const DEFAULT_WORK_END_HOUR = 21;
 
+    /** Days shown in the date strip below — also the outer edge a URL-supplied date may name. */
+    private const DATE_HORIZON_DAYS = 14;
+
+    /**
+     * Тот же горизонт для ленты дат: разметка не должна знать своё число
+     * отдельно от проверки в mount(), иначе кнопка предложит дату, которую
+     * перезагрузка отвергнет.
+     */
+    #[Computed]
+    public function dateHorizonDays(): int
+    {
+        return self::DATE_HORIZON_DAYS;
+    }
+
+    /**
+     * `#[Url]` makes every one of these attacker-supplied on first paint — this is
+     * a public, unauthenticated page. `mount()` below re-derives each value against
+     * the database before the view ever renders, so a crafted or stale link can only
+     * ever settle on the nearest step the (validated) selection actually supports.
+     */
+    #[Url(history: true)]
     public int $step = 1;
 
+    #[Url]
     public ?int $serviceId = null;
 
+    #[Url]
     public ?int $barberId = null;
 
+    #[Url]
     public ?string $date = null;
 
+    #[Url]
     public ?string $time = null;
 
     public string $name = '';
@@ -51,7 +77,77 @@ class extends Component
 
     public function mount(): void
     {
-        $this->date = Carbon::now()->toDateString();
+        $this->serviceId = $this->validServiceId($this->serviceId);
+
+        $this->barberId = $this->serviceId !== null
+            ? $this->validBarberId($this->barberId)
+            : null;
+
+        $this->date = $this->validDateWithinHorizon($this->date) ?? Carbon::now()->toDateString();
+
+        $this->time = $this->barberId !== null && $this->isSelectableSlot($this->time)
+            ? $this->time
+            : null;
+
+        $this->step = match (true) {
+            $this->time !== null => 4,
+            $this->barberId !== null => 3,
+            $this->serviceId !== null => 2,
+            default => 1,
+        };
+    }
+
+    /**
+     * A service id from the URL is only trusted while it still names an active
+     * service; a stale or invented id is dropped rather than reaching the
+     * price/duration lookups further down.
+     */
+    private function validServiceId(?int $id): ?int
+    {
+        if ($id === null) {
+            return null;
+        }
+
+        return Service::active()->whereKey($id)->exists() ? $id : null;
+    }
+
+    /**
+     * Mirrors {@see validServiceId()} for barbers. Forced to null whenever the
+     * service itself was dropped — the click path never lets a barber be chosen
+     * before a service is.
+     */
+    private function validBarberId(?int $id): ?int
+    {
+        if ($id === null) {
+            return null;
+        }
+
+        return Barber::active()->whereKey($id)->exists() ? $id : null;
+    }
+
+    /**
+     * A date from the URL is only trusted when it is a real calendar date inside
+     * the window the strip itself offers: nothing in the past, nothing past the
+     * visible horizon.
+     */
+    private function validDateWithinHorizon(?string $date): ?string
+    {
+        if ($date === null || ! preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $date, $parts)) {
+            return null;
+        }
+
+        if (! checkdate((int) $parts[2], (int) $parts[3], (int) $parts[1])) {
+            return null;
+        }
+
+        $today = Carbon::now()->startOfDay();
+        $parsed = Carbon::createFromDate((int) $parts[1], (int) $parts[2], (int) $parts[3])->startOfDay();
+
+        if ($parsed->lt($today) || $parsed->gt($today->copy()->addDays(self::DATE_HORIZON_DAYS - 1))) {
+            return null;
+        }
+
+        return $date;
     }
 
     /**
@@ -470,7 +566,7 @@ class extends Component
             @error('serviceId')
                 <div class="mb-4 rounded-xl border border-danger/20 bg-danger/10 px-4 py-3 text-sm font-medium text-danger">{{ $message }}</div>
             @enderror
-            <div class="space-y-2.5">
+            <div class="space-y-2.5" wire:loading.class="pointer-events-none opacity-50" wire:target="selectService">
                 @forelse ($this->services as $service)
                     <button type="button" wire:key="bk-service-{{ $service->id }}"
                             wire:click="selectService({{ $service->id }})"
@@ -508,7 +604,7 @@ class extends Component
             </button>
             <h2 class="mb-1 text-lg font-bold">{{ __('booking.barber.title') }}</h2>
             <p class="mb-5 text-sm text-content/40">{{ __('booking.barber.subtitle') }}</p>
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-2 gap-3" wire:loading.class="pointer-events-none opacity-50" wire:target="selectBarber">
                 @forelse ($this->barbers as $barber)
                     @php($photo = $barber->photoUrl)
                     <button type="button" wire:key="bk-barber-{{ $barber->id }}"
@@ -552,8 +648,9 @@ class extends Component
             @enderror
 
             {{-- Horizontal date picker --}}
-            <div class="hide-scrollbar -mx-4 mb-5 flex gap-2 overflow-x-auto px-4 pb-1">
-                @for ($i = 0; $i < 14; $i++)
+            <div class="mb-2 text-xs font-semibold uppercase tracking-wide text-content/40">{{ $this->selectedDate->translatedFormat('F Y') }}</div>
+            <div class="hide-scrollbar -mx-4 mb-2 flex gap-2 overflow-x-auto px-4 pb-1">
+                @for ($i = 0; $i < $this->dateHorizonDays; $i++)
                     @php($d = now()->addDays($i))
                     @php($isSelected = $date === $d->toDateString())
                     <button type="button"
@@ -578,6 +675,7 @@ class extends Component
                     </button>
                 @endfor
             </div>
+            <p class="mb-5 text-[11px] text-content/25">{{ __('booking.datetime.horizon') }}</p>
 
             {{-- Time slots --}}
             @php($takenSlots = $this->takenSlots)
@@ -587,7 +685,7 @@ class extends Component
                     {{ __('booking.datetime.no_slots') }}
                 </div>
             @else
-                <div class="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                <div class="grid grid-cols-3 gap-2 sm:grid-cols-4" wire:loading.class="pointer-events-none animate-pulse" wire:target="date">
                     @foreach ($this->availableSlots as $slot)
                         @php($isTaken = in_array($slot['value'], $takenSlots, true))
                         <button type="button" wire:key="bk-slot-{{ $slot['value'] }}"

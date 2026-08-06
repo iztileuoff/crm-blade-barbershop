@@ -281,3 +281,275 @@ it('throttles a flood of bookings from the same client', function () {
 
     expect(Appointment::count())->toBe(5);
 });
+
+it('refuses to create a second appointment from a rapid double submit', function () {
+    $service = Service::factory()->create(['duration_minutes' => 60]);
+    $barber = Barber::factory()->create();
+    $date = now()->toDateString();
+
+    $component = Volt::test('pages.booking')
+        ->call('selectService', $service->id)
+        ->call('selectBarber', $barber->id)
+        ->set('date', $date)
+        ->call('selectTime', '12:00')
+        ->set('name', 'Гость Клиент')
+        ->set('phone', '998901112233');
+
+    $component->call('confirm')->assertHasNoErrors()->assertSet('step', 5);
+
+    // The second tap of a double-tap reaches the server after the first one
+    // already booked the slot — it must be rejected, not double-booked.
+    $component->call('confirm')
+        ->assertHasErrors('time')
+        ->assertSet('step', 3);
+
+    expect(Appointment::count())->toBe(1);
+});
+
+it('drops a service id from the url that does not exist', function () {
+    Livewire::withQueryParams(['serviceId' => 999999])
+        ->test('pages.booking')
+        ->assertSet('serviceId', null)
+        ->assertSet('step', 1);
+});
+
+it('drops a service id from the url that belongs to an inactive service', function () {
+    $service = Service::factory()->create(['is_active' => false]);
+
+    Livewire::withQueryParams(['serviceId' => $service->id])
+        ->test('pages.booking')
+        ->assertSet('serviceId', null)
+        ->assertSet('step', 1);
+});
+
+it('drops a barber id from the url that belongs to an inactive barber', function () {
+    $service = Service::factory()->create();
+    $barber = Barber::factory()->create(['is_active' => false]);
+
+    Livewire::withQueryParams(['serviceId' => $service->id, 'barberId' => $barber->id])
+        ->test('pages.booking')
+        ->assertSet('barberId', null)
+        ->assertSet('step', 2);
+});
+
+it('drops a barber id from the url when no service was selected', function () {
+    $barber = Barber::factory()->create();
+
+    Livewire::withQueryParams(['barberId' => $barber->id])
+        ->test('pages.booking')
+        ->assertSet('barberId', null)
+        ->assertSet('step', 1);
+});
+
+it('drops a date from the url that has already passed', function () {
+    Livewire::withQueryParams(['date' => now()->subDay()->toDateString()])
+        ->test('pages.booking')
+        ->assertSet('date', now()->toDateString());
+});
+
+it('drops a date from the url that is past the visible horizon', function () {
+    Livewire::withQueryParams(['date' => now()->addDays(30)->toDateString()])
+        ->test('pages.booking')
+        ->assertSet('date', now()->toDateString());
+});
+
+it('drops a malformed date from the url instead of crashing', function () {
+    Livewire::withQueryParams(['date' => '2026-02-30'])
+        ->test('pages.booking')
+        ->assertSet('date', now()->toDateString());
+});
+
+it('drops a time from the url that is already taken for that barber', function () {
+    $service = Service::factory()->create(['duration_minutes' => 60]);
+    $barber = Barber::factory()->create();
+    $date = now()->toDateString();
+
+    Appointment::factory()->create([
+        'barber_id' => $barber->id,
+        'starts_at' => $date.' 12:00:00',
+        'ends_at' => $date.' 13:00:00',
+        'status' => AppointmentStatus::Pending,
+    ]);
+
+    Livewire::withQueryParams([
+        'serviceId' => $service->id,
+        'barberId' => $barber->id,
+        'date' => $date,
+        'time' => '12:00',
+    ])->test('pages.booking')
+        ->assertSet('time', null)
+        ->assertSet('step', 3);
+});
+
+it('restores a full valid selection from the url and lands on the matching step', function () {
+    $service = Service::factory()->create(['duration_minutes' => 60]);
+    $barber = Barber::factory()->create();
+    $date = now()->toDateString();
+
+    Livewire::withQueryParams([
+        'serviceId' => $service->id,
+        'barberId' => $barber->id,
+        'date' => $date,
+        'time' => '12:00',
+    ])->test('pages.booking')
+        ->assertSet('serviceId', $service->id)
+        ->assertSet('barberId', $barber->id)
+        ->assertSet('date', $date)
+        ->assertSet('time', '12:00')
+        ->assertSet('step', 4);
+});
+
+it('never lets a url jump straight to the success step', function () {
+    $service = Service::factory()->create(['duration_minutes' => 60]);
+    $barber = Barber::factory()->create();
+    $date = now()->toDateString();
+
+    Livewire::withQueryParams([
+        'step' => 5,
+        'serviceId' => $service->id,
+        'barberId' => $barber->id,
+        'date' => $date,
+        'time' => '12:00',
+    ])->test('pages.booking')
+        ->assertSet('step', 4);
+});
+
+it('ignores a step from the url that outruns the validated selection', function () {
+    Livewire::withQueryParams(['step' => 3])
+        ->test('pages.booking')
+        ->assertSet('step', 1);
+});
+
+it('never populates the name or phone from the url', function () {
+    Livewire::withQueryParams(['name' => 'Hacker', 'phone' => '998901112233'])
+        ->test('pages.booking')
+        ->assertSet('name', '')
+        ->assertSet('phone', '');
+});
+
+it('drops a barber id from the url when the service id itself was invalid', function () {
+    $barber = Barber::factory()->create();
+
+    Livewire::withQueryParams(['serviceId' => 999999, 'barberId' => $barber->id])
+        ->test('pages.booking')
+        ->assertSet('serviceId', null)
+        ->assertSet('barberId', null)
+        ->assertSet('step', 1);
+});
+
+it('drops an out-of-hours time from the url', function () {
+    $service = Service::factory()->create(['duration_minutes' => 60]);
+    $barber = Barber::factory()->create();
+    $date = now()->addDay()->toDateString();
+
+    // Default working hours are 09:00-21:00; 22:00 is well-formed but outside them.
+    Livewire::withQueryParams([
+        'serviceId' => $service->id,
+        'barberId' => $barber->id,
+        'date' => $date,
+        'time' => '22:00',
+    ])->test('pages.booking')
+        ->assertSet('time', null)
+        ->assertSet('step', 3);
+});
+
+it('lets a barber without a custom price for the service still reach the time step from a deep link', function () {
+    $service = Service::factory()->create(['duration_minutes' => 60]);
+    // No services()->attach() here: this barber has never been given a custom
+    // price for $service. The app has no notion of "a barber who cannot do a
+    // service" — every active barber is bookable for every active service and
+    // falls back to their base price — so this pairing is not tampering and
+    // must reach the same step the click path would land it on.
+    $barber = Barber::factory()->create(['price' => 30000]);
+    $date = now()->addDay()->toDateString();
+
+    Livewire::withQueryParams([
+        'serviceId' => $service->id,
+        'barberId' => $barber->id,
+        'date' => $date,
+    ])->test('pages.booking')
+        ->assertSet('serviceId', $service->id)
+        ->assertSet('barberId', $barber->id)
+        ->assertSet('step', 3);
+});
+
+it('clamps a step from the url that outruns a partial valid selection', function () {
+    $service = Service::factory()->create();
+
+    // Only the service is valid; the url still asks to start on step 4.
+    Livewire::withQueryParams(['step' => 4, 'serviceId' => $service->id])
+        ->test('pages.booking')
+        ->assertSet('step', 2);
+});
+
+it('recovers a bookable state when only the date in an otherwise valid deep link is malformed', function () {
+    $this->travelTo(now()->startOfDay()->addHours(8));
+
+    $service = Service::factory()->create(['duration_minutes' => 60]);
+    $barber = Barber::factory()->create();
+
+    // The date is sanitized to today before the time is checked against it, so
+    // a still-valid time for today survives and the selection stays bookable.
+    Livewire::withQueryParams([
+        'serviceId' => $service->id,
+        'barberId' => $barber->id,
+        'date' => '2026-02-30',
+        'time' => '09:00',
+    ])->test('pages.booking')
+        ->assertSet('date', now()->toDateString())
+        ->assertSet('time', '09:00')
+        ->assertSet('step', 4);
+});
+
+it('completes a booking that started from a fully valid deep link', function () {
+    $service = Service::factory()->create(['duration_minutes' => 60]);
+    $barber = Barber::factory()->create();
+    $date = now()->addDay()->toDateString();
+
+    Livewire::withQueryParams([
+        'serviceId' => $service->id,
+        'barberId' => $barber->id,
+        'date' => $date,
+        'time' => '12:00',
+    ])->test('pages.booking')
+        ->assertSet('step', 4)
+        ->set('name', 'Гость Клиент')
+        ->set('phone', '998901112233')
+        ->call('confirm')
+        ->assertHasNoErrors()
+        ->assertSet('step', 5);
+
+    expect(Appointment::count())->toBe(1);
+});
+
+it('cannot confirm an appointment for a taken slot by setting time directly after loading a deep link', function () {
+    $service = Service::factory()->create(['duration_minutes' => 60]);
+    $barber = Barber::factory()->create();
+    $date = now()->addDay()->toDateString();
+
+    Appointment::factory()->create([
+        'barber_id' => $barber->id,
+        'starts_at' => $date.' 12:00:00',
+        'ends_at' => $date.' 13:00:00',
+        'status' => AppointmentStatus::Pending,
+    ]);
+
+    // The component is hydrated from a deep link (not from ->set() calls), then
+    // the attacker writes straight to the public $time property — bypassing
+    // both selectTime()'s guard and mount()'s url sanitizing. confirm() must
+    // still refuse it server-side.
+    Livewire::withQueryParams([
+        'serviceId' => $service->id,
+        'barberId' => $barber->id,
+        'date' => $date,
+    ])->test('pages.booking')
+        ->set('time', '12:00')
+        ->set('name', 'Гость Клиент')
+        ->set('phone', '998901112233')
+        ->call('confirm')
+        ->assertHasErrors('time')
+        ->assertSet('step', 3);
+
+    expect(Appointment::where('barber_id', $barber->id)->count())->toBe(1)
+        ->and(Client::where('phone', '998901112233')->exists())->toBeFalse();
+});

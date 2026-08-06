@@ -31,6 +31,7 @@ return [
         'title' => 'Sáne hám waqıt',
         'subtitle' => 'Sizge qashan qolaylı?',
         'today' => 'Búgin',
+        'horizon' => 'Kelesi 14 kúnge jazılıw múmkin',
         'no_slots' => 'Bul kúni bos waqıt joq. Basqa sánani saylań.',
         'taken' => 'Bul waqıtqa álleqashan jazılıw bar',
     ],

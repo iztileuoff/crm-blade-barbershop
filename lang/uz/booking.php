@@ -31,6 +31,7 @@ return [
         'title' => 'Sana va vaqt',
         'subtitle' => 'Sizga qachon qulay?',
         'today' => 'Bugun',
+        'horizon' => 'Keyingi 14 kun uchun band qilish mumkin',
         'no_slots' => 'Bu kuni boʻsh vaqt yoʻq. Boshqa sanani tanlang.',
         'taken' => 'Bu vaqtga allaqachon yozuv bor',
     ],
