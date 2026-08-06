@@ -5,8 +5,11 @@ use App\Models\Appointment;
 use App\Models\Barber;
 use App\Models\Client;
 use App\Models\Order;
+use App\Models\Product;
+use App\Models\Service;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
@@ -182,4 +185,96 @@ it('opens the pay modal for a record that is not on the first page', function ()
         ->call('openPayOrder', $last->id)
         ->assertSet('payAmount', 10000)
         ->assertSee($client->name);
+});
+
+/*
+|--------------------------------------------------------------------------
+| Responsive tables: sm:table-cell breakpoints on both header and body, and
+| every hidden value still present in the mobile sub-line (#69)
+|--------------------------------------------------------------------------
+*/
+
+it('renders the sm:table-cell breakpoint on header and body cells, and mirrors every hidden value onto the mobile sub-line, for appointment debts (#69)', function () {
+    $client = Client::factory()->create();
+    $barber = Barber::factory()->create(['name' => 'Botir']);
+    $service = Service::factory()->create(['name' => Service::encodeTranslations(['ru' => 'Стрижка'])]);
+
+    $appointment = Appointment::create([
+        'client_id' => $client->id,
+        'barber_id' => $barber->id,
+        'starts_at' => '2026-08-01 15:30:00',
+        'ends_at' => '2026-08-01 16:00:00',
+        'price' => 80000,
+        'payment_type' => 'cash',
+        'debt_amount' => 50000,
+    ]);
+    $appointment->services()->attach($service->id, ['amount' => 80000]);
+
+    Livewire::actingAs(debtListAdmin())
+        ->test('pages.admin.debts')
+        ->call('openPayAppointment', $appointment->id)
+        ->set('payAmount', 20000)
+        ->call('payAppointmentDebt')
+        ->assertHasNoErrors();
+
+    $html = Livewire::actingAs(debtListAdmin())->test('pages.admin.debts')->html();
+
+    // Только эта таблица непуста — заголовок и тело обеих скрытых на sm
+    // колонок («дата/время», «мастер/услуги», «долг») получили брейкпоинт:
+    // единственная строка даёт ровно одну пару заголовок+тело на колонку.
+    expect(substr_count($html, 'hidden px-6 py-4 sm:table-cell'))->toBe(3)
+        ->and(substr_count($html, 'hidden whitespace-nowrap px-6 py-4 sm:table-cell'))->toBe(1)
+        ->and(substr_count($html, 'hidden px-6 py-4 text-right sm:table-cell'))->toBe(1)
+        ->and(substr_count($html, 'hidden whitespace-nowrap px-6 py-4 text-right sm:table-cell'))->toBe(1);
+
+    // Цифры и текст, которые эти колонки прячут на мобиле, дублированы
+    // подстрокой под именем клиента — их не потеряли вместе со скрытой
+    // колонкой.
+    expect($html)
+        ->toContain('01.08.2026 15:30')
+        ->toContain('Botir · Стрижка')
+        ->toContain(__('common.price').': 80 000 '.__('common.currency'))
+        ->toContain(__('common.debt').': 30 000 '.__('common.currency'))
+        ->toContain(__('debts.paid_amount', ['amount' => '20 000 '.__('common.currency')]));
+});
+
+it('renders the sm:table-cell breakpoint on header and body cells, and mirrors every hidden value onto the mobile sub-line, for order debts (#69)', function () {
+    Carbon::setTestNow(Carbon::parse('2026-08-02 10:15:00', 'Asia/Tashkent'));
+
+    $client = Client::factory()->create();
+    $product = Product::create(['name' => 'Шампунь', 'stock' => 10, 'selling_price' => 25000]);
+
+    $order = Order::create([
+        'client_id' => $client->id,
+        'total_price' => 60000,
+        'payment_type' => 'cash',
+        'debt_amount' => 40000,
+    ]);
+    $order->items()->create(['product_id' => $product->id, 'quantity' => 2, 'price_at_sale' => 25000]);
+
+    Livewire::actingAs(debtListAdmin())
+        ->test('pages.admin.debts')
+        ->call('openPayOrder', $order->id)
+        ->set('payAmount', 15000)
+        ->call('payOrderDebt')
+        ->assertHasNoErrors();
+
+    $html = Livewire::actingAs(debtListAdmin())->test('pages.admin.debts')->html();
+
+    // Только эта таблица непуста — заголовок и тело обеих скрытых на sm
+    // колонок («дата/время», «товары», «долг») получили брейкпоинт.
+    expect(substr_count($html, 'hidden px-6 py-4 sm:table-cell'))->toBe(3)
+        ->and(substr_count($html, 'hidden whitespace-nowrap px-6 py-4 sm:table-cell'))->toBe(1)
+        ->and(substr_count($html, 'hidden px-6 py-4 text-right sm:table-cell'))->toBe(1)
+        ->and(substr_count($html, 'hidden whitespace-nowrap px-6 py-4 text-right sm:table-cell'))->toBe(1);
+
+    expect($html)
+        ->toContain('02.08.2026 10:15')
+        ->toContain('Шампунь')
+        ->toContain('×2')
+        ->toContain(__('common.price').': 60 000 '.__('common.currency'))
+        ->toContain(__('common.debt').': 25 000 '.__('common.currency'))
+        ->toContain(__('debts.paid_amount', ['amount' => '15 000 '.__('common.currency')]));
+
+    Carbon::setTestNow();
 });

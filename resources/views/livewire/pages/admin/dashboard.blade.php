@@ -1038,19 +1038,19 @@ class extends Component
                 <table class="w-full text-left text-sm">
                     <thead>
                         <tr class="border-b border-content/[0.06] bg-content/[0.03] text-xs font-bold uppercase tracking-wider text-content/30">
-                            <th class="px-6 py-4">{{ __('common.name') }}</th>
-                            <th class="px-6 py-4 text-center">{{ __('dashboard.appointments_day') }}</th>
-                            <th class="px-6 py-4 text-center">{{ __('dashboard.cancelled') }}</th>
+                            <th class="sticky left-0 z-10 bg-surface-sunken px-6 py-4">{{ __('common.name') }}</th>
+                            <th class="hidden px-6 py-4 text-center md:table-cell">{{ __('dashboard.appointments_day') }}</th>
+                            <th class="hidden px-6 py-4 text-center md:table-cell">{{ __('dashboard.cancelled') }}</th>
                             <th class="px-6 py-4 text-right">{{ __('common.revenue') }}</th>
-                            <th class="px-6 py-4 text-right">{{ __('dashboard.paid_by_client') }}</th>
+                            <th class="hidden px-6 py-4 text-right md:table-cell">{{ __('dashboard.paid_by_client') }}</th>
                             <th class="px-6 py-4 text-right">{{ __('dashboard.salary_short') }}</th>
                             <th class="px-6 py-4 text-right">{{ __('dashboard.remainder') }}</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-content/[0.04]">
                         @forelse ($this->barberStats as $stat)
-                            <tr class="transition-colors hover:bg-content/[0.02]">
-                                <td class="px-6 py-4">
+                            <tr class="group transition-colors hover:bg-content/[0.02]">
+                                <td class="sticky left-0 z-10 bg-surface-sunken px-6 py-4 transition-colors group-hover:bg-surface">
                                     <div class="flex items-center gap-3">
                                         @if ($stat->photoUrl)
                                             <img src="{{ $stat->photoUrl }}" alt="{{ $stat->name }}" class="h-9 w-9 rounded-full object-cover ring-1 ring-content/10">
@@ -1066,10 +1066,21 @@ class extends Component
                                                     {{ __('dashboard.barber_inactive') }}
                                                 </span>
                                             @endunless
+                                            {{-- Скрытые на мобиле колонки — подстрокой здесь, иначе они
+                                                 пропадают из виду вместе с горизонтальным скроллом. --}}
+                                            <div class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-content/40 md:hidden">
+                                                <span>{{ __('dashboard.appointments_day') }}: {{ $stat->count }}</span>
+                                                @if ($stat->cancelled_count > 0)
+                                                    <span class="text-danger/60">{{ __('dashboard.cancelled') }}: {{ $stat->cancelled_count }}</span>
+                                                @endif
+                                                @if ($stat->received > 0)
+                                                    <span>{{ __('dashboard.paid_by_client') }}: {{ $stat->formattedReceived }}</span>
+                                                @endif
+                                            </div>
                                         </div>
                                     </div>
                                 </td>
-                                <td class="px-6 py-4 text-center">
+                                <td class="hidden px-6 py-4 text-center md:table-cell">
                                     <span @class([
                                         'inline-flex min-w-[2.5rem] items-center justify-center rounded-full px-3 py-1 text-xs font-bold',
                                         'bg-brass/10 text-brass-ink' => $stat->count > 0,
@@ -1078,7 +1089,7 @@ class extends Component
                                         {{ $stat->count }}
                                     </span>
                                 </td>
-                                <td class="px-6 py-4 text-center">
+                                <td class="hidden px-6 py-4 text-center md:table-cell">
                                     <span @class([
                                         'inline-flex min-w-[2.5rem] items-center justify-center rounded-full px-3 py-1 text-xs font-bold',
                                         'bg-danger/10 text-danger' => $stat->cancelled_count > 0,
@@ -1118,7 +1129,7 @@ class extends Component
                                     @endif
                                 </td>
                                 {{-- База зарплаты: Оплачено − ЗП = Остаток --}}
-                                <td class="px-6 py-4 text-right">
+                                <td class="hidden px-6 py-4 text-right md:table-cell">
                                     <span @class([
                                         'font-extrabold tabular-nums',
                                         'text-content/70' => $stat->received > 0,
@@ -1149,18 +1160,20 @@ class extends Component
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="px-6 py-12 text-center text-content/20">{{ __('dashboard.no_active_barbers') }}</td>
+                                {{-- Ниже md три колонки скрыты: colspan обязан считать видимые, иначе шапка съедет относительно строки. --}}
+                                <td colspan="4" class="px-6 py-12 text-center text-content/20 md:hidden">{{ __('dashboard.no_active_barbers') }}</td>
+                                <td colspan="7" class="hidden px-6 py-12 text-center text-content/20 md:table-cell">{{ __('dashboard.no_active_barbers') }}</td>
                             </tr>
                         @endforelse
                     </tbody>
                     @if ($this->barberStats->isNotEmpty())
                         <tfoot>
                             <tr class="border-t border-content/[0.06] bg-content/[0.03] text-xs font-bold uppercase tracking-wider text-content/40">
-                                <td class="px-6 py-4">{{ __('common.total') }}</td>
-                                <td class="px-6 py-4 text-center text-content">{{ $this->barberStats->sum('count') }}</td>
-                                <td class="px-6 py-4 text-center text-content">{{ $this->barberStats->sum('cancelled_count') }}</td>
+                                <td class="sticky left-0 z-10 bg-surface-sunken px-6 py-4">{{ __('common.total') }}</td>
+                                <td class="hidden px-6 py-4 text-center text-content md:table-cell">{{ $this->barberStats->sum('count') }}</td>
+                                <td class="hidden px-6 py-4 text-center text-content md:table-cell">{{ $this->barberStats->sum('cancelled_count') }}</td>
                                 <td class="px-6 py-4 text-right text-success">{{ $this->formatSum((int) $this->barberStats->sum('revenue')) }}</td>
-                                <td class="px-6 py-4 text-right text-content">{{ $this->formatSum((int) $this->barberStats->sum('received')) }}</td>
+                                <td class="hidden px-6 py-4 text-right text-content md:table-cell">{{ $this->formatSum((int) $this->barberStats->sum('received')) }}</td>
                                 <td class="px-6 py-4 text-right text-brass-ink">{{ $this->formatSum((int) $this->barberStats->sum('salary')) }}</td>
                                 <td class="px-6 py-4 text-right text-royal">{{ $this->formatSum((int) $this->barberStats->sum('remainder')) }}</td>
                             </tr>
@@ -1485,19 +1498,19 @@ class extends Component
                 <table class="w-full text-left text-sm">
                     <thead>
                         <tr class="border-b border-content/[0.06] bg-content/[0.03] text-xs font-bold uppercase tracking-wider text-content/30">
-                            <th class="px-6 py-4">{{ __('common.barber') }}</th>
-                            <th class="px-6 py-4 text-center">{{ __('dashboard.col_appointments') }}</th>
+                            <th class="sticky left-0 z-10 bg-surface-sunken px-6 py-4">{{ __('common.barber') }}</th>
+                            <th class="hidden px-6 py-4 text-center md:table-cell">{{ __('dashboard.col_appointments') }}</th>
                             <th class="px-6 py-4 text-right">{{ __('common.revenue') }}</th>
-                            <th class="px-6 py-4 text-right">{{ __('dashboard.paid_by_client') }}</th>
-                            <th class="px-6 py-4 text-right">{{ __('dashboard.col_salary_percent') }}</th>
+                            <th class="hidden px-6 py-4 text-right md:table-cell">{{ __('dashboard.paid_by_client') }}</th>
+                            <th class="hidden px-6 py-4 text-right md:table-cell">{{ __('dashboard.col_salary_percent') }}</th>
                             <th class="px-6 py-4 text-right">{{ __('dashboard.col_salary_payable') }}</th>
                             <th class="px-6 py-4 text-right">{{ __('dashboard.remainder') }}</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-content/[0.04]">
                         @forelse ($this->monthlyBarberStats as $stat)
-                            <tr class="transition-colors hover:bg-content/[0.02]">
-                                <td class="px-6 py-4">
+                            <tr class="group transition-colors hover:bg-content/[0.02]">
+                                <td class="sticky left-0 z-10 bg-surface-sunken px-6 py-4 transition-colors group-hover:bg-surface">
                                     <div class="flex items-center gap-3">
                                         @if ($stat->photoUrl)
                                             <img src="{{ $stat->photoUrl }}" alt="{{ $stat->name }}" class="h-9 w-9 rounded-full object-cover ring-1 ring-content/10">
@@ -1513,10 +1526,18 @@ class extends Component
                                                     {{ __('dashboard.barber_inactive') }}
                                                 </span>
                                             @endunless
+                                            {{-- Скрытые на мобиле колонки — подстрокой здесь, иначе они
+                                                 пропадают из виду вместе с горизонтальным скроллом. --}}
+                                            <div class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-content/40 md:hidden">
+                                                <span>{{ __('dashboard.col_appointments') }}: {{ $stat->count }}</span>
+                                                @if ($stat->received > 0)
+                                                    <span>{{ __('dashboard.paid_by_client') }}: {{ $stat->formattedReceived }}</span>
+                                                @endif
+                                            </div>
                                         </div>
                                     </div>
                                 </td>
-                                <td class="px-6 py-4 text-center">
+                                <td class="hidden px-6 py-4 text-center md:table-cell">
                                     <span @class([
                                         'inline-flex min-w-[2.5rem] items-center justify-center rounded-full px-3 py-1 text-xs font-bold',
                                         'bg-brass/10 text-brass-ink' => $stat->count > 0,
@@ -1556,7 +1577,7 @@ class extends Component
                                     @endif
                                 </td>
                                 {{-- База зарплаты: Оплачено − ЗП = Остаток --}}
-                                <td class="px-6 py-4 text-right">
+                                <td class="hidden px-6 py-4 text-right md:table-cell">
                                     <span @class([
                                         'font-extrabold tabular-nums',
                                         'text-content/70' => $stat->received > 0,
@@ -1565,7 +1586,7 @@ class extends Component
                                         {{ $stat->formattedReceived }}
                                     </span>
                                 </td>
-                                <td class="px-6 py-4 text-right">
+                                <td class="hidden px-6 py-4 text-right md:table-cell">
                                     <span class="text-xs font-bold text-content/40">{{ $stat->salaryPercent }}%</span>
                                 </td>
                                 <td class="px-6 py-4 text-right">
@@ -1576,6 +1597,7 @@ class extends Component
                                     ])>
                                         {{ $stat->formattedSalary }}
                                     </span>
+                                    <div class="mt-0.5 text-[10px] text-content/25 md:hidden">{{ $stat->salaryPercent }}%</div>
                                 </td>
                                 <td class="px-6 py-4 text-right">
                                     <span @class([
@@ -1589,24 +1611,29 @@ class extends Component
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="px-6 py-12 text-center text-content/20">{{ __('dashboard.no_active_barbers') }}</td>
+                                {{-- Ниже md три колонки скрыты: colspan обязан считать видимые, иначе шапка съедет относительно строки. --}}
+                                <td colspan="4" class="px-6 py-12 text-center text-content/20 md:hidden">{{ __('dashboard.no_active_barbers') }}</td>
+                                <td colspan="7" class="hidden px-6 py-12 text-center text-content/20 md:table-cell">{{ __('dashboard.no_active_barbers') }}</td>
                             </tr>
                         @endforelse
                     </tbody>
                     @if ($this->monthlyBarberStats->isNotEmpty())
                         <tfoot>
                             <tr class="border-t border-content/[0.06] bg-content/[0.03] text-xs font-bold uppercase tracking-wider text-content/40">
-                                <td class="px-6 py-4">{{ __('common.total') }}</td>
-                                <td class="px-6 py-4 text-center text-content">{{ $this->monthlyBarberStats->sum('count') }}</td>
+                                <td class="sticky left-0 z-10 bg-surface-sunken px-6 py-4">{{ __('common.total') }}</td>
+                                <td class="hidden px-6 py-4 text-center text-content md:table-cell">{{ $this->monthlyBarberStats->sum('count') }}</td>
                                 <td class="px-6 py-4 text-right text-success">{{ $this->formatSum((int) $this->monthlyBarberStats->sum('revenue')) }}</td>
-                                <td class="px-6 py-4 text-right text-content">{{ $this->formatSum((int) $this->monthlyBarberStats->sum('received')) }}</td>
-                                <td class="px-6 py-4"></td>
+                                <td class="hidden px-6 py-4 text-right text-content md:table-cell">{{ $this->formatSum((int) $this->monthlyBarberStats->sum('received')) }}</td>
+                                <td class="hidden px-6 py-4 md:table-cell"></td>
                                 <td class="px-6 py-4 text-right text-info">{{ $this->formatSum($this->monthlyTotalSalary) }}</td>
                                 <td class="px-6 py-4 text-right text-royal">{{ $this->formatSum((int) $this->monthlyBarberStats->sum('remainder')) }}</td>
                             </tr>
                             <tr class="border-t border-content/[0.06] bg-content/[0.02] text-xs font-bold uppercase tracking-wider">
-                                <td class="px-6 py-4 text-content/40" colspan="4">{{ __('dashboard.profit_row') }}</td>
-                                <td class="px-6 py-4"></td>
+                                {{-- На мобиле колонки 2 и 4 скрыты, поэтому подпись занимает две ячейки, а не четыре:
+                                     иначе строка прибыли шире остальных и число уезжает из-под «Зарплаты». --}}
+                                <td class="sticky left-0 z-10 bg-surface-sunken px-6 py-4 text-content/40 md:hidden" colspan="2">{{ __('dashboard.profit_row') }}</td>
+                                <td class="sticky left-0 z-10 hidden bg-surface-sunken px-6 py-4 text-content/40 md:table-cell" colspan="4">{{ __('dashboard.profit_row') }}</td>
+                                <td class="hidden px-6 py-4 md:table-cell"></td>
                                 <td @class([
                                     'px-6 py-4 text-right font-extrabold tabular-nums',
                                     'text-success' => $this->companyProfit >= 0,

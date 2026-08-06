@@ -425,11 +425,14 @@ class extends Component
 
     {{-- New order form --}}
     @if ($showForm)
+        {{-- Своя область для липкой панели: без неё containing block тянется до
+             конца страницы, и панель продолжала бы висеть поверх списка продаж. --}}
+        <div class="relative">
         <div class="mb-8 overflow-hidden rounded-2xl border border-content/[0.06] bg-content/[0.03] shadow-xl backdrop-blur-md">
             <div class="border-b border-content/[0.06] bg-content/[0.03] px-6 py-4">
                 <h3 class="text-sm font-bold text-content">{{ __('orders.new') }}</h3>
             </div>
-            <form wire:submit="save" class="grid gap-0 lg:grid-cols-2">
+            <form id="orderForm" wire:submit="save" class="grid gap-0 lg:grid-cols-2">
                 {{-- Left: product selector --}}
                 <div class="border-b border-content/[0.06] p-6 lg:border-b-0 lg:border-r">
                     <p class="mb-4 text-xs font-semibold uppercase tracking-wider text-content/40">{{ __('orders.select_products') }}</p>
@@ -494,10 +497,6 @@ class extends Component
                                     </button>
                                 </div>
                             @endforeach
-                        </div>
-                        <div class="mb-6 flex items-center justify-between rounded-xl border border-brass/20 bg-brass/[0.06] px-4 py-3">
-                            <span class="text-sm font-bold text-content/60">{{ __('common.total') }}</span>
-                            <span class="text-lg font-extrabold text-brass-ink tabular-nums">{{ number_format($this->cartTotal, 0, '.', ' ') }} {{ __('common.currency') }}</span>
                         </div>
                     @endif
 
@@ -618,15 +617,32 @@ class extends Component
                         @error('note') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                     </div>
 
-                    <div class="flex gap-3">
-                        <button type="button" wire:click="cancel"
-                                class="rounded-xl border border-content/[0.08] px-5 py-2.5 text-sm font-bold text-content/60 transition hover:bg-content/[0.06] hover:text-content">
-                            {{ __('common.cancel') }}
-                        </button>
-                        <x-submit-button class="flex-1">{{ __('orders.submit') }}</x-submit-button>
-                    </div>
                 </div>
             </form>
+        </div>
+
+        {{-- Sticky mobile summary bar: item count, total and submit stay visible
+             while scrolling the product grid above, so adding a product is felt
+             right away — otherwise the cart lives a screen and a half below.
+             On large screens the grid and cart already fit without scrolling,
+             so the bar just settles into normal flow below the form. --}}
+        <div class="sticky bottom-0 z-20 mb-8 flex items-center justify-between gap-3 rounded-2xl border border-content/[0.08] bg-surface/95 px-4 py-3 shadow-[0_-8px_24px_rgba(0,0,0,0.18)] backdrop-blur-md lg:static lg:border-content/[0.06] lg:bg-content/[0.03] lg:px-6 lg:py-4 lg:shadow-none">
+            <div>
+                <div class="text-[10px] font-bold uppercase tracking-widest text-content/40">
+                    {{ __('orders.cart') }} · {{ __('orders.cart_count', ['count' => count($cartItems)]) }}
+                </div>
+                <div class="text-lg font-extrabold text-brass-ink tabular-nums">
+                    {{ number_format($this->cartTotal, 0, '.', ' ') }} {{ __('common.currency') }}
+                </div>
+            </div>
+            <div class="flex shrink-0 gap-2">
+                <button type="button" wire:click="cancel"
+                        class="rounded-xl border border-content/[0.08] px-4 py-2.5 text-sm font-bold text-content/60 transition hover:bg-content/[0.06] hover:text-content">
+                    {{ __('common.cancel') }}
+                </button>
+                <x-submit-button form="orderForm">{{ __('orders.submit') }}</x-submit-button>
+            </div>
+        </div>
         </div>
     @endif
 

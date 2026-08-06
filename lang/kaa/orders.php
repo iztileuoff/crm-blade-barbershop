@@ -14,6 +14,7 @@ return [
     'no_products' => 'Satıwda tovar joq.',
     'cart' => 'Sebet',
     'cart_empty' => 'Tovarlar qosılmaǵan',
+    'cart_count' => ':count tovar',
     'search_client' => 'Klientti izlew...',
     'on_debt' => 'Qarızǵa',
     'debt_hint' => 'Eger klient házir tólemese',

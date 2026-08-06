@@ -136,7 +136,7 @@ class extends Component
                 <thead>
                     <tr class="border-b border-content/[0.06] bg-content/[0.03] text-xs font-bold uppercase tracking-wider text-content/30">
                         <th class="px-6 py-4">{{ __('common.title_field') }}</th>
-                        <th class="px-6 py-4">{{ __('common.description') }}</th>
+                        <th class="hidden px-6 py-4 sm:table-cell">{{ __('common.description') }}</th>
                         <th class="px-6 py-4 text-center">{{ __('specializations.barbers_count') }}</th>
                         <th class="px-6 py-4 text-right">{{ __('common.actions') }}</th>
                     </tr>
@@ -144,8 +144,13 @@ class extends Component
                 <tbody class="divide-y divide-content/[0.04]">
                     @forelse ($this->specializations as $specialization)
                         <tr class="transition-colors hover:bg-content/[0.02]">
-                            <td class="px-6 py-4 font-bold text-content">{{ $specialization->name }}</td>
-                            <td class="px-6 py-4 text-content/50">{{ $specialization->description ?: '—' }}</td>
+                            <td class="px-6 py-4 font-bold text-content">
+                                {{ $specialization->name }}
+                                @if ($specialization->description)
+                                    <div class="mt-0.5 text-xs font-normal text-content/40 sm:hidden">{{ $specialization->description }}</div>
+                                @endif
+                            </td>
+                            <td class="hidden px-6 py-4 text-content/50 sm:table-cell">{{ $specialization->description ?: '—' }}</td>
                             <td class="px-6 py-4 text-center">
                                 <span class="inline-flex h-6 w-6 items-center justify-center rounded-lg bg-content/5 text-xs font-bold text-content/40">
                                     {{ $specialization->barbers_count }}

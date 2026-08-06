@@ -14,6 +14,7 @@ return [
     'no_products' => 'Sotuvda mahsulot yoʻq.',
     'cart' => 'Savat',
     'cart_empty' => 'Mahsulotlar qoʻshilmagan',
+    'cart_count' => ':count mahsulot',
     'search_client' => 'Mijozni qidirish...',
     'on_debt' => 'Qarzga',
     'debt_hint' => 'Agar mijoz hozir toʻlamasa',

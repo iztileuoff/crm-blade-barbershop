@@ -356,29 +356,39 @@ class extends Component
                     <table class="w-full text-left text-sm">
                         <thead>
                             <tr class="border-b border-content/[0.06] bg-content/[0.03] text-xs font-bold uppercase tracking-wider text-content/30">
-                                <th class="px-6 py-4">{{ __('debts.date_time') }}</th>
+                                <th class="hidden px-6 py-4 sm:table-cell">{{ __('debts.date_time') }}</th>
                                 <th class="px-6 py-4">{{ __('common.client') }}</th>
-                                <th class="px-6 py-4">{{ __('debts.barber_services') }}</th>
-                                <th class="px-6 py-4 text-right">{{ __('debts.amount_debt') }}</th>
+                                <th class="hidden px-6 py-4 sm:table-cell">{{ __('debts.barber_services') }}</th>
+                                <th class="hidden px-6 py-4 text-right sm:table-cell">{{ __('debts.amount_debt') }}</th>
                                 <th class="px-6 py-4 text-right">{{ __('debts.action') }}</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-content/[0.04]">
                             @foreach ($this->appointmentDebts as $appointment)
                                 <tr class="transition-colors hover:bg-content/[0.02]">
-                                    <td class="whitespace-nowrap px-6 py-4">
+                                    <td class="hidden whitespace-nowrap px-6 py-4 sm:table-cell">
                                         <div class="font-bold text-content">{{ $appointment->starts_at->format('d.m.Y') }}</div>
                                         <div class="text-[10px] text-content/30">{{ $appointment->starts_at->format('H:i') }}</div>
                                     </td>
                                     <td class="px-6 py-4">
                                         <div class="font-bold text-content">{{ $appointment->client?->name ?? '—' }}</div>
                                         <div class="text-xs text-brass-ink/60">{{ $appointment->client?->formattedPhone }}</div>
+                                        {{-- Скрытые на мобиле колонки — подстрокой здесь, включая суммы. --}}
+                                        <div class="mt-1 space-y-0.5 text-[10px] text-content/40 sm:hidden">
+                                            <div>{{ $appointment->starts_at->format('d.m.Y H:i') }}</div>
+                                            <div>{{ $appointment->barber?->name }} · {{ $appointment->services->pluck('name')->join(', ') }}</div>
+                                            <div>{{ __('common.price') }}: {{ $appointment->formattedPrice }}</div>
+                                            <div class="font-bold text-danger">{{ __('common.debt') }}: {{ $appointment->formattedDebt }}</div>
+                                            @if ($appointment->debtPaid > 0)
+                                                <div class="font-bold text-success">{{ __('debts.paid_amount', ['amount' => number_format($appointment->debtPaid, 0, '.', ' ').' '.__('common.currency')]) }}</div>
+                                            @endif
+                                        </div>
                                     </td>
-                                    <td class="px-6 py-4">
+                                    <td class="hidden px-6 py-4 sm:table-cell">
                                         <div class="text-content/60">{{ $appointment->barber?->name }}</div>
                                         <div class="mt-0.5 text-[10px] text-content/30">{{ $appointment->services->pluck('name')->join(', ') }}</div>
                                     </td>
-                                    <td class="whitespace-nowrap px-6 py-4 text-right">
+                                    <td class="hidden whitespace-nowrap px-6 py-4 text-right sm:table-cell">
                                         <div class="text-xs text-content/40">{{ $appointment->formattedPrice }}</div>
                                         <div class="mt-0.5 font-extrabold text-danger tabular-nums">{{ $appointment->formattedDebt }}</div>
                                         @if ($appointment->debtPaid > 0)
@@ -413,25 +423,42 @@ class extends Component
                     <table class="w-full text-left text-sm">
                         <thead>
                             <tr class="border-b border-content/[0.06] bg-content/[0.03] text-xs font-bold uppercase tracking-wider text-content/30">
-                                <th class="px-6 py-4">{{ __('debts.date_time') }}</th>
+                                <th class="hidden px-6 py-4 sm:table-cell">{{ __('debts.date_time') }}</th>
                                 <th class="px-6 py-4">{{ __('common.client') }}</th>
-                                <th class="px-6 py-4">{{ __('nav.products') }}</th>
-                                <th class="px-6 py-4 text-right">{{ __('debts.amount_debt') }}</th>
+                                <th class="hidden px-6 py-4 sm:table-cell">{{ __('nav.products') }}</th>
+                                <th class="hidden px-6 py-4 text-right sm:table-cell">{{ __('debts.amount_debt') }}</th>
                                 <th class="px-6 py-4 text-right">{{ __('debts.action') }}</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-content/[0.04]">
                             @foreach ($this->orderDebts as $order)
                                 <tr class="transition-colors hover:bg-content/[0.02]">
-                                    <td class="whitespace-nowrap px-6 py-4">
+                                    <td class="hidden whitespace-nowrap px-6 py-4 sm:table-cell">
                                         <div class="font-bold text-content">{{ $order->created_at->format('d.m.Y') }}</div>
                                         <div class="text-[10px] text-content/30">{{ $order->created_at->format('H:i') }}</div>
                                     </td>
                                     <td class="px-6 py-4">
                                         <div class="font-bold text-content">{{ $order->client?->name ?? '—' }}</div>
                                         <div class="text-xs text-brass-ink/60">{{ $order->client?->formattedPhone }}</div>
+                                        {{-- Скрытые на мобиле колонки — подстрокой здесь, включая суммы. --}}
+                                        <div class="mt-1 space-y-0.5 text-[10px] text-content/40 sm:hidden">
+                                            <div>{{ $order->created_at->format('d.m.Y H:i') }}</div>
+                                            <div class="flex flex-wrap gap-1">
+                                                @foreach ($order->items as $item)
+                                                    <span class="inline-flex items-center rounded-full bg-content/[0.06] px-2 py-0.5 text-content/60">
+                                                        {{ $item->product?->name ?? '—' }}
+                                                        <span class="ml-1 font-bold text-content/40">×{{ $item->quantity }}</span>
+                                                    </span>
+                                                @endforeach
+                                            </div>
+                                            <div>{{ __('common.price') }}: {{ $order->formattedTotal }}</div>
+                                            <div class="font-bold text-danger">{{ __('common.debt') }}: {{ $order->formattedDebt }}</div>
+                                            @if ($order->debtPaid > 0)
+                                                <div class="font-bold text-success">{{ __('debts.paid_amount', ['amount' => number_format($order->debtPaid, 0, '.', ' ').' '.__('common.currency')]) }}</div>
+                                            @endif
+                                        </div>
                                     </td>
-                                    <td class="px-6 py-4">
+                                    <td class="hidden px-6 py-4 sm:table-cell">
                                         <div class="flex flex-wrap gap-1">
                                             @foreach ($order->items as $item)
                                                 <span class="inline-flex items-center rounded-full bg-content/[0.06] px-2 py-0.5 text-xs text-content/60">
@@ -441,7 +468,7 @@ class extends Component
                                             @endforeach
                                         </div>
                                     </td>
-                                    <td class="whitespace-nowrap px-6 py-4 text-right">
+                                    <td class="hidden whitespace-nowrap px-6 py-4 text-right sm:table-cell">
                                         <div class="text-xs text-content/40">{{ $order->formattedTotal }}</div>
                                         <div class="mt-0.5 font-extrabold text-danger tabular-nums">{{ $order->formattedDebt }}</div>
                                         @if ($order->debtPaid > 0)

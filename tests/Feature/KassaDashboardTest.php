@@ -606,6 +606,127 @@ it('computes the cash register remainder per barber for the month', function () 
 
 /*
 |--------------------------------------------------------------------------
+| Responsive salary tables: sticky name column, hidden columns keep their
+| numbers on mobile (#69)
+|--------------------------------------------------------------------------
+|
+| Server-rendered HTML is all Pest can see, so these pin the contract that
+| would otherwise rot silently: the barber-name cell stays sticky, every
+| column hidden below the breakpoint gets the same class on its header AND
+| its body cell, and every value that moved into the mobile sub-line is
+| still present in the markup — just relocated, never dropped.
+*/
+
+it('keeps the barber name cell sticky and duplicates every value the mobile columns hide, on the day table (#69)', function () {
+    Carbon::setTestNow(Carbon::parse('2026-08-10 12:00:00', 'Asia/Tashkent'));
+
+    $admin = kassaAdmin();
+    $barber = Barber::factory()->create(['name' => 'Botir', 'salary_percent' => 50, 'price' => 100000]);
+    $client = Client::factory()->create();
+
+    $makeAppointment = function (array $attrs) use ($barber, $client): Appointment {
+        return Appointment::create(array_merge([
+            'client_id' => $client->id,
+            'barber_id' => $barber->id,
+            'starts_at' => now()->setTime(12, 0),
+            'ends_at' => now()->setTime(13, 0),
+            'price' => 100000,
+            'payment_type' => 'cash',
+        ], $attrs));
+    };
+
+    $makeAppointment(['status' => AppointmentStatus::Completed]);
+    $makeAppointment(['status' => AppointmentStatus::Completed]);
+    $makeAppointment(['status' => AppointmentStatus::Cancelled]);
+
+    $page = Livewire::actingAs($admin)
+        ->test('pages.admin.dashboard')
+        ->set('activeTab', 'day')
+        ->set('date', '2026-08-10');
+
+    $stat = $page->instance()->barberStats()->firstWhere('id', $barber->id);
+    expect($stat->count)->toBe(3)
+        ->and($stat->cancelled_count)->toBe(1)
+        ->and($stat->received)->toBe(200000);
+
+    $html = $page->html();
+
+    // Имя мастера сидит в липкой ячейке — в заголовке, в теле и в итоговой
+    // строке — иначе на мобиле оно уезжает вместе со строкой при скролле.
+    expect($html)
+        ->toContain('sticky left-0 z-10 bg-surface-sunken px-6 py-4">'.__('common.name'))
+        ->toContain('sticky left-0 z-10 bg-surface-sunken px-6 py-4 transition-colors group-hover:bg-surface')
+        ->toContain('sticky left-0 z-10 bg-surface-sunken px-6 py-4">'.__('common.total'));
+
+    // Скрытые на md колонки («Записей», «Отменено», «Оплачено клиентом»)
+    // получили брейкпоинт и в заголовке, и в теле — единственный мастер за
+    // день даёт ровно по одной паре на колонку.
+    expect(substr_count($html, 'hidden px-6 py-4 text-center md:table-cell'))->toBe(4)
+        ->and(substr_count($html, 'hidden px-6 py-4 text-right md:table-cell'))->toBe(2);
+
+    // …а цифры, которые эти колонки прячут на мобиле, никуда не делись —
+    // они дублированы подстрокой под именем мастера.
+    expect($html)
+        ->toContain(__('dashboard.appointments_day').': 3')
+        ->toContain(__('dashboard.cancelled').': 1')
+        ->toContain(__('dashboard.paid_by_client').': '.$stat->formattedReceived);
+
+    Carbon::setTestNow();
+});
+
+it('keeps the barber name cell sticky and duplicates every value the mobile columns hide, on the month table (#69)', function () {
+    Carbon::setTestNow(Carbon::parse('2026-08-10 12:00:00', 'Asia/Tashkent'));
+
+    $admin = kassaAdmin();
+    $barber = Barber::factory()->create(['name' => 'Diyor', 'salary_percent' => 40, 'price' => 100000]);
+    $client = Client::factory()->create();
+
+    foreach ([['h' => 12], ['h' => 14]] as $slot) {
+        Appointment::create([
+            'client_id' => $client->id,
+            'barber_id' => $barber->id,
+            'starts_at' => now()->setTime($slot['h'], 0),
+            'ends_at' => now()->setTime($slot['h'] + 1, 0),
+            'status' => AppointmentStatus::Completed,
+            'price' => 100000,
+            'payment_type' => 'cash',
+        ]);
+    }
+
+    $page = Livewire::actingAs($admin)
+        ->test('pages.admin.dashboard')
+        ->set('activeTab', 'month')
+        ->set('month', '2026-08');
+
+    $stat = $page->instance()->monthlyBarberStats()->firstWhere('id', $barber->id);
+    expect($stat->count)->toBe(2)
+        ->and($stat->received)->toBe(200000)
+        ->and($stat->salaryPercent)->toBe(40);
+
+    $html = $page->html();
+
+    expect($html)
+        ->toContain('sticky left-0 z-10 bg-surface-sunken px-6 py-4">'.__('common.barber'))
+        ->toContain('sticky left-0 z-10 bg-surface-sunken px-6 py-4 transition-colors group-hover:bg-surface')
+        ->toContain('sticky left-0 z-10 bg-surface-sunken px-6 py-4">'.__('common.total'));
+
+    // Скрытые на md колонки («Записей», «Оплачено клиентом», «% ЗП»)
+    // получили брейкпоинт и в заголовке, и в теле.
+    expect(substr_count($html, 'hidden px-6 py-4 text-center md:table-cell'))->toBe(2)
+        ->and(substr_count($html, 'hidden px-6 py-4 text-right md:table-cell'))->toBe(4);
+
+    expect($html)
+        ->toContain(__('dashboard.col_appointments').': 2')
+        ->toContain(__('dashboard.paid_by_client').': '.$stat->formattedReceived)
+        // % ЗП тоже скрыт на мобиле как отдельная колонка — продублирован
+        // под самой зарплатой, а не потерян вместе со скрытой ячейкой.
+        ->toContain('text-content/25 md:hidden">'.$stat->salaryPercent.'%');
+
+    Carbon::setTestNow();
+});
+
+/*
+|--------------------------------------------------------------------------
 | Full mix: pins every dashboard KPI to a hand-computed constant (#66)
 |--------------------------------------------------------------------------
 |

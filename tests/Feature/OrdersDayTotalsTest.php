@@ -3,6 +3,7 @@
 use App\Enums\Role;
 use App\Models\Client;
 use App\Models\Order;
+use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -14,6 +15,32 @@ function ordersAdmin(): User
 {
     return User::factory()->create(['role' => Role::ADMIN]);
 }
+
+it('keeps the sticky mobile total bar in sync with the cart, matching the same total the layout uses everywhere else (#69)', function () {
+    $admin = ordersAdmin();
+    $shampoo = Product::create(['name' => 'Шампунь', 'stock' => 10, 'selling_price' => 25000]);
+    $wax = Product::create(['name' => 'Воск', 'stock' => 10, 'selling_price' => 15000]);
+
+    $page = Livewire::actingAs($admin)
+        ->test('pages.admin.orders')
+        ->call('openCreate')
+        ->call('addToCart', $shampoo->id)
+        ->call('addToCart', $wax->id);
+
+    // 25 000 + 15 000 — то же число обязано попасть в липкую панель снизу,
+    // а не разойтись с тем, что реально лежит в корзине.
+    expect($page->instance()->cartTotal())->toBe(40000);
+
+    $html = $page->html();
+
+    // Панель липнет ко дну на мобиле и садится в обычный поток на lg —
+    // это одна и та же панель для обоих размеров экрана, не две разные.
+    expect($html)
+        ->toContain('sticky bottom-0 z-20')
+        ->toContain('lg:static')
+        ->toContain(__('orders.cart_count', ['count' => 2]))
+        ->toContain(number_format(40000, 0, '.', ' ').' '.__('common.currency'));
+});
 
 it('shows received money, not the gross total that still includes unpaid debt', function () {
     $client = Client::factory()->create();
