@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\AppointmentStatus;
 use App\Enums\Role;
 use App\Models\Appointment;
 use App\Models\Barber;
@@ -203,7 +204,98 @@ it('sends an empty mixed split to cash, matching the repair migration', function
 });
 
 it('lets a fully-on-credit operation be saved without a split', function () {
-    expect(PaymentSplit::errors('both', 100000, null, null, 100000))->toBeEmpty();
+    expect(PaymentSplit::errors('both', 100000, null, null, 100000))->toBeEmpty()
+        ->and(PaymentSplit::errors('both', 100000, 0, 0, 100000))->toBeEmpty();
+});
+
+it('rejects a leftover split on a fully-on-credit operation', function () {
+    // Иначе строка сохраняется и навсегда висит в баннере «битые операции»,
+    // а у продаж нет экрана правки, чтобы её починить.
+    expect(PaymentSplit::errors('both', 100000, 50000, 50000, 100000))->not->toBeEmpty()
+        // форма строки #222 из дампа: цена 0, а в разбивке деньги
+        ->and(PaymentSplit::errors('both', 0, 30000, 20000, 0))->not->toBeEmpty();
+});
+
+it('shows the money error to the cashier, not just in the error bag', function () {
+    // Ошибка в мешке — ещё не ошибка на экране: раньше модалка просто замирала.
+    $product = Product::create([
+        'name' => 'Гель',
+        'selling_price' => 100000,
+        'purchase_price' => 30000,
+        'stock' => 10,
+        'is_active' => true,
+    ]);
+
+    $html = Livewire::actingAs(moneyAdmin())
+        ->test('pages.admin.orders')
+        ->call('openCreate')
+        ->call('addToCart', $product->id)
+        ->set('payment_type', 'both')
+        ->set('cash_amount', 40000)
+        ->set('card_amount', 40000)
+        ->call('save')
+        ->html();
+
+    expect($html)->toContain(__('payments.err_split_mismatch', ['expected' => '100 000']));
+});
+
+it('shows the debt-below-paid error even though the debt toggle is off', function () {
+    $admin = moneyAdmin();
+    $barber = Barber::factory()->create(['salary_percent' => 50, 'price' => 100000]);
+    $client = Client::factory()->create();
+    $service = Service::factory()->create();
+
+    $appointment = Appointment::create([
+        'client_id' => $client->id,
+        'barber_id' => $barber->id,
+        'starts_at' => now()->setTime(12, 0),
+        'ends_at' => now()->setTime(13, 0),
+        'status' => AppointmentStatus::Completed,
+        'price' => 100000,
+        'payment_type' => 'cash',
+        'debt_amount' => 40000,
+    ]);
+    $appointment->services()->sync([$service->id => ['amount' => 100000]]);
+
+    Livewire::actingAs($admin)
+        ->test('pages.admin.debts')
+        ->call('openPayAppointment', $appointment->id)
+        ->set('payAmount', 40000)
+        ->call('payAppointmentDebt');
+
+    $html = Livewire::actingAs($admin)
+        ->test('pages.admin.appointments')
+        ->call('edit', $appointment->id)
+        ->set('debtEnabled', false)
+        ->set('debt_amount', null)
+        ->call('save')
+        ->html();
+
+    expect($html)->toContain(__('payments.err_debt_below_paid', ['paid' => '40 000']));
+});
+
+it('shows a negative service amount error instead of silently refusing', function () {
+    $admin = moneyAdmin();
+    $barber = Barber::factory()->create(['salary_percent' => 50, 'price' => 100000]);
+    $service = Service::factory()->create();
+
+    $component = Livewire::actingAs($admin)
+        ->test('pages.admin.appointments')
+        ->call('openCreate')
+        ->set('barber_id', $barber->id)
+        ->set('form_date', '2026-08-06')
+        ->set('form_start_time', '10:00')
+        ->set('form_end_time', '11:00')
+        ->set('selectedServices', [['service_id' => $service->id, 'amount' => -5000]])
+        ->call('save');
+
+    $component->assertHasErrors('selectedServices.0.amount');
+
+    // Сообщение должно быть на экране, а не только в мешке ошибок.
+    $message = $component->errors()->get('selectedServices.0.amount')[0];
+
+    expect($component->html())->toContain($message)
+        ->and(Appointment::count())->toBe(0);
 });
 
 it('reproduces every broken row from the dump as a validation error', function () {

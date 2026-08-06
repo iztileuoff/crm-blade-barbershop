@@ -4,6 +4,7 @@ namespace App\Models\Concerns;
 
 use App\Enums\PaymentType;
 use App\Models\DebtPayment;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 /**
@@ -85,6 +86,27 @@ trait HasCashRegisterAmounts
     public function debtPayments(): MorphMany
     {
         return $this->morphMany(DebtPayment::class, 'payable');
+    }
+
+    /**
+     * Только операции с непогашенным остатком.
+     *
+     * Отбор идёт в SQL, а не в PHP: `debt_amount` больше не обнуляется при
+     * погашении, поэтому «долг был когда-либо» — это вся история, и её нельзя
+     * тянуть в память целиком.
+     */
+    public function scopeWithOutstandingDebt(Builder $query): Builder
+    {
+        $table = $this->getTable();
+
+        return $query
+            ->where('debt_amount', '>', 0)
+            ->whereRaw(
+                "coalesce((select sum(amount) from debt_payments
+                    where debt_payments.payable_type = ?
+                      and debt_payments.payable_id = {$table}.id), 0) < {$table}.debt_amount",
+                [$this->getMorphClass()],
+            );
     }
 
     /**

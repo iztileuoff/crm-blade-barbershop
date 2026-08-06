@@ -53,7 +53,6 @@ return [
     'not_collected' => 'Yigʻilmagan',
     'debt_repaid' => 'Qarzlar toʻlandi',
     'barber_inactive' => 'Ishdan boʻshagan',
-    'percent_mismatch' => 'Haqiqiy stavka ustaning joriy foizi bilan mos kelmaydi',
     'broken_operations' => 'Nosoz amallar',
     'broken_operations_hint' => 'Taqsimoti mos kelmaydigan yoki qarzi narxdan katta amallar: :count. Ularni «Yozuvlar» va «Sotuvlar»da tuzating.',
     'profit_positive' => 'Aylanma minus barberlar maoshi',

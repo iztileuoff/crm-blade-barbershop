@@ -40,12 +40,13 @@ class BarberMenuHandler
         $percent = $barber->salary_percent ?? self::DEFAULT_SALARY_PERCENT;
 
         // Формула зарплаты живёт на модели — иначе бот и дашборд разъезжаются.
-        // Погашения внутри периода добираются тем же скоупом, что и на дашборде.
+        // Окно сбора долгов — расчётный месяц, как и на дашборде, чтобы «Сегодня»
+        // и «За месяц» считались по одному правилу.
         $share = function (Carbon $from, Carbon $to) use ($barber, $percent): int {
             return (int) Appointment::query()
                 ->where('barber_id', $barber->id)
                 ->where('status', AppointmentStatus::Completed->value)
-                ->withDebtCollectedBetween($from, $to)
+                ->withDebtCollectedBetween($to->copy()->startOfMonth(), $to->copy()->endOfMonth())
                 ->whereBetween('starts_at', [$from, $to])
                 ->get()
                 ->sum(fn (Appointment $a) => $a->salaryShare($percent));

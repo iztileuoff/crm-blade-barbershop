@@ -110,9 +110,11 @@ it('shows the actual rate paid, not the barber current percent', function () {
         ->firstWhere('id', $newBarber->id);
 
     // Подпись показывает фактические 100%, а не «правильные» 60% мастера.
+    // Красной пометки при этом нет: сравнивать снимок прошлого периода с
+    // сегодняшней ставкой мастера некорректно — она горела и на исправных
+    // строках. Саму подмену процента теперь не даёт случиться AppointmentObserver.
     expect($stat->salary)->toBe(300000)
-        ->and($stat->salaryPercent)->toBe(100)
-        ->and($stat->percentMismatch)->toBeTrue();
+        ->and($stat->salaryPercent)->toBe(100);
 
     Carbon::setTestNow();
 });

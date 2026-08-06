@@ -29,4 +29,5 @@ return [
 
     'err_empty_cart' => 'Keminde bir tovar qosıń.',
     'err_debt_client' => 'Qarız bolsa klient májbúriy.',
+    'err_delete_has_payments' => 'Bul satıw boyınsha qarız tólewleri bar — óshiriw basqa kúnler kassasın jıljıtadı. Aldın tólewlerdi óshiriń.',
 ];

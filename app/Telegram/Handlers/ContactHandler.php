@@ -19,7 +19,10 @@ class ContactHandler
         }
 
         // Принимаем только собственный контакт пользователя, не пересланный чужой.
-        if ($contact->user_id !== null && $contact->user_id !== $bot->userId()) {
+        // Пустой user_id тоже отклоняем: кнопка «поделиться контактом» его всегда
+        // проставляет, а без него привязка ушла бы к любому владельцу номера —
+        // вместе с его заработком и расписанием.
+        if ($contact->user_id === null || $contact->user_id !== $bot->userId()) {
             $bot->sendMessage('Пожалуйста, отправьте именно свой номер кнопкой ниже.', reply_markup: Keyboards::shareContact());
 
             return;

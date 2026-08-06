@@ -321,6 +321,70 @@ it('refuses to lower a debt below what has already been collected', function () 
     Carbon::setTestNow();
 });
 
+it('refuses to delete an operation whose repayments sit in another day', function () {
+    $admin = debtAdmin();
+    $client = Client::factory()->create();
+
+    Carbon::setTestNow(Carbon::parse('2026-05-27 11:00:00', 'Asia/Tashkent'));
+    $order = Order::create([
+        'client_id' => $client->id,
+        'total_price' => 100000,
+        'payment_type' => 'cash',
+        'debt_amount' => 40000,
+    ]);
+
+    Carbon::setTestNow(Carbon::parse('2026-08-02 09:00:00', 'Asia/Tashkent'));
+    Livewire::actingAs($admin)
+        ->test('pages.admin.debts')
+        ->call('openPayOrder', $order->id)
+        ->set('payAmount', 40000)
+        ->call('payOrderDebt');
+
+    Livewire::actingAs($admin)
+        ->test('pages.admin.orders')
+        ->call('deleteOrder', $order->id)
+        ->assertHasErrors('cart');
+
+    expect(Order::whereKey($order->id)->exists())->toBeTrue()
+        // касса дня платежа не сдвинулась
+        ->and(dashboardOn($admin, '2026-08-02')->receivedTotal())->toBe(40000);
+
+    Carbon::setTestNow();
+});
+
+it('purges orphaned payments through the maintenance command', function () {
+    $client = Client::factory()->create();
+    $barber = Barber::factory()->create();
+
+    $appointment = Appointment::create([
+        'client_id' => $client->id,
+        'barber_id' => $barber->id,
+        'starts_at' => now()->setTime(9, 0),
+        'ends_at' => now()->setTime(10, 0),
+        'status' => AppointmentStatus::Completed,
+        'price' => 100000,
+        'payment_type' => 'cash',
+        'debt_amount' => 40000,
+    ]);
+
+    DebtPayment::create([
+        'payable_type' => $appointment->getMorphClass(),
+        'payable_id' => $appointment->id,
+        'amount' => 40000,
+        'payment_type' => 'cash',
+        'paid_at' => now(),
+    ]);
+
+    // Каскад в БД уносит запись, не поднимая событий Eloquent.
+    $client->delete();
+
+    expect(DebtPayment::count())->toBe(1);
+
+    $this->artisan('app:purge-orphan-debt-payments')->assertSuccessful();
+
+    expect(DebtPayment::count())->toBe(0);
+});
+
 it('counts an appointment debt repayment in the payment-day cash register', function () {
     $admin = debtAdmin();
     $barber = Barber::factory()->create(['salary_percent' => 50, 'price' => 100000]);

@@ -59,3 +59,19 @@ it('links a barber when they share their own contact', function () {
     expect($user->fresh()->telegram_chat_id)->not->toBeNull();
     $bot->assertReply('sendMessage');
 });
+
+it('refuses to link a contact that carries no owner id', function () {
+    // Кнопка «поделиться контактом» всегда проставляет user_id. Его отсутствие —
+    // признак пересланного чужого номера: привязка отдала бы чужой заработок.
+    $user = User::factory()->create(['role' => Role::BARBER, 'phone' => '998906591828']);
+    Barber::factory()->create(['user_id' => $user->id]);
+
+    $bot = botWithHandlers();
+
+    $bot->hearUpdateType(UpdateType::MESSAGE, [
+        'from' => ['id' => 701, 'is_bot' => false, 'first_name' => 'Чужой'],
+        'contact' => ['phone_number' => '998906591828', 'first_name' => 'Иван'],
+    ])->reply();
+
+    expect($user->fresh()->telegram_chat_id)->toBeNull();
+});

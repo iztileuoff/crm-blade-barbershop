@@ -53,7 +53,6 @@ return [
     'not_collected' => 'Jıynalmaǵan',
     'debt_repaid' => 'Qarızlar tólendi',
     'barber_inactive' => 'Jumıstan shıqqan',
-    'percent_mismatch' => 'Haqıyqıy stavka ustanıń házirgi procenti menen sáykes kelmeydi',
     'broken_operations' => 'Buzıq ámeller',
     'broken_operations_hint' => 'Bólistiriwi sáykes kelmeytuǵın yaki qarızı bahadan úlken ámeller: :count. Olardı «Jazıwlar» hám «Satıwlar»da durıslań.',
     'profit_positive' => 'Aylanba minus barberler aylıǵı',

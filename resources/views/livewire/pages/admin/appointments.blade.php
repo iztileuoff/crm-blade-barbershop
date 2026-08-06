@@ -7,6 +7,7 @@ use App\Models\Client;
 use App\Models\Service;
 use App\Support\PaymentSplit;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Locked;
@@ -71,6 +72,11 @@ class extends Component
     #[Validate('required|regex:/^\d{2}:\d{2}$/')]
     public string $form_end_time = '';
 
+    /**
+     * Заперто: форму открывают только серверные действия. Незапертым свойством
+     * мастер открывал модалку и вычитывал через неё справочник клиентов.
+     */
+    #[Locked]
     public bool $showForm = false;
 
     public int $timeStep = 60;
@@ -112,6 +118,19 @@ class extends Component
     }
 
     /**
+     * Начало выбранного дня. $date — клиентское поле, поэтому разбор защищён:
+     * иначе кривое значение даёт 500 вместо пустого списка.
+     */
+    private function dayStart(): Carbon
+    {
+        try {
+            return Carbon::parse($this->date, 'Asia/Tashkent')->startOfDay();
+        } catch (Exception) {
+            return Carbon::now('Asia/Tashkent')->startOfDay();
+        }
+    }
+
+    /**
      * Id мастера, если страницу смотрит мастер. Тоже из сессии.
      */
     private function sessionBarberId(): ?int
@@ -124,6 +143,12 @@ class extends Component
     #[Computed]
     public function filteredClients()
     {
+        // Ограничиваем само чтение, а не только флаг формы: мастеру справочник
+        // клиентов не положен, ему закрыт и весь раздел «Клиенты».
+        if ($this->sessionBarberId() !== null) {
+            return collect();
+        }
+
         return Client::query()
             ->when($this->clientSearch, function ($q) {
                 $q->where(function ($q) {
@@ -146,11 +171,14 @@ class extends Component
     {
         // Мастеру отдаём только его записи, и решает это сессия, а не свойство.
         $ownBarberId = $this->sessionBarberId();
+        $day = $this->dayStart();
 
         return Appointment::query()
             ->with(['client', 'barber', 'services'])
             ->withSum('debtPayments as debt_paid_total', 'amount')
-            ->whereDate('starts_at', $this->date)
+            // Полуоткрытый диапазон вместо whereDate: date(starts_at) = ? не
+            // ложится на индекс (starts_at, notified_30min).
+            ->whereBetween('starts_at', [$day, $day->copy()->endOfDay()])
             ->when($ownBarberId !== null, fn ($q) => $q->where('barber_id', $ownBarberId))
             ->when($ownBarberId === null && $this->barberFilter, fn ($q) => $q->where('barber_id', $this->barberFilter))
             ->orderBy($this->sortableField(), $this->sortDirection === 'desc' ? 'desc' : 'asc')
@@ -437,25 +465,7 @@ class extends Component
 
         $this->recalculateTotal();
 
-        // Цена собирается из услуг, поэтому денежные поля сверяем уже после неё.
-        $moneyErrors = PaymentSplit::errors(
-            $this->payment_type,
-            (int) ($this->price ?? 0),
-            $this->cash_amount,
-            $this->card_amount,
-            $this->debt_amount,
-            $this->editingId ? (Appointment::find($this->editingId)?->debtPaid ?? 0) : 0,
-        );
-
-        if ($moneyErrors !== []) {
-            foreach ($moneyErrors as $field => $message) {
-                $this->addError($field, $message);
-            }
-
-            return;
-        }
-
-        $payload = [
+        $payloadBase = [
             'client_id' => $this->client_id,
             'barber_id' => $this->barber_id,
             'price' => $this->price,
@@ -466,21 +476,60 @@ class extends Component
             'debt_amount' => ($this->debt_amount ?? 0) > 0 ? $this->debt_amount : null,
             'starts_at' => $startsAt,
             'ends_at' => $endsAt,
-            'status' => $this->editingId ? Appointment::find($this->editingId)->status : AppointmentStatus::Confirmed,
         ];
-
-        if ($this->editingId) {
-            $appointment = Appointment::findOrFail($this->editingId);
-            $appointment->update($payload);
-        } else {
-            $appointment = Appointment::create($payload);
-        }
 
         $syncData = $validServices->mapWithKeys(fn ($row) => [
             (int) $row['service_id'] => ['amount' => (int) ($row['amount'] ?? 0)],
         ])->toArray();
 
-        $appointment->services()->sync($syncData);
+        $moneyErrors = [];
+
+        // Одна транзакция на всё: погашенную сумму читаем под блокировкой (иначе
+        // параллельное погашение позволит опустить долг ниже принятого), а цена
+        // и услуги, из которых она посчитана, пишутся вместе.
+        $appointment = DB::transaction(function () use (&$moneyErrors, $payloadBase, $syncData) {
+            $existing = $this->editingId
+                ? Appointment::query()->lockForUpdate()->find($this->editingId)
+                : null;
+
+            abort_if($this->editingId !== null && $existing === null, 404);
+
+            $moneyErrors = PaymentSplit::errors(
+                $this->payment_type,
+                (int) ($this->price ?? 0),
+                $this->cash_amount,
+                $this->card_amount,
+                $this->debt_amount,
+                $existing?->debtPaid ?? 0,
+            );
+
+            if ($moneyErrors !== []) {
+                return null;
+            }
+
+            $payload = $payloadBase + [
+                'status' => $existing?->status ?? AppointmentStatus::Confirmed,
+            ];
+
+            if ($existing !== null) {
+                $existing->update($payload);
+                $appointment = $existing;
+            } else {
+                $appointment = Appointment::create($payload);
+            }
+
+            $appointment->services()->sync($syncData);
+
+            return $appointment;
+        });
+
+        if ($appointment === null) {
+            foreach ($moneyErrors as $field => $message) {
+                $this->addError($field, $message);
+            }
+
+            return;
+        }
 
         unset($this->appointments);
         $this->showForm = false;
@@ -511,7 +560,17 @@ class extends Component
     public function delete(int $id): void
     {
         $this->abortIfBarber();
-        Appointment::findOrFail($id)->delete();
+
+        $appointment = Appointment::findOrFail($id);
+
+        // Удаление унесёт и погашения — а они лежат в кассе других дней.
+        if ($appointment->debtPayments()->exists()) {
+            $this->addError('selectedServices', __('appointments.err_delete_has_payments'));
+
+            return;
+        }
+
+        $appointment->delete();
         unset($this->appointments);
     }
 
@@ -575,8 +634,8 @@ class extends Component
         </button>
     </div>
 
-    {{-- Modal --}}
-    @if ($showForm)
+    {{-- Modal — мастеру недоступна: внутри поиск по всему справочнику клиентов --}}
+    @if ($showForm && ! $isBarberView)
         <div class="fixed inset-0 z-50 flex items-center justify-center p-4"
              x-data
              x-on:keydown.escape.window="$wire.cancel()">
@@ -710,8 +769,14 @@ class extends Component
                                                    class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] py-3 pl-4 pr-12 text-sm text-content outline-none transition focus:border-danger/40 focus:ring-1 focus:ring-danger/20">
                                             <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-medium text-content/25">{{ __('common.currency') }}</span>
                                         </div>
-                                        @error('debt_amount') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                                         <p class="mt-2 text-[10px] text-danger/70">{{ __('appointments.debt_client_required') }}</p>
+                                    @endif
+                                    {{-- Вне @if: ошибка «долг меньше уже принятого» приходит при выключенном тумблере --}}
+                                    @error('debt_amount') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
+                                    @if ($debtAlreadyPaid > 0)
+                                        <p class="mt-1.5 text-[10px] text-content/40">
+                                            {{ __('appointments.debt_already_paid', ['amount' => number_format($debtAlreadyPaid, 0, '.', ' ')]) }}
+                                        </p>
                                     @endif
                                 </div>
                             </div>
@@ -728,6 +793,10 @@ class extends Component
                                 </div>
 
                                 @error('selectedServices') <p class="mb-3 text-xs text-danger">{{ $message }}</p> @enderror
+                                {{-- Правила дают ключи вида selectedServices.0.amount — точный @error их не ловит --}}
+                                @foreach ($errors->get('selectedServices.*') as $serviceError)
+                                    <p class="mb-3 text-xs text-danger">{{ $serviceError[0] }}</p>
+                                @endforeach
 
                                 @php
                                     $usedServiceIds = collect($selectedServices)

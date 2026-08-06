@@ -5,4 +5,5 @@ return [
     'err_split_required' => 'Aralas tólewde naqd hám/yaki karta summasın kiritiń.',
     'err_split_mismatch' => 'Naqd + karta :expected sum bolıwı kerek.',
     'err_debt_below_paid' => 'Bul qarız boyınsha :paid sum qabıl etilgen — qarızdı kemeytiw múmkin emes.',
+    'err_split_not_needed' => 'Ámel tolıq qarızǵa ketti — naqd hám karta maydanların bosatıń.',
 ];

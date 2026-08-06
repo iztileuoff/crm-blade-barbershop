@@ -29,4 +29,5 @@ return [
 
     'err_empty_cart' => 'Kamida bitta mahsulot qoʻshing.',
     'err_debt_client' => 'Qarz boʻlsa mijoz majburiy.',
+    'err_delete_has_payments' => 'Bu sotuv boʻyicha qarz toʻlovlari bor — oʻchirish boshqa kunlar kassasini siljitadi. Avval toʻlovlarni oʻchiring.',
 ];

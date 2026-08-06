@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Support\PaymentSplit;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Validate;
@@ -220,32 +221,36 @@ class extends Component
             return;
         }
 
-        $order = Order::create([
-            'client_id' => $this->client_id,
-            'total_price' => $total,
-            'note' => $this->note ?: null,
-            'debt_amount' => $debtAmount,
-            'payment_type' => $this->payment_type,
-            'cash_amount' => $this->payment_type === 'both' ? $this->cash_amount : null,
-            'card_amount' => $this->payment_type === 'both' ? $this->card_amount : null,
-        ]);
-
-        foreach ($this->cartItems as $item) {
-            $product = Product::find($item['product_id']);
-
-            if (! $product) {
-                continue;
-            }
-
-            OrderItem::create([
-                'order_id' => $order->id,
-                'product_id' => $product->id,
-                'quantity' => $item['quantity'],
-                'price_at_sale' => $item['price'],
+        // Заказ, позиции и списание остатка — одна операция: сбой посередине
+        // иначе оставляет продажу с частью позиций и частью списанного товара.
+        DB::transaction(function () use ($total, $debtAmount): void {
+            $order = Order::create([
+                'client_id' => $this->client_id,
+                'total_price' => $total,
+                'note' => $this->note ?: null,
+                'debt_amount' => $debtAmount,
+                'payment_type' => $this->payment_type,
+                'cash_amount' => $this->payment_type === 'both' ? $this->cash_amount : null,
+                'card_amount' => $this->payment_type === 'both' ? $this->card_amount : null,
             ]);
 
-            $product->decrement('stock', $item['quantity']);
-        }
+            foreach ($this->cartItems as $item) {
+                $product = Product::query()->lockForUpdate()->find($item['product_id']);
+
+                if (! $product) {
+                    continue;
+                }
+
+                OrderItem::create([
+                    'order_id' => $order->id,
+                    'product_id' => $product->id,
+                    'quantity' => $item['quantity'],
+                    'price_at_sale' => $item['price'],
+                ]);
+
+                $product->decrement('stock', $item['quantity']);
+            }
+        });
 
         unset($this->orders, $this->availableProducts);
         $this->showForm = false;
@@ -256,11 +261,30 @@ class extends Component
     {
         $order = Order::with('items')->findOrFail($id);
 
-        foreach ($order->items as $item) {
-            $item->product?->increment('stock', $item->quantity);
+        // Удаление унесёт и погашения — а они лежат в кассе других дней.
+        // Молча двигать закрытый день нельзя.
+        if ($order->debtPayments()->exists()) {
+            $this->addError('cart', __('orders.err_delete_has_payments'));
+
+            return;
         }
 
-        $order->delete();
+        // Сначала удаляем (вместе с погашениями через хук модели), потом
+        // возвращаем остаток — и всё внутри одной транзакции, иначе сбой на
+        // удалении оставляет товар возвращённым дважды.
+        DB::transaction(function () use ($order): void {
+            $items = $order->items->map(fn (OrderItem $item) => [
+                'product_id' => $item->product_id,
+                'quantity' => $item->quantity,
+            ])->all();
+
+            $order->delete();
+
+            foreach ($items as $item) {
+                Product::query()->whereKey($item['product_id'])->increment('stock', $item['quantity']);
+            }
+        });
+
         unset($this->orders, $this->availableProducts);
     }
 
@@ -450,6 +474,9 @@ class extends Component
                                 <p class="col-span-2 text-[10px] text-content/30">{{ __('orders.both_hint') }}</p>
                             </div>
                         @endif
+                        @error('payment_type') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
+                        @error('cash_amount') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
+                        @error('card_amount') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                     </div>
 
                     {{-- Client --}}
@@ -511,6 +538,8 @@ class extends Component
                                     <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-medium text-content/25">{{ __('common.currency') }}</span>
                                 </div>
                             @endif
+                            {{-- Вне @if: ошибка «долг меньше уже принятого» приходит при выключенном тумблере --}}
+                            @error('debt_amount') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                         </div>
                     </div>
 
@@ -519,6 +548,7 @@ class extends Component
                         <label class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('common.note') }}</label>
                         <input type="text" wire:model="note" placeholder="{{ __('orders.note_placeholder') }}"
                                class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content placeholder-content/20 outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
+                        @error('note') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                     </div>
 
                     <div class="flex gap-3">

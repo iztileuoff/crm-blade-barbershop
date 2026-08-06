@@ -41,5 +41,7 @@ return [
     // Validation
     'err_end_after_start' => 'Tamamlanıw waqtı baslanıw waqtınan keyin bolıwı kerek.',
     'err_add_service' => 'Keminde bir xızmet qosıń.',
+    'err_delete_has_payments' => 'Bul jazıw boyınsha qarız tólewleri bar — óshiriw basqa kúnler kassasın jıljıtadı. Aldın tólewlerdi óshiriń.',
+    'debt_already_paid' => 'Bul qarız boyınsha :amount sum qabıl etilgen.',
     'err_service_once' => 'Hár bir xızmet tek bir ret kórsetiliwi kerek.',
 ];

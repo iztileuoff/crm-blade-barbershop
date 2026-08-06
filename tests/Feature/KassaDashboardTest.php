@@ -366,7 +366,7 @@ it('does not flag a mismatch when the percent changed mid-period', function () {
 
     // Средневзвешенные 60% — законный результат смены ставки, а не поломка.
     expect($stat->salaryPercent)->toBe(60)
-        ->and($stat->percentMismatch)->toBeFalse();
+        ->and($stat->salary)->toBe(120000);
 });
 
 it('accrues salary on a debt collected inside the same payroll month', function () {
@@ -409,6 +409,50 @@ it('accrues salary on a debt collected inside the same payroll month', function 
     expect($instance->monthlyReceivedTotal())->toBe(100000)
         ->and($instance->monthlyTotalSalary())->toBe(50000)
         ->and($instance->companyProfitInCash())->toBe(50000);
+
+    Carbon::setTestNow();
+});
+
+it('makes the sum of daily salaries equal the monthly salary', function () {
+    $admin = kassaAdmin();
+    $barber = Barber::factory()->create(['salary_percent' => 50, 'price' => 100000]);
+    $client = Client::factory()->create();
+
+    Carbon::setTestNow(Carbon::parse('2026-08-01 12:00:00', 'Asia/Tashkent'));
+    $appointment = Appointment::create([
+        'client_id' => $client->id,
+        'barber_id' => $barber->id,
+        'starts_at' => now()->setTime(12, 0),
+        'ends_at' => now()->setTime(13, 0),
+        'status' => AppointmentStatus::Completed,
+        'price' => 100000,
+        'payment_type' => 'cash',
+        'debt_amount' => 100000,
+    ]);
+
+    // Долг приносят 6 августа — другой день, тот же расчётный месяц.
+    Carbon::setTestNow(Carbon::parse('2026-08-06 10:00:00', 'Asia/Tashkent'));
+    Livewire::actingAs($admin)
+        ->test('pages.admin.debts')
+        ->call('openPayAppointment', $appointment->id)
+        ->set('payAmount', 100000)
+        ->call('payAppointmentDebt');
+
+    $dailyTotal = 0;
+    for ($day = 1; $day <= 31; $day++) {
+        $date = sprintf('2026-08-%02d', $day);
+        $dailyTotal += (int) dashboard($admin, $date)->barberStats()->sum('salary');
+    }
+
+    $monthly = Livewire::actingAs($admin)
+        ->test('pages.admin.dashboard')
+        ->set('activeTab', 'month')
+        ->set('month', '2026-08')
+        ->instance()
+        ->monthlyTotalSalary();
+
+    expect($monthly)->toBe(50000)
+        ->and($dailyTotal)->toBe($monthly);
 
     Carbon::setTestNow();
 });

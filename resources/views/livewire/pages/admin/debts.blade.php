@@ -43,11 +43,9 @@ class extends Component
         return Appointment::query()
             ->with(['client', 'barber', 'services'])
             ->withSum('debtPayments as debt_paid_total', 'amount')
-            ->where('debt_amount', '>', 0)
+            ->withOutstandingDebt()
             ->orderByDesc('starts_at')
-            ->get()
-            ->filter(fn (Appointment $a) => $a->outstandingDebt > 0)
-            ->values();
+            ->get();
     }
 
     #[Computed]
@@ -56,11 +54,9 @@ class extends Component
         return Order::query()
             ->with(['client', 'items.product'])
             ->withSum('debtPayments as debt_paid_total', 'amount')
-            ->where('debt_amount', '>', 0)
+            ->withOutstandingDebt()
             ->orderByDesc('created_at')
-            ->get()
-            ->filter(fn (Order $o) => $o->outstandingDebt > 0)
-            ->values();
+            ->get();
     }
 
     #[Computed]

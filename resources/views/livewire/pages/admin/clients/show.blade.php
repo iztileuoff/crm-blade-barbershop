@@ -76,7 +76,7 @@ class extends Component
         $outstanding = function ($relation): int {
             return (int) $relation
                 ->withSum('debtPayments as debt_paid_total', 'amount')
-                ->where('debt_amount', '>', 0)
+                ->withOutstandingDebt()
                 ->get()
                 ->sum(fn ($row) => $row->outstandingDebt);
         };

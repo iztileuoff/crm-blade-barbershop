@@ -127,6 +127,26 @@ it('never shows a barber another barber appointments even if the filter is forge
         ->and($rows->first()->barber_id)->toBe($barber->id);
 });
 
+it('never leaks the client directory to a barber through the form modal', function () {
+    [$user] = barberUser();
+
+    // Клиент, которого этот мастер никогда не обслуживал.
+    Client::factory()->create(['name' => 'Секретный Клиент', 'phone' => '998901112233']);
+
+    // showForm заперт — подделать его запросом нельзя.
+    expect(fn () => Livewire::actingAs($user)
+        ->test('pages.admin.appointments')
+        ->set('showForm', true)
+    )->toThrow(CannotUpdateLockedPropertyException::class);
+
+    // И даже если бы модалка открылась, читать клиентов мастеру нечем.
+    $component = Livewire::actingAs($user)->test('pages.admin.appointments');
+
+    expect($component->instance()->filteredClients())->toHaveCount(0)
+        ->and($component->html())->not->toContain('998901112233')
+        ->and($component->html())->not->toContain('Секретный Клиент');
+});
+
 it('forbids a barber from reaching the debts screen', function () {
     [$user] = barberUser();
 

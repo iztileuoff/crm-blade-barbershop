@@ -29,16 +29,23 @@ class extends Component
         $this->month = $now->format('Y-m');
     }
 
+    /**
+     * Начало выбранного дня. $date — клиентское поле, поэтому разбор защищён
+     * здесь один раз, а не повторяется без try/catch по вызовам.
+     */
+    private function dayStart(): Carbon
+    {
+        try {
+            return Carbon::parse($this->date ?: 'now', 'Asia/Tashkent')->startOfDay();
+        } catch (Exception) {
+            return Carbon::now('Asia/Tashkent')->startOfDay();
+        }
+    }
+
     #[Computed]
     public function dateString(): string
     {
-        try {
-            $d = Carbon::parse($this->date);
-        } catch (Exception $e) {
-            $d = Carbon::now('Asia/Tashkent');
-        }
-
-        return $d->translatedFormat('j F Y');
+        return $this->dayStart()->translatedFormat('j F Y');
     }
 
     #[Computed]
@@ -58,11 +65,14 @@ class extends Component
     #[Computed]
     public function appointments(): Collection
     {
-        $day = Carbon::parse($this->date ?: today('Asia/Tashkent'), 'Asia/Tashkent')->startOfDay();
+        $day = $this->dayStart();
 
+        // Окно сбора долгов — расчётный МЕСЯЦ этого дня, а не сам день. Иначе
+        // сумма дневных зарплат не сходится с месячной: погашение приходит в
+        // другой день, чем сама запись, и не попадает ни в одну дневную строку.
         return Appointment::query()
             ->with(['barber', 'services'])
-            ->withDebtCollectedBetween($day, $day->copy()->endOfDay())
+            ->withDebtCollectedBetween($day->copy()->startOfMonth(), $day->copy()->endOfMonth())
             ->whereBetween('starts_at', [$day, $day->copy()->endOfDay()])
             ->get();
     }
@@ -78,7 +88,7 @@ class extends Component
     #[Computed]
     public function debtPaymentsToday(): Collection
     {
-        $day = Carbon::parse($this->date ?: today('Asia/Tashkent'), 'Asia/Tashkent')->startOfDay();
+        $day = $this->dayStart();
 
         return DebtPayment::query()
             ->betweenDates($day, $day->copy()->endOfDay())
@@ -234,6 +244,9 @@ class extends Component
         $idsWithAppointments = $appointments->pluck('barber_id')->filter()->unique()->all();
 
         return Barber::query()
+            // photoUrl читает медиатеку — без этого запрос на каждого мастера
+            // при каждой отрисовке, а дашборд стоит на wire:poll.60s.
+            ->with('media')
             ->where(function ($query) use ($idsWithAppointments) {
                 $query->where('is_active', true);
 
@@ -270,16 +283,13 @@ class extends Component
         $salary = (int) $completed->sum(fn ($a) => $a->salaryShare($barber->salary_percent));
 
         // Фактическая ставка по начисленному, а не «текущий процент мастера»:
-        // иначе ошибка в зафиксированном проценте не видна глазами.
+        // иначе ошибка в зафиксированном проценте не видна глазами. Пометки
+        // «не совпадает» намеренно нет — сравнивать снимок прошлого периода с
+        // сегодняшней ставкой некорректно, она горела и на исправных строках.
+        // Подмену процента при смене мастера не даёт случиться AppointmentObserver.
         $actualPercent = $received > 0
             ? (int) round($salary / $received * 100)
             : (int) $barber->salary_percent;
-
-        // Ругаемся только когда все снимки периода одинаковы и при этом расходятся
-        // с текущей ставкой. Если процент меняли внутри периода, средневзвешенное
-        // значение закономерно не совпадает ни с одним из них — это штатно, и
-        // красная пометка на исправных строках только приучает её игнорировать.
-        $uniformPercent = $completed->pluck('salary_percent')->unique()->count() === 1;
 
         $remainder = $received - $salary;
 
@@ -297,9 +307,6 @@ class extends Component
             'debt' => $debt,
             'salary' => $salary,
             'salaryPercent' => $actualPercent,
-            'percentMismatch' => $received > 0
-                && $uniformPercent
-                && $actualPercent !== (int) $barber->salary_percent,
             'remainder' => $remainder,
             'formattedRevenue' => number_format($revenue, 0, '.', ' ').' '.__('common.currency'),
             'formattedReceived' => number_format($received, 0, '.', ' ').' '.__('common.currency'),
@@ -878,16 +885,7 @@ class extends Component
                                     ])>
                                         {{ $stat->formattedSalary }}
                                     </span>
-                                    <div @class([
-                                        'mt-0.5 text-[10px]',
-                                        'text-danger/70' => $stat->percentMismatch,
-                                        'text-content/25' => ! $stat->percentMismatch,
-                                    ])>
-                                        {{ $stat->salaryPercent }}%
-                                        @if ($stat->percentMismatch)
-                                            <span title="{{ __('dashboard.percent_mismatch') }}">⚠</span>
-                                        @endif
-                                    </div>
+                                    <div class="mt-0.5 text-[10px] text-content/25">{{ $stat->salaryPercent }}%</div>
                                 </td>
                                 <td class="px-6 py-4 text-right">
                                     <span @class([
@@ -1285,16 +1283,7 @@ class extends Component
                                     </span>
                                 </td>
                                 <td class="px-6 py-4 text-right">
-                                    <span @class([
-                                        'text-xs font-bold',
-                                        'text-danger/70' => $stat->percentMismatch,
-                                        'text-content/40' => ! $stat->percentMismatch,
-                                    ])>
-                                        {{ $stat->salaryPercent }}%
-                                        @if ($stat->percentMismatch)
-                                            <span title="{{ __('dashboard.percent_mismatch') }}">⚠</span>
-                                        @endif
-                                    </span>
+                                    <span class="text-xs font-bold text-content/40">{{ $stat->salaryPercent }}%</span>
                                 </td>
                                 <td class="px-6 py-4 text-right">
                                     <span @class([

@@ -80,13 +80,16 @@ class Appointment extends Model
      * полученное при оказании услуги плюс погашения долга, принятые в том же
      * периоде.
      *
-     * Слагаемое с погашениями берётся из withSum('... as debt_collected_in_period').
-     * Без него остаётся только полученное при визите — это и нужно там, где
-     * период не задан.
+     * Слагаемое с погашениями приходит из {@see scopeWithDebtCollectedBetween()}.
+     * Если скоуп не применяли, период не задан — считаем по всем погашениям,
+     * как это делает соседний {@see HasCashRegisterAmounts::$debtPaid}. Молча
+     * возвращать «только полученное при визите» нельзя: вызов без скоупа тогда
+     * недоплачивал бы мастеру без единой ошибки.
      */
     public int $collectedInPeriod {
-        get => $this->receivedAmount
-            + (int) ($this->attributes['debt_collected_in_period'] ?? 0);
+        get => $this->receivedAmount + (array_key_exists('debt_collected_in_period', $this->attributes)
+            ? (int) $this->attributes['debt_collected_in_period']
+            : $this->debtPaid);
     }
 
     /**
