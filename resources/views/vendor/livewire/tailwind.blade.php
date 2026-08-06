@@ -13,7 +13,7 @@
     // вендорной вставкой. Светлая и тёмная темы идут от переменных content/brass.
     $base = 'inline-flex items-center justify-center rounded-xl border text-sm font-semibold transition';
     $idle = 'border-content/[0.08] bg-content/[0.04] text-content/60 hover:border-content/15 hover:bg-content/[0.08] hover:text-content';
-    $muted = 'border-content/[0.06] bg-content/[0.02] text-content/20 cursor-not-allowed';
+    $muted = 'border-content/[0.06] bg-content/[0.02] text-content-muted cursor-not-allowed';
     $current = 'border-brass bg-brass text-on-brass shadow-lg shadow-brass/20';
 @endphp
 

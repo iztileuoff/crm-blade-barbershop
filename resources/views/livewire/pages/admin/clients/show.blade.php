@@ -381,7 +381,7 @@ class extends Component
     {{-- Profile facts --}}
     <div class="mb-6 grid gap-4 rounded-2xl border border-content/[0.06] bg-content/[0.03] p-6 shadow-xl backdrop-blur-md sm:grid-cols-2 lg:grid-cols-4">
         <div>
-            <p class="text-xs font-semibold uppercase tracking-wider text-content/30">{{ __('common.birth_date') }}</p>
+            <p class="text-xs font-semibold uppercase tracking-wider text-content-muted">{{ __('common.birth_date') }}</p>
             <p class="mt-1 text-sm text-content/80">
                 {{ $client->formattedBirthDate }}
                 @if ($client->birth_date)
@@ -390,15 +390,15 @@ class extends Component
             </p>
         </div>
         <div>
-            <p class="text-xs font-semibold uppercase tracking-wider text-content/30">{{ __('clients.client_since') }}</p>
+            <p class="text-xs font-semibold uppercase tracking-wider text-content-muted">{{ __('clients.client_since') }}</p>
             <p class="mt-1 text-sm text-content/80">{{ $client->created_at ? \App\Models\Client::formatLocalizedDate($client->created_at) : '—' }}</p>
         </div>
         <div>
-            <p class="text-xs font-semibold uppercase tracking-wider text-content/30">{{ __('clients.last_visit') }}</p>
+            <p class="text-xs font-semibold uppercase tracking-wider text-content-muted">{{ __('clients.last_visit') }}</p>
             <p class="mt-1 text-sm text-content/80">{{ $client->formattedLastVisit }}</p>
         </div>
         <div>
-            <p class="text-xs font-semibold uppercase tracking-wider text-content/30">{{ __('clients.telegram') }}</p>
+            <p class="text-xs font-semibold uppercase tracking-wider text-content-muted">{{ __('clients.telegram') }}</p>
             <p class="mt-1 text-sm text-content/80">{{ $client->telegram_chat_id !== null ? __('clients.linked') : __('clients.not_linked') }}</p>
         </div>
     </div>
@@ -406,21 +406,21 @@ class extends Component
     {{-- Metrics --}}
     <div class="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div class="rounded-2xl border border-content/[0.06] bg-content/[0.03] p-6 shadow-xl backdrop-blur-md">
-            <p class="text-xs font-semibold uppercase tracking-wider text-content/30">{{ __('clients.metric_visits') }}</p>
+            <p class="text-xs font-semibold uppercase tracking-wider text-content-muted">{{ __('clients.metric_visits') }}</p>
             <p class="mt-2 font-display text-3xl font-semibold text-content">{{ $this->visitsCount }}</p>
             <p class="mt-1 text-xs text-content/40">{{ __('clients.metric_cancelled', ['count' => $this->cancelledCount]) }}</p>
         </div>
         <div class="rounded-2xl border border-content/[0.06] bg-content/[0.03] p-6 shadow-xl backdrop-blur-md">
-            <p class="text-xs font-semibold uppercase tracking-wider text-content/30">{{ __('clients.metric_spent') }}</p>
+            <p class="text-xs font-semibold uppercase tracking-wider text-content-muted">{{ __('clients.metric_spent') }}</p>
             <p class="mt-2 font-display text-3xl font-semibold text-content">{{ $this->money($this->totalSpent) }}</p>
             <p class="mt-1 text-xs text-content/40">{{ __('clients.metric_avg_check') }}: {{ $this->money($this->averageCheck) }}</p>
         </div>
         <div class="rounded-2xl border border-content/[0.06] bg-content/[0.03] p-6 shadow-xl backdrop-blur-md">
-            <p class="text-xs font-semibold uppercase tracking-wider text-content/30">{{ __('clients.metric_debt') }}</p>
+            <p class="text-xs font-semibold uppercase tracking-wider text-content-muted">{{ __('clients.metric_debt') }}</p>
             <p class="mt-2 font-display text-3xl font-semibold {{ $this->totalDebt > 0 ? 'text-danger' : 'text-content' }}">{{ $this->money($this->totalDebt) }}</p>
         </div>
         <div class="rounded-2xl border border-content/[0.06] bg-content/[0.03] p-6 shadow-xl backdrop-blur-md">
-            <p class="text-xs font-semibold uppercase tracking-wider text-content/30">{{ __('clients.metric_favorite_barber') }}</p>
+            <p class="text-xs font-semibold uppercase tracking-wider text-content-muted">{{ __('clients.metric_favorite_barber') }}</p>
             <p class="mt-2 truncate text-lg font-bold text-content">{{ $this->favoriteBarber?->name ?? '—' }}</p>
             @if ($this->topServices->isNotEmpty())
                 <p class="mt-1 truncate text-xs text-content/40">{{ $this->topServices->pluck('name')->join(', ') }}</p>
@@ -467,7 +467,7 @@ class extends Component
         <div class="overflow-x-auto">
             <table class="w-full text-left text-sm">
                 <thead>
-                    <tr class="border-b border-content/[0.06] text-xs font-bold uppercase tracking-wider text-content/30">
+                    <tr class="border-b border-content/[0.06] text-xs font-bold uppercase tracking-wider text-content-muted">
                         <th class="px-6 py-4">{{ __('common.date') }}</th>
                         <th class="px-6 py-4">{{ __('common.barber') }}</th>
                         <th class="px-6 py-4">{{ __('common.services') }}</th>
@@ -487,7 +487,7 @@ class extends Component
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="5" class="px-6 py-12 text-center text-content/20">{{ __('clients.empty_appointments') }}</td></tr>
+                        <tr><td colspan="5" class="px-6 py-12 text-center text-content-muted">{{ __('clients.empty_appointments') }}</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -500,7 +500,7 @@ class extends Component
         <div class="overflow-x-auto">
             <table class="w-full text-left text-sm">
                 <thead>
-                    <tr class="border-b border-content/[0.06] text-xs font-bold uppercase tracking-wider text-content/30">
+                    <tr class="border-b border-content/[0.06] text-xs font-bold uppercase tracking-wider text-content-muted">
                         <th class="px-6 py-4">{{ __('common.date') }}</th>
                         <th class="px-6 py-4">{{ __('clients.order_items') }}</th>
                         <th class="px-6 py-4">{{ __('common.total') }}</th>
@@ -520,7 +520,7 @@ class extends Component
                             <td class="whitespace-nowrap px-6 py-4 {{ $order->hasDebt ? 'text-danger' : 'text-content/40' }}">{{ $order->formattedDebt }}</td>
                         </tr>
                     @empty
-                        <tr><td colspan="4" class="px-6 py-12 text-center text-content/20">{{ __('clients.empty_orders') }}</td></tr>
+                        <tr><td colspan="4" class="px-6 py-12 text-center text-content-muted">{{ __('clients.empty_orders') }}</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -533,7 +533,7 @@ class extends Component
         <div class="overflow-x-auto">
             <table class="w-full text-left text-sm">
                 <thead>
-                    <tr class="border-b border-content/[0.06] text-xs font-bold uppercase tracking-wider text-content/30">
+                    <tr class="border-b border-content/[0.06] text-xs font-bold uppercase tracking-wider text-content-muted">
                         <th class="px-6 py-4">{{ __('common.date') }}</th>
                         <th class="px-6 py-4">{{ __('sms.col_type') }}</th>
                         <th class="px-6 py-4">{{ __('sms.col_message') }}</th>
@@ -555,7 +555,7 @@ class extends Component
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="4" class="px-6 py-12 text-center text-content/20">{{ __('clients.empty_sms') }}</td></tr>
+                        <tr><td colspan="4" class="px-6 py-12 text-center text-content-muted">{{ __('clients.empty_sms') }}</td></tr>
                     @endforelse
                 </tbody>
             </table>

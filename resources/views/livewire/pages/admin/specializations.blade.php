@@ -134,7 +134,7 @@ class extends Component
         <div class="overflow-x-auto">
             <table class="w-full text-left text-sm">
                 <thead>
-                    <tr class="border-b border-content/[0.06] bg-content/[0.03] text-xs font-bold uppercase tracking-wider text-content/30">
+                    <tr class="border-b border-content/[0.06] bg-content/[0.03] text-xs font-bold uppercase tracking-wider text-content-muted">
                         <th class="px-6 py-4">{{ __('common.title_field') }}</th>
                         <th class="hidden px-6 py-4 sm:table-cell">{{ __('common.description') }}</th>
                         <th class="px-6 py-4 text-center">{{ __('specializations.barbers_count') }}</th>
@@ -172,7 +172,7 @@ class extends Component
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="4" class="px-6 py-12 text-center text-content/20">{{ __('specializations.empty') }}</td>
+                            <td colspan="4" class="px-6 py-12 text-center text-content-muted">{{ __('specializations.empty') }}</td>
                         </tr>
                     @endforelse
                 </tbody>

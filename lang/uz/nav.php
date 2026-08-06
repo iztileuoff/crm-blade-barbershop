@@ -29,4 +29,10 @@ return [
 
     'settings' => 'Sozlamalar',
     'users' => 'Foydalanuvchilar',
+
+    // Sayd-bar bo'limlari (issue #68) — eyebrow-sarlavhalar 16 admin-sahifani guruhlaydi
+    'section_operations' => 'Kundalik',
+    'section_business' => 'Mijozlar va sotuvlar',
+    'section_communications' => 'Aloqa',
+    'section_system' => 'Tizim',
 ];

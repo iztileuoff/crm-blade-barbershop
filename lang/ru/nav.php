@@ -29,4 +29,10 @@ return [
 
     'settings' => 'Настройки',
     'users' => 'Пользователи',
+
+    // Секции сайдбара (issue #68) — eyebrow-заголовки группируют 16 админ-страниц
+    'section_operations' => 'Ежедневное',
+    'section_business' => 'Клиенты и продажи',
+    'section_communications' => 'Коммуникации',
+    'section_system' => 'Система',
 ];

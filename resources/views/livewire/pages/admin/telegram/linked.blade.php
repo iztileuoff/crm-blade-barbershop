@@ -126,7 +126,7 @@ class extends Component
             <p class="mt-1 text-sm text-content/40">{{ __('telegram.linked_subtitle') }} · {{ __('common.total_count') }}: <span class="font-bold text-content/70">{{ $this->clientsCount + $this->barbersCount }}</span></p>
         </div>
         <div class="relative">
-            <svg class="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-content/20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
+            <svg class="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-content-subtle" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
             <input type="text" wire:model.live.debounce.300ms="search" placeholder="{{ __('telegram.search_placeholder') }}"
                    class="w-64 rounded-xl border border-content/[0.08] bg-content/[0.04] py-2.5 pl-10 pr-4 text-sm text-content placeholder-content/20 outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
         </div>
@@ -154,7 +154,7 @@ class extends Component
         <div class="overflow-x-auto">
             <table class="w-full text-left text-sm">
                 <thead>
-                    <tr class="border-b border-content/[0.06] bg-content/[0.03] text-xs font-bold uppercase tracking-wider text-content/30">
+                    <tr class="border-b border-content/[0.06] bg-content/[0.03] text-xs font-bold uppercase tracking-wider text-content-muted">
                         <th class="px-6 py-4">{{ __('common.name') }}</th>
                         <th class="px-6 py-4">{{ __('common.type') }}</th>
                         <th class="hidden px-6 py-4 sm:table-cell">{{ __('common.phone') }}</th>
@@ -191,7 +191,7 @@ class extends Component
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="px-6 py-12 text-center text-content/20">
+                            <td colspan="5" class="px-6 py-12 text-center text-content-muted">
                                 {{ trim($search) !== '' ? __('common.nothing_found') : __('telegram.empty_linked') }}
                             </td>
                         </tr>

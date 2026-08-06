@@ -920,7 +920,7 @@ class extends Component
                     </div>
                 </div>
                 <div class="mt-4 font-display text-4xl font-bold tabular-nums text-content">{{ $this->totalAppointments }}</div>
-                <div class="mt-1 text-xs text-content/30">{{ __('dashboard.all_day_appointments') }}</div>
+                <div class="mt-1 text-xs text-content-muted">{{ __('dashboard.all_day_appointments') }}</div>
             </div>
 
             {{-- Pending --}}
@@ -944,7 +944,7 @@ class extends Component
                     </div>
                 </div>
                 <div class="mt-4 font-display text-4xl font-bold tabular-nums text-content">{{ $this->completedCount }}</div>
-                <div class="mt-1 text-xs text-content/30">{{ __('dashboard.closed_visits') }}</div>
+                <div class="mt-1 text-xs text-content-muted">{{ __('dashboard.closed_visits') }}</div>
             </div>
 
             {{-- Cancelled --}}
@@ -970,7 +970,7 @@ class extends Component
                 <div class="flex items-center justify-between border-b border-content/[0.06] bg-content/[0.03] px-6 py-4">
                     <div>
                         <h3 class="text-sm font-bold text-content">{{ __('dashboard.product_sales_day') }}</h3>
-                        <p class="mt-0.5 text-xs text-content/30">{{ __('dashboard.retail_from_stock') }}</p>
+                        <p class="mt-0.5 text-xs text-content-muted">{{ __('dashboard.retail_from_stock') }}</p>
                     </div>
                     <a href="{{ route('admin.orders') }}" class="text-xs font-bold text-brass-ink/70 transition hover:text-brass-ink">
                         {{ __('dashboard.all_sales') }}
@@ -979,7 +979,7 @@ class extends Component
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-sm">
                         <thead>
-                            <tr class="border-b border-content/[0.06] bg-content/[0.03] text-xs font-bold uppercase tracking-wider text-content/30">
+                            <tr class="border-b border-content/[0.06] bg-content/[0.03] text-xs font-bold uppercase tracking-wider text-content-muted">
                                 <th class="px-6 py-4">{{ __('common.time') }}</th>
                                 <th class="px-6 py-4">{{ __('common.client') }}</th>
                                 <th class="px-6 py-4">{{ __('dashboard.products') }}</th>
@@ -1031,13 +1031,13 @@ class extends Component
             <div class="flex items-center justify-between border-b border-content/[0.06] bg-content/[0.03] px-6 py-4">
                 <div>
                     <h3 class="text-sm font-bold text-content">{{ __('dashboard.barber_performance') }}</h3>
-                    <p class="mt-0.5 text-xs text-content/30">{{ __('dashboard.appointments_revenue_day') }}</p>
+                    <p class="mt-0.5 text-xs text-content-muted">{{ __('dashboard.appointments_revenue_day') }}</p>
                 </div>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-sm">
                     <thead>
-                        <tr class="border-b border-content/[0.06] bg-content/[0.03] text-xs font-bold uppercase tracking-wider text-content/30">
+                        <tr class="border-b border-content/[0.06] bg-content/[0.03] text-xs font-bold uppercase tracking-wider text-content-muted">
                             <th class="sticky left-0 z-10 bg-surface-sunken px-6 py-4">{{ __('common.name') }}</th>
                             <th class="hidden px-6 py-4 text-center md:table-cell">{{ __('dashboard.appointments_day') }}</th>
                             <th class="hidden px-6 py-4 text-center md:table-cell">{{ __('dashboard.cancelled') }}</th>
@@ -1084,7 +1084,7 @@ class extends Component
                                     <span @class([
                                         'inline-flex min-w-[2.5rem] items-center justify-center rounded-full px-3 py-1 text-xs font-bold',
                                         'bg-brass/10 text-brass-ink' => $stat->count > 0,
-                                        'bg-content/[0.04] text-content/30' => $stat->count === 0,
+                                        'bg-content/[0.04] text-content-muted' => $stat->count === 0,
                                     ])>
                                         {{ $stat->count }}
                                     </span>
@@ -1093,7 +1093,7 @@ class extends Component
                                     <span @class([
                                         'inline-flex min-w-[2.5rem] items-center justify-center rounded-full px-3 py-1 text-xs font-bold',
                                         'bg-danger/10 text-danger' => $stat->cancelled_count > 0,
-                                        'bg-content/[0.04] text-content/30' => $stat->cancelled_count === 0,
+                                        'bg-content/[0.04] text-content-muted' => $stat->cancelled_count === 0,
                                     ])>
                                         {{ $stat->cancelled_count }}
                                     </span>
@@ -1102,7 +1102,7 @@ class extends Component
                                     <span @class([
                                         'font-extrabold tabular-nums',
                                         'text-success' => $stat->revenue > 0,
-                                        'text-content/30' => $stat->revenue === 0,
+                                        'text-content-muted' => $stat->revenue === 0,
                                     ])>
                                         {{ $stat->formattedRevenue }}
                                     </span>
@@ -1133,7 +1133,7 @@ class extends Component
                                     <span @class([
                                         'font-extrabold tabular-nums',
                                         'text-content/70' => $stat->received > 0,
-                                        'text-content/30' => $stat->received === 0,
+                                        'text-content-muted' => $stat->received === 0,
                                     ])>
                                         {{ $stat->formattedReceived }}
                                     </span>
@@ -1142,7 +1142,7 @@ class extends Component
                                     <span @class([
                                         'font-extrabold tabular-nums',
                                         'text-brass-ink' => $stat->salary > 0,
-                                        'text-content/30' => $stat->salary === 0,
+                                        'text-content-muted' => $stat->salary === 0,
                                     ])>
                                         {{ $stat->formattedSalary }}
                                     </span>
@@ -1152,7 +1152,7 @@ class extends Component
                                     <span @class([
                                         'font-extrabold tabular-nums',
                                         'text-royal' => $stat->remainder > 0,
-                                        'text-content/30' => $stat->remainder === 0,
+                                        'text-content-muted' => $stat->remainder === 0,
                                     ])>
                                         {{ $stat->formattedRemainder }}
                                     </span>
@@ -1161,8 +1161,8 @@ class extends Component
                         @empty
                             <tr>
                                 {{-- Ниже md три колонки скрыты: colspan обязан считать видимые, иначе шапка съедет относительно строки. --}}
-                                <td colspan="4" class="px-6 py-12 text-center text-content/20 md:hidden">{{ __('dashboard.no_active_barbers') }}</td>
-                                <td colspan="7" class="hidden px-6 py-12 text-center text-content/20 md:table-cell">{{ __('dashboard.no_active_barbers') }}</td>
+                                <td colspan="4" class="px-6 py-12 text-center text-content-muted md:hidden">{{ __('dashboard.no_active_barbers') }}</td>
+                                <td colspan="7" class="hidden px-6 py-12 text-center text-content-muted md:table-cell">{{ __('dashboard.no_active_barbers') }}</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -1194,7 +1194,7 @@ class extends Component
              долги — отдельная группа от того, что реально лежит в кассе. --}}
         <div class="mb-3">
             <h2 class="text-xs font-bold uppercase tracking-widest text-content/50">{{ __('dashboard.accrued_heading') }}</h2>
-            <p class="mt-0.5 text-xs text-content/30">{{ __('dashboard.accrued_heading_hint') }}</p>
+            <p class="mt-0.5 text-xs text-content-muted">{{ __('dashboard.accrued_heading_hint') }}</p>
         </div>
         <div
             wire:loading.class="opacity-40 pointer-events-none"
@@ -1244,7 +1244,7 @@ class extends Component
         {{-- Получено: деньги, реально дошедшие до кассы за месяц. --}}
         <div class="mb-3">
             <h2 class="text-xs font-bold uppercase tracking-widest text-content/50">{{ __('dashboard.received_heading') }}</h2>
-            <p class="mt-0.5 text-xs text-content/30">{{ __('dashboard.received_heading_hint') }}</p>
+            <p class="mt-0.5 text-xs text-content-muted">{{ __('dashboard.received_heading_hint') }}</p>
         </div>
         <div
             wire:loading.class="opacity-40 pointer-events-none"
@@ -1388,7 +1388,7 @@ class extends Component
         >
             <div class="border-b border-content/[0.06] bg-content/[0.03] px-6 py-4">
                 <h3 class="text-sm font-bold text-content">{{ __('dashboard.revenue_by_day') }}</h3>
-                <p class="mt-0.5 text-xs text-content/30">{{ $this->monthString }} — {{ __('dashboard.revenue_by_day_sub') }}</p>
+                <p class="mt-0.5 text-xs text-content-muted">{{ $this->monthString }} — {{ __('dashboard.revenue_by_day_sub') }}</p>
             </div>
             <div class="px-6 py-5">
                 {{-- Legend --}}
@@ -1476,7 +1476,7 @@ class extends Component
                     @endforeach
                 </svg>
 
-                <div class="mt-2 text-right text-[10px] text-content/20">
+                <div class="mt-2 text-right text-[10px] text-content-muted">
                     {{ __('dashboard.max_per_day') }}: {{ $this->formatSum((int) collect($this->dailyChartData)->max('total')) }}
                 </div>
             </div>
@@ -1491,13 +1491,13 @@ class extends Component
             <div class="flex items-center justify-between border-b border-content/[0.06] bg-content/[0.03] px-6 py-4">
                 <div>
                     <h3 class="text-sm font-bold text-content">{{ __('dashboard.salary_month_title') }}</h3>
-                    <p class="mt-0.5 text-xs text-content/30">{{ $this->monthString }} — {{ __('dashboard.salary_month_sub') }}</p>
+                    <p class="mt-0.5 text-xs text-content-muted">{{ $this->monthString }} — {{ __('dashboard.salary_month_sub') }}</p>
                 </div>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-sm">
                     <thead>
-                        <tr class="border-b border-content/[0.06] bg-content/[0.03] text-xs font-bold uppercase tracking-wider text-content/30">
+                        <tr class="border-b border-content/[0.06] bg-content/[0.03] text-xs font-bold uppercase tracking-wider text-content-muted">
                             <th class="sticky left-0 z-10 bg-surface-sunken px-6 py-4">{{ __('common.barber') }}</th>
                             <th class="hidden px-6 py-4 text-center md:table-cell">{{ __('dashboard.col_appointments') }}</th>
                             <th class="px-6 py-4 text-right">{{ __('common.revenue') }}</th>
@@ -1541,7 +1541,7 @@ class extends Component
                                     <span @class([
                                         'inline-flex min-w-[2.5rem] items-center justify-center rounded-full px-3 py-1 text-xs font-bold',
                                         'bg-brass/10 text-brass-ink' => $stat->count > 0,
-                                        'bg-content/[0.04] text-content/30' => $stat->count === 0,
+                                        'bg-content/[0.04] text-content-muted' => $stat->count === 0,
                                     ])>
                                         {{ $stat->count }}
                                     </span>
@@ -1550,7 +1550,7 @@ class extends Component
                                     <span @class([
                                         'font-extrabold tabular-nums',
                                         'text-success' => $stat->revenue > 0,
-                                        'text-content/30' => $stat->revenue === 0,
+                                        'text-content-muted' => $stat->revenue === 0,
                                     ])>
                                         {{ $stat->formattedRevenue }}
                                     </span>
@@ -1581,7 +1581,7 @@ class extends Component
                                     <span @class([
                                         'font-extrabold tabular-nums',
                                         'text-content/70' => $stat->received > 0,
-                                        'text-content/30' => $stat->received === 0,
+                                        'text-content-muted' => $stat->received === 0,
                                     ])>
                                         {{ $stat->formattedReceived }}
                                     </span>
@@ -1593,7 +1593,7 @@ class extends Component
                                     <span @class([
                                         'font-extrabold tabular-nums',
                                         'text-info' => $stat->salary > 0,
-                                        'text-content/30' => $stat->salary === 0,
+                                        'text-content-muted' => $stat->salary === 0,
                                     ])>
                                         {{ $stat->formattedSalary }}
                                     </span>
@@ -1603,7 +1603,7 @@ class extends Component
                                     <span @class([
                                         'font-extrabold tabular-nums',
                                         'text-royal' => $stat->remainder > 0,
-                                        'text-content/30' => $stat->remainder === 0,
+                                        'text-content-muted' => $stat->remainder === 0,
                                     ])>
                                         {{ $stat->formattedRemainder }}
                                     </span>
@@ -1612,8 +1612,8 @@ class extends Component
                         @empty
                             <tr>
                                 {{-- Ниже md три колонки скрыты: colspan обязан считать видимые, иначе шапка съедет относительно строки. --}}
-                                <td colspan="4" class="px-6 py-12 text-center text-content/20 md:hidden">{{ __('dashboard.no_active_barbers') }}</td>
-                                <td colspan="7" class="hidden px-6 py-12 text-center text-content/20 md:table-cell">{{ __('dashboard.no_active_barbers') }}</td>
+                                <td colspan="4" class="px-6 py-12 text-center text-content-muted md:hidden">{{ __('dashboard.no_active_barbers') }}</td>
+                                <td colspan="7" class="hidden px-6 py-12 text-center text-content-muted md:table-cell">{{ __('dashboard.no_active_barbers') }}</td>
                             </tr>
                         @endforelse
                     </tbody>

@@ -11,7 +11,7 @@
 
     $base = 'inline-flex items-center justify-center rounded-xl border px-4 py-2.5 text-sm font-semibold transition';
     $idle = 'border-content/[0.08] bg-content/[0.04] text-content/60 hover:border-content/15 hover:bg-content/[0.08] hover:text-content active:scale-[0.98]';
-    $muted = 'border-content/[0.06] bg-content/[0.02] text-content/20 cursor-not-allowed';
+    $muted = 'border-content/[0.06] bg-content/[0.02] text-content-muted cursor-not-allowed';
     $isCursor = method_exists($paginator, 'getCursorName');
 @endphp
 

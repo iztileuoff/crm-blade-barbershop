@@ -215,7 +215,7 @@ class extends Component
         <div class="overflow-x-auto">
             <table class="w-full text-left text-sm">
                 <thead>
-                    <tr class="border-b border-content/[0.06] bg-content/[0.03] text-xs font-bold uppercase tracking-wider text-content/30">
+                    <tr class="border-b border-content/[0.06] bg-content/[0.03] text-xs font-bold uppercase tracking-wider text-content-muted">
                         <th class="px-6 py-4">{{ __('common.service') }}</th>
                         <th class="px-6 py-4">{{ __('services.duration_short') }}</th>
                         <th class="hidden px-6 py-4 sm:table-cell">{{ __('common.status') }}</th>
@@ -247,13 +247,13 @@ class extends Component
                                         {{ __('services.active') }}
                                     </span>
                                 @else
-                                    <span class="inline-flex items-center gap-1.5 rounded-full bg-content/10 px-2.5 py-1 text-xs font-bold text-content/30">
+                                    <span class="inline-flex items-center gap-1.5 rounded-full bg-content/10 px-2.5 py-1 text-xs font-bold text-content-muted">
                                         <span class="h-1.5 w-1.5 rounded-full bg-content/30"></span>
                                         {{ __('services.inactive') }}
                                     </span>
                                 @endif
                             </td>
-                            <td class="hidden px-6 py-4 text-content/30 sm:table-cell">{{ $service->appointments_count }}</td>
+                            <td class="hidden px-6 py-4 text-content-muted sm:table-cell">{{ $service->appointments_count }}</td>
                             <td class="px-6 py-4">
                                 <div class="flex items-center justify-end gap-2">
                                     <button type="button" wire:click="edit({{ $service->id }})"
@@ -270,7 +270,7 @@ class extends Component
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="px-6 py-12 text-center text-content/20">{{ __('services.empty') }}</td>
+                            <td colspan="5" class="px-6 py-12 text-center text-content-muted">{{ __('services.empty') }}</td>
                         </tr>
                     @endforelse
                 </tbody>

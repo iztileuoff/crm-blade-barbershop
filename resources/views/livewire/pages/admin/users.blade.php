@@ -213,7 +213,7 @@ class extends Component
                                     <option value="{{ $barber->id }}">{{ $barber->name }}</option>
                                 @endforeach
                             </select>
-                            <p class="mt-1.5 text-[11px] text-content/30">{{ __('users.barber_hint') }}</p>
+                            <p class="mt-1.5 text-[11px] text-content-muted">{{ __('users.barber_hint') }}</p>
                             @error('barberId') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                         </div>
                     @endif
@@ -242,7 +242,7 @@ class extends Component
         <div class="overflow-x-auto">
             <table class="w-full text-left text-sm">
                 <thead>
-                    <tr class="border-b border-content/[0.06] bg-content/[0.03] text-xs font-bold uppercase tracking-wider text-content/30">
+                    <tr class="border-b border-content/[0.06] bg-content/[0.03] text-xs font-bold uppercase tracking-wider text-content-muted">
                         <th class="px-6 py-4">{{ __('common.name') }}</th>
                         <th class="px-6 py-4">{{ __('common.phone') }}</th>
                         <th class="px-6 py-4">{{ __('users.role') }}</th>
@@ -281,7 +281,7 @@ class extends Component
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="4" class="px-6 py-12 text-center text-content/20">{{ __('users.empty') }}</td>
+                            <td colspan="4" class="px-6 py-12 text-center text-content-muted">{{ __('users.empty') }}</td>
                         </tr>
                     @endforelse
                 </tbody>

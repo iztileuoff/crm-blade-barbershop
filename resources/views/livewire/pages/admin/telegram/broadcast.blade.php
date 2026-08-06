@@ -262,7 +262,7 @@ class extends Component
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-sm">
                     <thead>
-                        <tr class="border-b border-content/[0.06] bg-content/[0.03] text-xs font-bold uppercase tracking-wider text-content/30">
+                        <tr class="border-b border-content/[0.06] bg-content/[0.03] text-xs font-bold uppercase tracking-wider text-content-muted">
                             <th class="px-6 py-4">{{ __('common.date') }}</th>
                             <th class="px-6 py-4">{{ __('telegram.col_audience') }}</th>
                             <th class="px-6 py-4">{{ __('telegram.col_message') }}</th>
@@ -295,7 +295,7 @@ class extends Component
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="4" class="px-6 py-12 text-center text-content/20">{{ __('telegram.empty_broadcasts') }}</td>
+                                <td colspan="4" class="px-6 py-12 text-center text-content-muted">{{ __('telegram.empty_broadcasts') }}</td>
                             </tr>
                         @endforelse
                     </tbody>

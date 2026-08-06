@@ -437,7 +437,7 @@ class extends Component
                 <div class="border-b border-content/[0.06] p-6 lg:border-b-0 lg:border-r">
                     <p class="mb-4 text-xs font-semibold uppercase tracking-wider text-content/40">{{ __('orders.select_products') }}</p>
                     @if ($this->availableProducts->isEmpty())
-                        <p class="text-sm text-content/30">{{ __('orders.no_products') }}</p>
+                        <p class="text-sm text-content-muted">{{ __('orders.no_products') }}</p>
                     @else
                         <div class="grid gap-2 sm:grid-cols-2">
                             @foreach ($this->availableProducts as $product)
@@ -472,7 +472,7 @@ class extends Component
                     @enderror
 
                     @if (empty($cartItems))
-                        <p class="mb-6 text-sm text-content/20">{{ __('orders.cart_empty') }}</p>
+                        <p class="mb-6 text-sm text-content-muted">{{ __('orders.cart_empty') }}</p>
                     @else
                         <div class="mb-6 space-y-2">
                             @foreach ($cartItems as $index => $item)
@@ -492,7 +492,7 @@ class extends Component
                                             <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
                                         </button>
                                     </div>
-                                    <button type="button" wire:click="removeFromCart({{ $index }})" class="text-content/20 transition hover:text-danger">
+                                    <button type="button" wire:click="removeFromCart({{ $index }})" class="text-content-subtle transition hover:text-danger">
                                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
                                     </button>
                                 </div>
@@ -510,7 +510,7 @@ class extends Component
                                 <option value="card">{{ __('enums.payment_type.card') }}</option>
                                 <option value="both">{{ __('enums.payment_type.both') }}</option>
                             </select>
-                            <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-content/30">
+                            <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-content-subtle">
                                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
                             </div>
                         </div>
@@ -535,7 +535,7 @@ class extends Component
                                         <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-medium text-content/25">{{ __('common.currency') }}</span>
                                     </div>
                                 </div>
-                                <p class="col-span-2 text-[10px] text-content/30">{{ __('orders.both_hint') }}</p>
+                                <p class="col-span-2 text-[10px] text-content-muted">{{ __('orders.both_hint') }}</p>
                             </div>
                         @endif
                         @error('payment_type') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
@@ -580,7 +580,7 @@ class extends Component
                                         'text-danger/80' => $debtEnabled,
                                         'text-content/50' => ! $debtEnabled,
                                     ])>{{ __('orders.on_debt') }}</label>
-                                    <p class="mt-0.5 text-[10px] text-content/30">{{ __('orders.debt_hint') }}</p>
+                                    <p class="mt-0.5 text-[10px] text-content-muted">{{ __('orders.debt_hint') }}</p>
                                 </div>
                                 <button type="button" wire:click="$toggle('debtEnabled')"
                                         role="switch" aria-checked="{{ $debtEnabled ? 'true' : 'false' }}"
@@ -651,7 +651,7 @@ class extends Component
         <div class="overflow-x-auto">
             <table class="w-full text-left text-sm">
                 <thead>
-                    <tr class="border-b border-content/[0.06] bg-content/[0.03] text-xs font-bold uppercase tracking-wider text-content/30">
+                    <tr class="border-b border-content/[0.06] bg-content/[0.03] text-xs font-bold uppercase tracking-wider text-content-muted">
                         <th class="px-6 py-4">{{ __('common.time') }}</th>
                         <th class="px-6 py-4">{{ __('common.client') }}</th>
                         <th class="px-6 py-4">{{ __('orders.composition') }}</th>
@@ -664,14 +664,14 @@ class extends Component
                         <tr class="transition-colors hover:bg-content/[0.02]">
                             <td class="whitespace-nowrap px-6 py-4">
                                 <div class="font-bold text-content">{{ $order->created_at->format('H:i') }}</div>
-                                <div class="text-[10px] text-content/30">{{ $order->created_at->format('d.m') }}</div>
+                                <div class="text-[10px] text-content-muted">{{ $order->created_at->format('d.m') }}</div>
                             </td>
                             <td class="px-6 py-4">
                                 @if ($order->client)
                                     <div class="font-medium text-content">{{ $order->client->name }}</div>
                                     <div class="text-xs text-brass-ink/60">{{ $order->client->formattedPhone }}</div>
                                 @else
-                                    <span class="text-content/30">—</span>
+                                    <span class="text-content-muted">—</span>
                                 @endif
                             </td>
                             <td class="px-6 py-4">
@@ -684,7 +684,7 @@ class extends Component
                                     @endforeach
                                 </div>
                                 @if ($order->note)
-                                    <div class="mt-1 text-[11px] italic text-content/30">{{ $order->note }}</div>
+                                    <div class="mt-1 text-[11px] italic text-content-muted">{{ $order->note }}</div>
                                 @endif
                             </td>
                             <td class="whitespace-nowrap px-6 py-4 text-right">
@@ -720,7 +720,7 @@ class extends Component
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="px-6 py-12 text-center text-content/20">{{ __('orders.empty') }}</td>
+                            <td colspan="5" class="px-6 py-12 text-center text-content-muted">{{ __('orders.empty') }}</td>
                         </tr>
                     @endforelse
                 </tbody>

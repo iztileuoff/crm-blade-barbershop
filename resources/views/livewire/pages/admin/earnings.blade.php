@@ -80,7 +80,7 @@ class extends Component
         {{-- Ни у мастера без связки, ни у большинства админов профиля мастера
              нет — показываем это явно, а не пустые/нулевые карточки. --}}
         <div class="flex flex-col items-center gap-3 rounded-2xl border border-content/[0.06] bg-content/[0.03] px-6 py-16 text-center shadow-xl backdrop-blur-md">
-            <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-content/[0.06] text-content/30">
+            <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-content/[0.06] text-content-subtle">
                 <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>
             </div>
             <p class="max-w-sm text-sm text-content/40">

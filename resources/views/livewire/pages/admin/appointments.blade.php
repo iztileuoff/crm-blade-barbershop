@@ -820,7 +820,7 @@ class extends Component
                             <option value="{{ $barber->id }}">{{ $barber->name }}</option>
                         @endforeach
                     </select>
-                    <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-content/30">
+                    <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-content-subtle">
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
                     </div>
                 </div>
@@ -900,7 +900,7 @@ class extends Component
                     <h3 class="text-sm font-bold text-content">{{ $editingId ? __('appointments.edit_title') : __('appointments.create_title') }}</h3>
                     <button type="button" wire:click="cancel"
                             @if ($this->formHasContent) wire:confirm="{{ __('appointments.discard_confirm') }}" @endif
-                            class="flex h-8 w-8 items-center justify-center rounded-lg text-content/30 transition hover:bg-content/[0.06] hover:text-content">
+                            class="flex h-8 w-8 items-center justify-center rounded-lg text-content-subtle transition hover:bg-content/[0.06] hover:text-content">
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
                     </button>
                 </div>
@@ -935,7 +935,7 @@ class extends Component
                                             </option>
                                         @endforeach
                                     </select>
-                                    <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-content/30">
+                                    <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-content-subtle">
                                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
                                     </div>
                                 </div>
@@ -956,7 +956,7 @@ class extends Component
                                         <option value="card">{{ __('enums.payment_type.card') }}</option>
                                         <option value="both">{{ __('enums.payment_type.both') }}</option>
                                     </select>
-                                    <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-content/30">
+                                    <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-content-subtle">
                                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
                                     </div>
                                 </div>
@@ -1004,7 +1004,7 @@ class extends Component
                                                 'text-danger/80' => $debtEnabled,
                                                 'text-content/50' => ! $debtEnabled,
                                             ])>{{ __('appointments.on_debt') }}</label>
-                                            <p class="mt-0.5 text-[10px] text-content/30">{{ __('appointments.debt_hint') }}</p>
+                                            <p class="mt-0.5 text-[10px] text-content-muted">{{ __('appointments.debt_hint') }}</p>
                                         </div>
                                         <button type="button" wire:click="$toggle('debtEnabled')"
                                                 role="switch" aria-checked="{{ $debtEnabled ? 'true' : 'false' }}"
@@ -1081,7 +1081,7 @@ class extends Component
                                             'bg-danger/5' => $isDuplicate,
                                             'bg-content/[0.02]' => ! $isDuplicate,
                                         ])>
-                                            <span class="w-5 shrink-0 text-center text-xs font-bold text-content/20">{{ $i + 1 }}</span>
+                                            <span class="w-5 shrink-0 text-center text-xs font-bold text-content-muted">{{ $i + 1 }}</span>
                                             <select wire:model.live="selectedServices.{{ $i }}.service_id"
                                                     @class([
                                                         'min-w-0 flex-1 rounded-lg border bg-transparent px-3 py-2 text-sm text-content outline-none transition [&>option]:bg-surface',
@@ -1106,7 +1106,7 @@ class extends Component
                                                 <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-medium text-content/25">{{ __('common.currency') }}</span>
                                             </div>
                                             <button type="button" wire:click="removeService({{ $i }})"
-                                                    class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-content/20 transition hover:bg-danger/10 hover:text-danger">
+                                                    class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-content-subtle transition hover:bg-danger/10 hover:text-danger">
                                                 <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
                                             </button>
                                         </div>
@@ -1194,7 +1194,7 @@ class extends Component
         <div class="overflow-x-auto">
             <table class="w-full text-left text-sm">
                 <thead>
-                    <tr class="border-b border-content/[0.06] bg-content/[0.03] text-xs font-bold uppercase tracking-wider text-content/30">
+                    <tr class="border-b border-content/[0.06] bg-content/[0.03] text-xs font-bold uppercase tracking-wider text-content-muted">
                         <th class="cursor-pointer px-6 py-4 transition hover:text-content" wire:click="sortBy('starts_at')">
                             {{ __('common.time') }}
                             @if ($sortField === 'starts_at')
@@ -1221,7 +1221,7 @@ class extends Component
                         <tr class="transition-colors hover:bg-content/[0.02]">
                             <td class="whitespace-nowrap px-6 py-4">
                                 <div class="font-bold text-content">{{ $appointment->starts_at->format('H:i') }}</div>
-                                <div class="text-[10px] text-content/30">{{ $appointment->ends_at->format('H:i') }}</div>
+                                <div class="text-[10px] text-content-muted">{{ $appointment->ends_at->format('H:i') }}</div>
                             </td>
                             <td class="px-6 py-4">
                                 <div class="font-bold text-content">{{ $appointment->client?->name }}</div>
@@ -1232,7 +1232,7 @@ class extends Component
                                         <span class="italic">{{ $appointment->note }}</span>
                                     </div>
                                 @endif
-                                <div class="mt-1 text-[10px] text-content/30 md:hidden">
+                                <div class="mt-1 text-[10px] text-content-muted md:hidden">
                                     @unless ($isBarberView)
                                         {{ $appointment->barber?->name }} ·
                                     @endunless
@@ -1263,7 +1263,7 @@ class extends Component
                                         <span @class([
                                             'text-[10px] font-bold',
                                             'text-brass-ink' => $appointment->price !== null,
-                                            'text-content/30' => $appointment->price === null,
+                                            'text-content-muted' => $appointment->price === null,
                                         ])>
                                             {{ __('common.total') }}: {{ $appointment->formattedPrice }}
                                         </span>
@@ -1349,7 +1349,7 @@ class extends Component
                                         </button>
                                         <button type="button" wire:click="delete({{ $appointment->id }})"
                                                 wire:confirm="{{ __('appointments.delete_confirm') }}"
-                                                class="flex h-8 w-8 items-center justify-center rounded-lg border border-content/[0.06] text-content/20 transition hover:text-danger">
+                                                class="flex h-8 w-8 items-center justify-center rounded-lg border border-content/[0.06] text-content-subtle transition hover:text-danger">
                                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" /></svg>
                                         </button>
                                     @endunless
@@ -1358,7 +1358,7 @@ class extends Component
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="{{ $isBarberView ? 5 : 6 }}" class="px-6 py-12 text-center text-content/20">
+                            <td colspan="{{ $isBarberView ? 5 : 6 }}" class="px-6 py-12 text-center text-content-muted">
                                 @if ($this->isUnlinkedBarber)
                                     {{ __('appointments.barber_unlinked') }}
                                 @else

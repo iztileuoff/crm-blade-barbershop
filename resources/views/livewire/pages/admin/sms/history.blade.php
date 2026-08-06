@@ -36,6 +36,7 @@ class extends Component
         return [
             'reminder' => __('sms.context_reminder'),
             'retention' => __('sms.context_retention'),
+            'cancelled' => __('sms.context_cancelled'),
             'broadcast' => __('sms.context_broadcast'),
             'manual' => __('sms.context_manual'),
         ];
@@ -264,7 +265,7 @@ class extends Component
         </div>
         <div class="flex flex-wrap items-center gap-3">
             <div class="relative">
-                <svg class="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-content/20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
+                <svg class="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-content-subtle" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
                 <input type="text" wire:model.live.debounce.300ms="search" placeholder="{{ __('sms.search_placeholder') }}"
                        class="w-56 rounded-xl border border-content/[0.08] bg-content/[0.04] py-2.5 pl-10 pr-4 text-sm text-content placeholder-content/20 outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
             </div>
@@ -313,11 +314,11 @@ class extends Component
 
     {{-- Метрики по периодам. Считаются по всем отправкам: они про расход SMS,
          а не про выборку — и это должно быть написано, а не угадываться. --}}
-    <p class="mb-2 text-xs text-content/30">{{ __('sms.metrics_scope') }}</p>
+    <p class="mb-2 text-xs text-content-muted">{{ __('sms.metrics_scope') }}</p>
     <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         @foreach(['today' => __('sms.period_today'), 'week' => __('sms.period_7days'), 'month' => __('sms.period_30days')] as $key => $label)
             <div class="rounded-2xl border border-content/[0.06] bg-content/[0.03] p-5 shadow-xl backdrop-blur-md">
-                <p class="text-xs font-bold uppercase tracking-wider text-content/30">{{ $label }}</p>
+                <p class="text-xs font-bold uppercase tracking-wider text-content-muted">{{ $label }}</p>
                 <div class="mt-3 flex items-end justify-between gap-2">
                     <div>
                         <p class="text-2xl font-bold text-content">{{ $m['sent'][$key] }}</p>
@@ -338,21 +339,21 @@ class extends Component
         {{-- Баланс Eskiz: грузится лениво через wire:init, чтобы не задерживать
              первый рендер страницы — до ответа плитка показывает нейтральный плейсхолдер. --}}
         <div wire:init="loadBalance" class="rounded-2xl border border-content/[0.06] bg-content/[0.03] p-5 shadow-xl backdrop-blur-md">
-            <p class="text-xs font-bold uppercase tracking-wider text-content/30">{{ __('sms.balance') }}</p>
+            <p class="text-xs font-bold uppercase tracking-wider text-content-muted">{{ __('sms.balance') }}</p>
             <div class="mt-3 flex items-end justify-between gap-2">
                 <div>
                     @if (! $balanceChecked)
-                        <p class="text-2xl font-bold text-content/20">···</p>
+                        <p class="text-2xl font-bold text-content-muted">···</p>
                         <p class="text-xs text-content/40">{{ __('sms.checking') }}</p>
                     @elseif ($balance !== null)
                         <p class="text-2xl font-bold text-content">{{ $balance }}</p>
                         <p class="text-xs text-content/40">{{ __('common.currency') }}</p>
                     @else
-                        <p class="text-2xl font-bold text-content/30">—</p>
+                        <p class="text-2xl font-bold text-content-muted">—</p>
                         <p class="text-xs text-content/40">{{ __('sms.balance_unavailable') }}</p>
                     @endif
                 </div>
-                <svg wire:loading wire:target="loadBalance" class="h-4 w-4 animate-spin text-content/30" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                <svg wire:loading wire:target="loadBalance" class="h-4 w-4 animate-spin text-content-subtle" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
             </div>
         </div>
     </div>
@@ -390,7 +391,7 @@ class extends Component
         <div class="overflow-x-auto">
             <table class="w-full text-left text-sm">
                 <thead>
-                    <tr class="border-b border-content/[0.06] bg-content/[0.03] text-xs font-bold uppercase tracking-wider text-content/30">
+                    <tr class="border-b border-content/[0.06] bg-content/[0.03] text-xs font-bold uppercase tracking-wider text-content-muted">
                         <th class="px-6 py-4">{{ __('sms.col_recipient') }}</th>
                         <th class="px-6 py-4">{{ __('sms.col_message') }}</th>
                         <th class="hidden px-6 py-4 sm:table-cell">{{ __('sms.col_type') }}</th>
@@ -432,7 +433,7 @@ class extends Component
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="px-6 py-12 text-center text-content/20">
+                            <td colspan="5" class="px-6 py-12 text-center text-content-muted">
                                 {{ $this->hasFilters ? __('common.nothing_found') : __('sms.empty_history') }}
                             </td>
                         </tr>

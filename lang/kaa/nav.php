@@ -29,4 +29,10 @@ return [
 
     'settings' => 'Sazlamalar',
     'users' => 'Paydalanıwshılar',
+
+    // Sayd-bar bólimleri (issue #68) — eyebrow-atamalar 16 admin-betti toparlaydı
+    'section_operations' => 'Kúndelik',
+    'section_business' => 'Klientler hám satıwlar',
+    'section_communications' => 'Baylanıs',
+    'section_system' => 'Sistema',
 ];

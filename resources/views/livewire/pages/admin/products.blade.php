@@ -184,7 +184,7 @@ class extends Component
         </div>
         <div class="flex flex-wrap items-center gap-3">
             <div class="relative">
-                <svg class="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-content/20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
+                <svg class="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-content-subtle" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
                 <input type="text" wire:model.live.debounce.300ms="search" placeholder="{{ __('products.search_placeholder') }}"
                        class="w-56 rounded-xl border border-content/[0.08] bg-content/[0.04] py-2.5 pl-10 pr-4 text-sm text-content placeholder-content/20 outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
             </div>
@@ -264,7 +264,7 @@ class extends Component
         <div class="overflow-x-auto">
             <table class="w-full text-left text-sm">
                 <thead>
-                    <tr class="border-b border-content/[0.06] bg-content/[0.03] text-xs font-bold uppercase tracking-wider text-content/30">
+                    <tr class="border-b border-content/[0.06] bg-content/[0.03] text-xs font-bold uppercase tracking-wider text-content-muted">
                         <th class="px-6 py-4">{{ __('common.title_field') }}</th>
                         <th class="px-6 py-4 text-center">{{ __('products.stock') }}</th>
                         <th class="px-6 py-4 text-right">{{ __('common.price') }}</th>
@@ -327,7 +327,7 @@ class extends Component
                                         {{ __('common.active') }}
                                     </span>
                                 @else
-                                    <span class="inline-flex items-center gap-1.5 rounded-full bg-content/10 px-2.5 py-1 text-xs font-bold text-content/30">
+                                    <span class="inline-flex items-center gap-1.5 rounded-full bg-content/10 px-2.5 py-1 text-xs font-bold text-content-muted">
                                         <span class="h-1.5 w-1.5 rounded-full bg-content/30"></span>
                                         {{ __('common.inactive') }}
                                     </span>
@@ -349,7 +349,7 @@ class extends Component
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="px-6 py-12 text-center text-content/20">
+                            <td colspan="5" class="px-6 py-12 text-center text-content-muted">
                                 {{ trim($search) !== '' || $stockFilter !== 'all' ? __('common.nothing_found') : __('products.empty') }}
                             </td>
                         </tr>

@@ -244,7 +244,7 @@ class extends Component
             <p class="mt-1 text-sm text-content/40">{{ __('debts.subtitle') }}</p>
         </div>
         <div class="relative">
-            <svg class="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-content/20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
+            <svg class="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-content-subtle" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
             <input type="text" wire:model.live.debounce.300ms="search" placeholder="{{ __('debts.search_placeholder') }}"
                    class="w-64 rounded-xl border border-content/[0.08] bg-content/[0.04] py-2.5 pl-10 pr-4 text-sm text-content placeholder-content/20 outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
         </div>
@@ -284,7 +284,7 @@ class extends Component
                 <div class="flex items-center justify-between border-b border-content/[0.06] px-6 py-4">
                     <h3 class="text-sm font-bold text-content">{{ __('debts.pay_debt') }}</h3>
                     <button type="button" wire:click="cancelPay"
-                            class="flex h-8 w-8 items-center justify-center rounded-lg text-content/30 transition hover:bg-content/[0.06] hover:text-content">
+                            class="flex h-8 w-8 items-center justify-center rounded-lg text-content-subtle transition hover:bg-content/[0.06] hover:text-content">
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
                     </button>
                 </div>
@@ -355,7 +355,7 @@ class extends Component
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-sm">
                         <thead>
-                            <tr class="border-b border-content/[0.06] bg-content/[0.03] text-xs font-bold uppercase tracking-wider text-content/30">
+                            <tr class="border-b border-content/[0.06] bg-content/[0.03] text-xs font-bold uppercase tracking-wider text-content-muted">
                                 <th class="hidden px-6 py-4 sm:table-cell">{{ __('debts.date_time') }}</th>
                                 <th class="px-6 py-4">{{ __('common.client') }}</th>
                                 <th class="hidden px-6 py-4 sm:table-cell">{{ __('debts.barber_services') }}</th>
@@ -368,7 +368,7 @@ class extends Component
                                 <tr class="transition-colors hover:bg-content/[0.02]">
                                     <td class="hidden whitespace-nowrap px-6 py-4 sm:table-cell">
                                         <div class="font-bold text-content">{{ $appointment->starts_at->format('d.m.Y') }}</div>
-                                        <div class="text-[10px] text-content/30">{{ $appointment->starts_at->format('H:i') }}</div>
+                                        <div class="text-[10px] text-content-muted">{{ $appointment->starts_at->format('H:i') }}</div>
                                     </td>
                                     <td class="px-6 py-4">
                                         <div class="font-bold text-content">{{ $appointment->client?->name ?? '—' }}</div>
@@ -386,7 +386,7 @@ class extends Component
                                     </td>
                                     <td class="hidden px-6 py-4 sm:table-cell">
                                         <div class="text-content/60">{{ $appointment->barber?->name }}</div>
-                                        <div class="mt-0.5 text-[10px] text-content/30">{{ $appointment->services->pluck('name')->join(', ') }}</div>
+                                        <div class="mt-0.5 text-[10px] text-content-muted">{{ $appointment->services->pluck('name')->join(', ') }}</div>
                                     </td>
                                     <td class="hidden whitespace-nowrap px-6 py-4 text-right sm:table-cell">
                                         <div class="text-xs text-content/40">{{ $appointment->formattedPrice }}</div>
@@ -422,7 +422,7 @@ class extends Component
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-sm">
                         <thead>
-                            <tr class="border-b border-content/[0.06] bg-content/[0.03] text-xs font-bold uppercase tracking-wider text-content/30">
+                            <tr class="border-b border-content/[0.06] bg-content/[0.03] text-xs font-bold uppercase tracking-wider text-content-muted">
                                 <th class="hidden px-6 py-4 sm:table-cell">{{ __('debts.date_time') }}</th>
                                 <th class="px-6 py-4">{{ __('common.client') }}</th>
                                 <th class="hidden px-6 py-4 sm:table-cell">{{ __('nav.products') }}</th>
@@ -435,7 +435,7 @@ class extends Component
                                 <tr class="transition-colors hover:bg-content/[0.02]">
                                     <td class="hidden whitespace-nowrap px-6 py-4 sm:table-cell">
                                         <div class="font-bold text-content">{{ $order->created_at->format('d.m.Y') }}</div>
-                                        <div class="text-[10px] text-content/30">{{ $order->created_at->format('H:i') }}</div>
+                                        <div class="text-[10px] text-content-muted">{{ $order->created_at->format('H:i') }}</div>
                                     </td>
                                     <td class="px-6 py-4">
                                         <div class="font-bold text-content">{{ $order->client?->name ?? '—' }}</div>
@@ -499,7 +499,7 @@ class extends Component
         <div class="flex flex-col items-center gap-4 rounded-2xl border border-content/[0.06] bg-content/[0.03] py-20 text-center">
             <div @class([
                 'flex h-16 w-16 items-center justify-center rounded-2xl',
-                'bg-content/[0.06] text-content/30' => $isSearching,
+                'bg-content/[0.06] text-content-subtle' => $isSearching,
                 'bg-success/10 text-success' => ! $isSearching,
             ])>
                 @if ($isSearching)
@@ -511,7 +511,7 @@ class extends Component
             <div>
                 {{-- Пустой поиск — это не «долгов нет»: иначе поиск врёт про кассу --}}
                 <p class="text-lg font-bold text-content">{{ $isSearching ? __('common.nothing_found') : __('debts.no_debts') }}</p>
-                <p class="mt-1 text-sm text-content/30">{{ $isSearching ? __('debts.search_empty') : __('debts.all_paid') }}</p>
+                <p class="mt-1 text-sm text-content-muted">{{ $isSearching ? __('debts.search_empty') : __('debts.all_paid') }}</p>
             </div>
         </div>
     @endif

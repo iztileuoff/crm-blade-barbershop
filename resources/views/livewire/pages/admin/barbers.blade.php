@@ -299,7 +299,7 @@ class extends Component
                                 <div class="relative">
                                     <input type="number" wire:model="salary_percent" min="0" max="100" placeholder="50"
                                            class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 pr-10 text-sm text-content outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
-                                    <span class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold text-content/30">%</span>
+                                    <span class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold text-content-muted">%</span>
                                 </div>
                                 @error('salary_percent') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                             </div>
@@ -308,7 +308,7 @@ class extends Component
                                 <div class="relative">
                                     <input type="number" wire:model="price" min="0" placeholder="0"
                                            class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 pr-16 text-sm text-content outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
-                                    <span class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-content/30">{{ __('common.currency') }}</span>
+                                    <span class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-content-muted">{{ __('common.currency') }}</span>
                                 </div>
                                 @error('price') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                             </div>
@@ -353,7 +353,7 @@ class extends Component
                                             <div @class(['flex flex-1 items-center gap-1.5 transition-opacity', 'pointer-events-none opacity-30' => $isOff])>
                                                 <input type="time" wire:model="schedule.{{ $key }}.start" @disabled($isOff)
                                                        class="w-full rounded-lg border border-content/[0.06] bg-transparent px-1.5 py-1 text-center text-xs text-content outline-none focus:border-brass/40 focus:ring-1 focus:ring-brass/20 dark:[color-scheme:dark]">
-                                                <span class="text-content/20">—</span>
+                                                <span class="text-content-subtle">—</span>
                                                 <input type="time" wire:model="schedule.{{ $key }}.end" @disabled($isOff)
                                                        class="w-full rounded-lg border border-content/[0.06] bg-transparent px-1.5 py-1 text-center text-xs text-content outline-none focus:border-brass/40 focus:ring-1 focus:ring-brass/20 dark:[color-scheme:dark]">
                                             </div>
@@ -388,7 +388,7 @@ class extends Component
                             @else
                                 <div class="flex h-full w-full flex-col items-center justify-center p-6 text-center">
                                     <svg class="mb-3 h-10 w-10 text-content/10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" /></svg>
-                                    <p class="text-xs text-content/30">{{ __('barbers.upload_hint') }}</p>
+                                    <p class="text-xs text-content-muted">{{ __('barbers.upload_hint') }}</p>
                                 </div>
                             @endif
                             <input type="file" wire:model="photo" class="absolute inset-0 cursor-pointer opacity-0">
@@ -415,7 +415,7 @@ class extends Component
         <div class="overflow-x-auto">
             <table class="w-full text-left text-sm">
                 <thead>
-                    <tr class="border-b border-content/[0.06] bg-content/[0.03] text-xs font-bold uppercase tracking-wider text-content/30">
+                    <tr class="border-b border-content/[0.06] bg-content/[0.03] text-xs font-bold uppercase tracking-wider text-content-muted">
                         <th class="px-6 py-4">{{ __('common.barber') }}</th>
                         <th class="hidden px-6 py-4 sm:table-cell">{{ __('barbers.specialization') }}</th>
                         <th class="hidden px-6 py-4 sm:table-cell">{{ __('barbers.salary_percent_short') }}</th>
@@ -437,7 +437,7 @@ class extends Component
                                     @endif
                                     <div>
                                         <div class="font-bold text-content">{{ $barber->name }}</div>
-                                        <div class="text-[10px] text-content/30 sm:hidden">{{ $barber->specialization?->name }}</div>
+                                        <div class="text-[10px] text-content-muted sm:hidden">{{ $barber->specialization?->name }}</div>
                                     </div>
                                 </div>
                             </td>
@@ -456,7 +456,7 @@ class extends Component
                                         {{ __('common.active') }}
                                     </span>
                                 @else
-                                    <span class="inline-flex items-center gap-1.5 rounded-full bg-content/10 px-2.5 py-1 text-xs font-bold text-content/30">
+                                    <span class="inline-flex items-center gap-1.5 rounded-full bg-content/10 px-2.5 py-1 text-xs font-bold text-content-muted">
                                         <span class="h-1.5 w-1.5 rounded-full bg-content/30"></span>
                                         {{ __('common.inactive') }}
                                     </span>
@@ -478,7 +478,7 @@ class extends Component
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="px-6 py-12 text-center text-content/20">{{ __('barbers.empty') }}</td>
+                            <td colspan="5" class="px-6 py-12 text-center text-content-muted">{{ __('barbers.empty') }}</td>
                         </tr>
                     @endforelse
                 </tbody>
