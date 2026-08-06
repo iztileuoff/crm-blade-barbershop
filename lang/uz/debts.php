@@ -29,4 +29,7 @@ return [
     'all_paid' => 'Barcha mijozlar hisoblarini toʻlagan',
 
     'err_enter_amount' => 'Toʻlov summasini kiriting.',
+    'err_amount_exceeds' => 'Summa qarz qoldigʻidan koʻp (:max). Summani toʻgʻrilang.',
+    'err_already_paid' => 'Qarz allaqachon yopilgan — sahifani yangilang.',
+    'payment_saved' => 'Toʻlov qabul qilindi',
 ];

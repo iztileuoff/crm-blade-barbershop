@@ -153,14 +153,20 @@ it('never accepts more than the outstanding debt', function () {
         'debt_amount' => 40000,
     ]);
 
+    // Переплату не срезаем молча: кассир вбил 999 999 при долге 40 000 —
+    // раньше записывалось 40 000 и модалка исчезала без единого слова.
     Livewire::actingAs($admin)
         ->test('pages.admin.debts')
         ->call('openPayOrder', $order->id)
         ->set('payAmount', 999999)
-        ->call('payOrderDebt');
+        ->call('payOrderDebt')
+        ->assertHasErrors('payAmount')
+        // модалка остаётся открытой с введённой суммой — её можно исправить
+        ->assertSet('payingOrderId', $order->id)
+        ->assertSet('payAmount', 999999);
 
-    expect((int) DebtPayment::sum('amount'))->toBe(40000)
-        ->and($order->fresh()->outstandingDebt)->toBe(0);
+    expect((int) DebtPayment::sum('amount'))->toBe(0)
+        ->and($order->fresh()->outstandingDebt)->toBe(40000);
 });
 
 it('removes debt payments when the operation itself is deleted', function () {
@@ -353,6 +359,54 @@ it('refuses to delete an operation whose repayments sit in another day', functio
         ->and(dashboardOn($admin, '2026-08-02')->receivedTotal())->toBe(40000);
 
     Carbon::setTestNow();
+});
+
+it('accepts an exact payment and confirms it', function () {
+    $admin = debtAdmin();
+    $order = Order::create([
+        'client_id' => Client::factory()->create()->id,
+        'total_price' => 100000,
+        'payment_type' => 'cash',
+        'debt_amount' => 50000,
+    ]);
+
+    Livewire::actingAs($admin)
+        ->test('pages.admin.debts')
+        ->call('openPayOrder', $order->id)
+        ->set('payAmount', 50000)
+        ->call('payOrderDebt')
+        ->assertHasNoErrors()
+        ->assertDispatched('payment-saved')
+        ->assertSet('payingOrderId', null);
+
+    expect(DebtPayment::count())->toBe(1)
+        ->and($order->fresh()->outstandingDebt)->toBe(0);
+});
+
+it('refuses a second payment on an already settled debt', function () {
+    $admin = debtAdmin();
+    $order = Order::create([
+        'client_id' => Client::factory()->create()->id,
+        'total_price' => 100000,
+        'payment_type' => 'cash',
+        'debt_amount' => 50000,
+    ]);
+
+    $debts = Livewire::actingAs($admin)->test('pages.admin.debts');
+
+    $debts->call('openPayOrder', $order->id)
+        ->set('payAmount', 50000)
+        ->call('payOrderDebt')
+        ->assertHasNoErrors();
+
+    // Вторая вкладка/второй клик по уже погашенному долгу.
+    $debts->call('openPayOrder', $order->id)
+        ->set('payAmount', 50000)
+        ->call('payOrderDebt')
+        ->assertHasErrors('payAmount')
+        ->assertSee(__('debts.err_already_paid'));
+
+    expect(DebtPayment::count())->toBe(1);
 });
 
 it('shows the reason when a visit with repayments cannot be deleted', function () {

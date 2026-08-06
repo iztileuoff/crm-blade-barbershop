@@ -48,16 +48,29 @@ class extends Component
         return $this->dayStart()->translatedFormat('j F Y');
     }
 
+    /**
+     * Начало выбранного месяца. $month — клиентское поле: очищенное в браузере
+     * приходит пустым, и `Carbon::parse('-01')` молча даёт декабрь 1969-го, а
+     * значение вида `2026-13` роняет страницу. Поэтому формат проверяется до
+     * разбора, а шапка и данные берут месяц отсюда — и разойтись уже не могут.
+     */
+    private function monthStart(): Carbon
+    {
+        if (preg_match('/^(\d{4})-(\d{2})$/', $this->month, $parts) === 1) {
+            $month = (int) $parts[2];
+
+            if ($month >= 1 && $month <= 12) {
+                return Carbon::create((int) $parts[1], $month, 1, 0, 0, 0, 'Asia/Tashkent')->startOfMonth();
+            }
+        }
+
+        return Carbon::now('Asia/Tashkent')->startOfMonth();
+    }
+
     #[Computed]
     public function monthString(): string
     {
-        try {
-            $d = Carbon::parse($this->month.'-01');
-        } catch (Exception $e) {
-            $d = Carbon::now('Asia/Tashkent');
-        }
-
-        return Str::ucfirst($d->translatedFormat('F Y'));
+        return Str::ucfirst($this->monthStart()->translatedFormat('F Y'));
     }
 
     // ─── Daily computed ───────────────────────────────────────────────────────
@@ -370,7 +383,7 @@ class extends Component
     #[Computed]
     public function monthlyAppointments(): Collection
     {
-        $start = Carbon::parse($this->month.'-01', 'Asia/Tashkent')->startOfMonth();
+        $start = $this->monthStart();
         $end = $start->copy()->endOfMonth();
 
         return Appointment::query()
@@ -384,7 +397,7 @@ class extends Component
     #[Computed]
     public function monthlyOrders(): Collection
     {
-        $start = Carbon::parse($this->month.'-01', 'Asia/Tashkent')->startOfMonth();
+        $start = $this->monthStart();
         $end = $start->copy()->endOfMonth();
 
         return Order::query()
@@ -399,7 +412,7 @@ class extends Component
     #[Computed]
     public function monthlyDebtPayments(): Collection
     {
-        $start = Carbon::parse($this->month.'-01', 'Asia/Tashkent')->startOfMonth();
+        $start = $this->monthStart();
         $end = $start->copy()->endOfMonth();
 
         return DebtPayment::query()
@@ -520,7 +533,7 @@ class extends Component
     #[Computed]
     public function dailyChartData(): array
     {
-        $start = Carbon::parse($this->month.'-01', 'Asia/Tashkent')->startOfMonth();
+        $start = $this->monthStart();
         $end = $start->copy()->endOfMonth();
 
         $appointments = Appointment::query()
@@ -534,7 +547,7 @@ class extends Component
 
         $days = [];
         for ($day = 1; $day <= $end->day; $day++) {
-            $date = $this->month.'-'.str_pad((string) $day, 2, '0', STR_PAD_LEFT);
+            $date = $start->format('Y-m').'-'.str_pad((string) $day, 2, '0', STR_PAD_LEFT);
 
             $serviceRev = (int) $appointments
                 ->filter(fn ($a) => Carbon::parse($a->starts_at)->toDateString() === $date)

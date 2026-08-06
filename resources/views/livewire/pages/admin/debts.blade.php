@@ -122,47 +122,66 @@ class extends Component
     private function recordPayment(Appointment|Order $payable): void
     {
         $this->abortIfBarber();
+        $this->resetErrorBag('payAmount');
 
         $method = in_array($this->payPaymentType, ['cash', 'card'], true)
             ? $this->payPaymentType
             : 'cash';
         $requested = (int) ($this->payAmount ?? 0);
 
-        // Остаток перечитываем под блокировкой внутри транзакции: иначе два
-        // параллельных запроса (двойной клик, вторая вкладка) читают один и тот
-        // же остаток и записывают платёж дважды, завышая кассу дня.
-        $recorded = DB::transaction(function () use ($payable, $requested, $method): int {
-            $fresh = $payable->newQuery()
-                ->lockForUpdate()
-                ->find($payable->getKey());
-
-            if ($fresh === null) {
-                return 0;
-            }
-
-            $pay = min($requested, $fresh->outstandingDebt);
-
-            if ($pay <= 0) {
-                return 0;
-            }
-
-            $fresh->debtPayments()->create([
-                'amount' => $pay,
-                'payment_type' => $method,
-                'paid_at' => Carbon::now('Asia/Tashkent'),
-                'user_id' => auth()->id(),
-            ]);
-
-            return $pay;
-        });
-
-        if ($recorded <= 0) {
+        if ($requested <= 0) {
             $this->addError('payAmount', __('debts.err_enter_amount'));
 
             return;
         }
 
+        // Остаток перечитываем под блокировкой внутри транзакции: иначе два
+        // параллельных запроса (двойной клик, вторая вкладка) читают один и тот
+        // же остаток и записывают платёж дважды, завышая кассу дня.
+        /** @var array{status: string, outstanding: int} $outcome */
+        $outcome = DB::transaction(function () use ($payable, $requested, $method): array {
+            $fresh = $payable->newQuery()
+                ->lockForUpdate()
+                ->find($payable->getKey());
+
+            $outstanding = (int) ($fresh?->outstandingDebt ?? 0);
+
+            if ($fresh === null || $outstanding <= 0) {
+                return ['status' => 'settled', 'outstanding' => 0];
+            }
+
+            // Переплату не срезаем молча: кассир вбил одну сумму, а записалась
+            // бы другая — и он бы об этом не узнал.
+            if ($requested > $outstanding) {
+                return ['status' => 'exceeds', 'outstanding' => $outstanding];
+            }
+
+            $fresh->debtPayments()->create([
+                'amount' => $requested,
+                'payment_type' => $method,
+                'paid_at' => Carbon::now('Asia/Tashkent'),
+                'user_id' => auth()->id(),
+            ]);
+
+            return ['status' => 'recorded', 'outstanding' => $outstanding];
+        });
+
+        if ($outcome['status'] === 'exceeds') {
+            $this->addError('payAmount', __('debts.err_amount_exceeds', [
+                'max' => number_format($outcome['outstanding'], 0, '.', ' ').' '.__('common.currency'),
+            ]));
+
+            return;
+        }
+
+        if ($outcome['status'] !== 'recorded') {
+            $this->addError('payAmount', __('debts.err_already_paid'));
+
+            return;
+        }
+
         $this->cancelPay();
+        $this->dispatch('payment-saved');
     }
 }; ?>
 
@@ -171,6 +190,16 @@ class extends Component
         <div>
             <h1 class="font-display text-4xl font-semibold uppercase tracking-tight text-content">{{ __('debts.title') }}</h1>
             <p class="mt-1 text-sm text-content/40">{{ __('debts.subtitle') }}</p>
+        </div>
+    </div>
+
+    {{-- Оплата принята: молча закрывать модалку нельзя --}}
+    <div x-data="{ saved: false }"
+         x-on:payment-saved.window="saved = true; clearTimeout($el._t); $el._t = setTimeout(() => saved = false, 2500)">
+        <div x-show="saved" x-cloak x-transition
+             class="mb-6 flex items-center gap-2 rounded-xl border border-success/20 bg-success/10 px-4 py-3 text-sm font-bold text-success">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+            {{ __('debts.payment_saved') }}
         </div>
     </div>
 
@@ -200,6 +229,7 @@ class extends Component
                 ? $this->appointmentDebts->firstWhere('id', $payingAppointmentId)
                 : $this->orderDebts->firstWhere('id', $payingOrderId);
             $maxPay = (int) ($debtRecord?->outstandingDebt ?? 0);
+            $payAction = $payingAppointmentId ? 'payAppointmentDebt' : 'payOrderDebt';
         @endphp
         <div class="fixed inset-0 z-50 flex items-center justify-center p-4"
              x-data
@@ -213,17 +243,19 @@ class extends Component
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
                     </button>
                 </div>
-                <div class="px-6 py-6">
+                {{-- Форма, а не набор кнопок: Enter должен принимать оплату --}}
+                <form wire:submit="{{ $payAction }}" class="px-6 py-6">
                     <div class="mb-4 rounded-xl border border-danger/20 bg-danger/5 px-4 py-3">
                         <div class="text-xs text-content/50">{{ __('common.client') }}</div>
                         <div class="mt-0.5 font-bold text-content">{{ $debtRecord?->client?->name ?? '—' }}</div>
                         <div class="mt-1 text-xs text-danger/70">{{ __('debts.remaining_debt') }}: <span class="font-bold">{{ number_format($maxPay, 0, '.', ' ') }} {{ __('common.currency') }}</span></div>
                     </div>
                     <div class="mb-1.5">
-                        <label class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('debts.pay_amount') }}</label>
+                        <label for="payAmount" class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('debts.pay_amount') }}</label>
                         <div class="relative">
-                            <input type="number" wire:model="payAmount"
+                            <input id="payAmount" type="number" wire:model="payAmount"
                                    placeholder="0" min="1" max="{{ $maxPay }}"
+                                   x-data x-init="$nextTick(() => { $el.focus(); $el.select(); })"
                                    class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] py-3 pl-4 pr-12 text-sm text-content outline-none transition focus:border-success/40 focus:ring-1 focus:ring-success/20">
                             <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-medium text-content/25">{{ __('common.currency') }}</span>
                         </div>
@@ -263,16 +295,15 @@ class extends Component
                                 class="rounded-xl border border-content/[0.08] px-5 py-2.5 text-sm font-bold text-content/60 transition hover:bg-content/[0.06] hover:text-content">
                             {{ __('common.cancel') }}
                         </button>
-                        @php($payAction = $payingAppointmentId ? 'payAppointmentDebt' : 'payOrderDebt')
-                        <button type="button"
-                                wire:click="{{ $payAction }}"
+                        <button type="submit"
                                 wire:loading.attr="disabled"
                                 wire:target="{{ $payAction }}"
                                 class="flex-1 rounded-xl bg-success px-6 py-2.5 text-sm font-bold text-black transition-all hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60">
-                            {{ __('debts.accept_payment') }}
+                            <span wire:loading.remove wire:target="{{ $payAction }}">{{ __('debts.accept_payment') }}</span>
+                            <span wire:loading wire:target="{{ $payAction }}">{{ __('common.saving') }}</span>
                         </button>
                     </div>
-                </div>
+                </form>
             </div>
         </div>
     @endif

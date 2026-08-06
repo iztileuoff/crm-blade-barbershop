@@ -29,4 +29,7 @@ return [
     'all_paid' => 'Barlıq klientler esapların tóledi',
 
     'err_enter_amount' => 'Tólew summasın kiritiń.',
+    'err_amount_exceeds' => 'Summa qarız qaldıǵınan kóp (:max). Summanı durıslań.',
+    'err_already_paid' => 'Qarız allaqashan jabılǵan — betti jańalań.',
+    'payment_saved' => 'Tólew qabıl etildi',
 ];
