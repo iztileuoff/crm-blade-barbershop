@@ -198,6 +198,98 @@ it('refuses to select a slot that is already taken', function () {
         ->assertSet('time', null);
 });
 
+it('lets an admin book over a taken slot and records the second appointment', function () {
+    // Салон регулярно берёт второго клиента в тот же час и разводит их потом на
+    // странице записей. Отказ означал только, что админ не записал визит никуда
+    // (issue #98).
+    $service = Service::factory()->create(['duration_minutes' => 60]);
+    $barber = Barber::factory()->create();
+    $date = now()->toDateString();
+
+    Appointment::factory()->create([
+        'barber_id' => $barber->id,
+        'starts_at' => $date.' 12:00:00',
+        'ends_at' => $date.' 13:00:00',
+        'status' => AppointmentStatus::Pending,
+    ]);
+
+    Livewire::actingAs(User::factory()->create(['role' => Role::ADMIN]))
+        ->test('pages.booking')
+        ->call('selectService', $service->id)
+        ->call('selectBarber', $barber->id)
+        ->set('date', $date)
+        ->call('selectTime', '12:00')
+        ->assertSet('step', 4)
+        ->assertSet('time', '12:00')
+        ->set('name', 'Второй Клиент')
+        ->set('phone', '998901112233')
+        ->call('confirm')
+        ->assertHasNoErrors()
+        ->assertSet('step', 5);
+
+    // Обе записи должны лежать в базе — вторая не подменяет первую.
+    expect(Appointment::where('barber_id', $barber->id)->where('starts_at', $date.' 12:00:00')->count())->toBe(2);
+});
+
+it('still shows the grid to an admin on a day where every hour is taken', function () {
+    // Заглушка «нет свободных окон» прятала сетку целиком — админу под ней
+    // нечего было нажать.
+    Setting::set('work_start', '10:00');
+    Setting::set('work_end', '12:00');
+
+    $service = Service::factory()->create(['duration_minutes' => 60]);
+    $barber = Barber::factory()->create();
+    $date = now()->addDay()->toDateString();
+
+    foreach (['10:00', '11:00'] as $hour) {
+        Appointment::factory()->create([
+            'barber_id' => $barber->id,
+            'starts_at' => $date.' '.$hour.':00',
+            'ends_at' => $date.' '.$hour.':59',
+            'status' => AppointmentStatus::Pending,
+        ]);
+    }
+
+    Livewire::actingAs(User::factory()->create(['role' => Role::ADMIN]))
+        ->test('pages.booking')
+        ->call('selectService', $service->id)
+        ->call('selectBarber', $barber->id)
+        ->set('date', $date)
+        ->assertDontSee(__('booking.datetime.no_slots'))
+        ->call('selectTime', '10:00')
+        ->assertSet('step', 4);
+});
+
+it('keeps a taken slot shut for a guest and for a barber', function (?Role $role) {
+    $service = Service::factory()->create(['duration_minutes' => 60]);
+    $barber = Barber::factory()->create();
+    $date = now()->toDateString();
+
+    Appointment::factory()->create([
+        'barber_id' => $barber->id,
+        'starts_at' => $date.' 12:00:00',
+        'ends_at' => $date.' 13:00:00',
+        'status' => AppointmentStatus::Pending,
+    ]);
+
+    $component = $role === null
+        ? Volt::test('pages.booking')
+        : Livewire::actingAs(User::factory()->create(['role' => $role]))->test('pages.booking');
+
+    $component
+        ->call('selectService', $service->id)
+        ->call('selectBarber', $barber->id)
+        ->set('date', $date)
+        ->call('selectTime', '12:00')
+        ->assertSet('step', 3)
+        ->assertSet('time', null);
+
+    expect(Appointment::where('barber_id', $barber->id)->count())->toBe(1);
+})->with([
+    'guest' => null,
+    'barber' => Role::BARBER,
+]);
+
 it('rejects a booking whose slot was taken while the guest filled the form', function () {
     $service = Service::factory()->create(['duration_minutes' => 60]);
     $barber = Barber::factory()->create();

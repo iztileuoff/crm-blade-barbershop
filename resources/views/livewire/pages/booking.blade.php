@@ -241,9 +241,7 @@ class extends Component
 
         $this->clientFound = $client !== null;
 
-        $user = auth()->user();
-
-        if ($user !== null && ! $user->isBarber()) {
+        if ($this->actingAsAdmin) {
             $this->prefillFromCard($client);
         }
     }
@@ -279,6 +277,24 @@ class extends Component
             $this->birth_date = $client->birth_date->format('Y-m-d');
             $this->prefilledFromCard = true;
         }
+    }
+
+    /**
+     * True for a signed-in admin, false for a guest and for a barber.
+     *
+     * This public page grants an admin two things it grants nobody else —
+     * prefilling a client's card {@see prefillFromCard()} and booking over a
+     * taken slot {@see isSelectableSlot()}. Both hang off this one predicate so
+     * they cannot drift apart, and it reads the session rather than any property
+     * the browser can write. A barber is excluded on purpose: {@see App\Http\Middleware\RestrictBarberAccess}
+     * keeps them out of the CRM beyond their own appointments.
+     */
+    #[Computed]
+    public function actingAsAdmin(): bool
+    {
+        $user = auth()->user();
+
+        return $user !== null && ! $user->isBarber();
     }
 
     #[Computed]
@@ -528,8 +544,14 @@ class extends Component
     }
 
     /**
-     * A slot may be picked only while it is still offered (inside the working
-     * hours and in the future) and still free for the chosen barber.
+     * A slot may be picked only while it is still offered — inside the working
+     * hours and in the future.
+     *
+     * Being already booked stops a guest but not an admin (issue #98). The shop
+     * routinely takes a second client into the same hour and shuffles the two
+     * afterwards on the appointments page; refusing the booking outright only
+     * meant the admin recorded it nowhere. The slot stays red either way — for
+     * the admin that is a warning, not a locked door.
      */
     private function isSelectableSlot(?string $time): bool
     {
@@ -537,8 +559,11 @@ class extends Component
             return false;
         }
 
-        return in_array($time, array_column($this->availableSlots, 'value'), true)
-            && ! in_array($time, $this->takenSlots, true);
+        if (! in_array($time, array_column($this->availableSlots, 'value'), true)) {
+            return false;
+        }
+
+        return $this->actingAsAdmin || ! in_array($time, $this->takenSlots, true);
     }
 
     public function back(): void
@@ -601,8 +626,14 @@ class extends Component
 
         $servicePrice = $barber->priceForService($service->id) ?? $barber->price ?? 0;
 
-        $appointment = DB::transaction(function () use ($barber, $service, $servicePrice, $normalized, $startsAt, $endsAt): ?Appointment {
-            $isTaken = Appointment::query()
+        // Гонка за слотом решается под блокировкой: между выбором времени и этим
+        // запросом его мог занять кто-то другой. Админ пишет поверх намеренно
+        // (issue #98), поэтому для него проверка не нужна — и лишний
+        // lockForUpdate на каждую его запись тоже.
+        $mustBeFree = ! $this->actingAsAdmin;
+
+        $appointment = DB::transaction(function () use ($barber, $service, $servicePrice, $normalized, $startsAt, $endsAt, $mustBeFree): ?Appointment {
+            $isTaken = $mustBeFree && Appointment::query()
                 ->where('barber_id', $barber->id)
                 ->active()
                 ->where('starts_at', '<', $endsAt)
@@ -857,7 +888,12 @@ class extends Component
             {{-- Time slots --}}
             @php($takenSlots = $this->takenSlots)
             @php($freeSlots = array_diff(array_column($this->availableSlots, 'value'), $takenSlots))
-            @if (count($freeSlots) === 0)
+            {{-- Админу занятый час не запрет, а предупреждение (issue #98): день,
+                 расписанный целиком, он всё равно должен видеть сеткой, а не
+                 заглушкой «нет свободных окон», под которой ничего не нажать. --}}
+            @php($mayBookOverTaken = $this->actingAsAdmin)
+            @php($selectableCount = $mayBookOverTaken ? count($this->availableSlots) : count($freeSlots))
+            @if ($selectableCount === 0)
                 <div class="rounded-2xl border border-brass/10 bg-brass/5 p-5 text-center text-sm text-brass-ink/60">
                     {{ __('booking.datetime.no_slots') }}
                 </div>
@@ -867,14 +903,19 @@ class extends Component
                         @php($isTaken = in_array($slot['value'], $takenSlots, true))
                         <button type="button" wire:key="bk-slot-{{ $slot['value'] }}"
                                 wire:click="selectTime('{{ $slot['value'] }}')"
-                                @disabled($isTaken)
+                                @disabled($isTaken && ! $mayBookOverTaken)
                                 @if ($isTaken)
-                                    title="{{ __('booking.datetime.taken') }}"
-                                    aria-label="{{ $slot['label'] }} — {{ __('booking.datetime.taken') }}"
+                                    @php($takenHint = $mayBookOverTaken ? __('booking.datetime.taken_bookable') : __('booking.datetime.taken'))
+                                    title="{{ $takenHint }}"
+                                    aria-label="{{ $slot['label'] }} — {{ $takenHint }}"
                                 @endif
                                 @class([
                                     'flex flex-col items-center rounded-xl border px-3 py-2.5 text-sm font-semibold transition-all duration-200',
-                                    'cursor-not-allowed border-danger/30 bg-danger/10 text-danger/60 line-through' => $isTaken,
+                                    // Красным занятый час остаётся для всех — меняется только то,
+                                    // нажимается он или нет.
+                                    'border-danger/30 bg-danger/10 text-danger/60 line-through' => $isTaken,
+                                    'cursor-not-allowed' => $isTaken && ! $mayBookOverTaken,
+                                    'hover:border-danger/60 hover:bg-danger/20 hover:text-danger active:scale-95' => $isTaken && $mayBookOverTaken,
                                     'border-content/[0.06] bg-content/[0.03] hover:border-brass/40 hover:bg-brass/10 hover:text-brass-ink active:scale-95' => ! $isTaken,
                                 ])>
                             {{ $slot['label'] }}

@@ -35,6 +35,7 @@ return [
         'horizon' => 'Keyingi 14 kun uchun band qilish mumkin',
         'no_slots' => 'Bu kuni boʻsh vaqt yoʻq. Boshqa sanani tanlang.',
         'taken' => 'Bu vaqtga allaqachon yozuv bor',
+        'taken_bookable' => 'Bu vaqtga allaqachon yozuv bor — ustiga yozish mumkin',
         'taken_short' => 'band',
     ],
 
