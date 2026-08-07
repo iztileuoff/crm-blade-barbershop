@@ -58,3 +58,38 @@ it('shows the chip only once a client is really attached', function (string $com
         ->set('clientSearch', 'Бек')
         ->assertDontSeeHtml('wire:click="clearClient"');
 })->with('client pickers');
+
+/*
+|--------------------------------------------------------------------------
+| Клавиатура выпадашки (#90)
+|--------------------------------------------------------------------------
+*/
+
+it('opens the list on arrow up, like it already did on arrow down', function () {
+    // Раньше ↑ зажимался в 0 и список не открывал: одно нажатие подсвечивало
+    // первый вариант при закрытой выпадашке, и следующий Enter выбирал
+    // клиента, которого пользователь не видел.
+    $markup = file_get_contents(resource_path('views/components/search-select.blade.php'));
+
+    expect($markup)
+        ->toContain('x-on:keydown.up.prevent="open = true; highlighted = Math.max(highlighted - 1, -1)"')
+        ->toContain('x-on:keydown.down.prevent="open = true;');
+});
+
+it('renders that arrow-up handler wherever a client is picked', function (string $component) {
+    Client::factory()->create(['name' => 'Али']);
+
+    // Выпадашка живёт внутри модалки — до openCreate() её в разметке нет.
+    Livewire::actingAs(selectionAdmin())
+        ->test($component)
+        ->call('openCreate')
+        ->assertSee('open = true; highlighted = Math.max(highlighted - 1, -1)', escape: false);
+})->with('client pickers');
+
+it('never confirms a selection while the list is closed', function () {
+    // Enter стреляет только при open && highlighted >= 0 — вернуться к
+    // «ничего не выбрано» теперь возможно, поэтому граница именно -1.
+    $markup = file_get_contents(resource_path('views/components/search-select.blade.php'));
+
+    expect($markup)->toContain('if (open && highlighted >= 0)');
+});

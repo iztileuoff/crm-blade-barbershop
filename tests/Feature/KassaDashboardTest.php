@@ -439,8 +439,11 @@ it('makes the sum of daily salaries equal the monthly salary', function () {
         ->set('payAmount', 100000)
         ->call('payAppointmentDebt');
 
+    // Считаем по сегодняшний день включительно: дальше дашборд не пускает
+    // (#89 — граница периода теперь общая для стрелок и пикера), а в будущем
+    // августе денег всё равно нет — обе операции лежат 1-го и 6-го.
     $dailyTotal = 0;
-    for ($day = 1; $day <= 31; $day++) {
+    for ($day = 1; $day <= Carbon::now('Asia/Tashkent')->day; $day++) {
         $date = sprintf('2026-08-%02d', $day);
         $dailyTotal += (int) dashboard($admin, $date)->barberStats()->sum('salary');
     }

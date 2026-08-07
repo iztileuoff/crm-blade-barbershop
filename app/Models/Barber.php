@@ -135,9 +135,14 @@ class Barber extends Model implements HasMedia
     }
 
     /**
-     * То же расписание, но для формы редактирования: здесь позиционная пара
-     * из старых данных читается — админ должен видеть, что было введено, и
-     * подтвердить это осознанно.
+     * То же расписание, но для формы редактирования: здесь читается и
+     * позиционная пара из старых данных, и невалидное окно — админ должен
+     * видеть, что было введено, и подтвердить это осознанно.
+     *
+     * Невалидные времена возвращаются как есть, без подстановки дефолтов:
+     * иначе день с `20:00–09:00` (импорт, сохранение до появления валидации)
+     * рисовался бы правдоподобными 09:00–20:00 и заменялся ими при первом же
+     * сохранении — ровно то молчаливое затирание, которого не должно быть.
      *
      * @return array{start: string, end: string}|'off'|null
      */
@@ -151,9 +156,23 @@ class Barber extends Model implements HasMedia
 
         $entry = is_array($this->schedule) ? ($this->schedule[$day] ?? null) : null;
 
-        return is_array($entry)
-            ? $this->validTimeWindow($entry[0] ?? null, $entry[1] ?? null)
-            : null;
+        if (! is_array($entry)) {
+            return null;
+        }
+
+        // Ключевая запись #73: окно невалидно (иначе его вернул бы
+        // scheduleWindowForDay) — показываем сохранённые строки как есть,
+        // чтобы форма отвалидировала их вслух.
+        if (array_key_exists('off', $entry) || array_key_exists('start', $entry)) {
+            $start = $entry['start'] ?? null;
+            $end = $entry['end'] ?? null;
+
+            return is_string($start) && is_string($end)
+                ? ['start' => $start, 'end' => $end]
+                : null;
+        }
+
+        return $this->validTimeWindow($entry[0] ?? null, $entry[1] ?? null);
     }
 
     /**

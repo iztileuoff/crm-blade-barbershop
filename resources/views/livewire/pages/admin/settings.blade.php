@@ -35,6 +35,11 @@ class extends Component
 
     public function save(): void
     {
+        // Вставленный целиком адрес приводим к хендлу до валидации: поле
+        // подписано «@blade_barbershop», но вставляют в него и «https://t.me/…»,
+        // из которого раньше собиралось «https://t.me/https://t.me/…».
+        $this->telegram = Setting::normalizeTelegramHandle($this->telegram) ?? '';
+
         $this->validate([
             'shop_name' => 'nullable|string|max:255',
             'phone' => 'nullable|string|max:50',
@@ -42,7 +47,9 @@ class extends Component
             'work_start' => 'nullable|regex:/^\d{2}:\d{2}$/',
             'work_end' => 'nullable|regex:/^\d{2}:\d{2}$/',
             'instagram' => 'nullable|string|max:255',
-            'telegram' => 'nullable|string|max:255',
+            'telegram' => 'nullable|string|max:32|regex:/^[A-Za-z0-9_]{5,32}$/',
+        ], [
+            'telegram.regex' => __('settings.err_telegram_handle'),
         ]);
 
         // Zero-padded HH:MM compares correctly as a string.

@@ -14,4 +14,5 @@ return [
     'work_end' => 'Ish tugashi',
     'save' => 'Sozlamalarni saqlash',
     'err_work_end_before_start' => 'Ish tugashi ish boshlanishidan keyin boʻlishi kerak',
+    'err_telegram_handle' => 'Bot nomini kiriting: lotin harflari, raqamlar va «_», 5 dan 32 belgigacha. Havolani toʻliq ham qoʻyish mumkin — u qisqartiriladi.',
 ];

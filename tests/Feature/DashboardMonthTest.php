@@ -147,13 +147,16 @@ it('snaps the day tab into whichever month the month tab was left on', function 
 });
 
 it('does not disturb an already-synced day when switching tabs', function () {
+    // День берём прошедший: будущее теперь подрезается в dayStart() (#89), а
+    // проверяем мы здесь не границу периода, а то, что переключение вкладок
+    // не трогает уже согласованный день.
     $component = Livewire::actingAs(monthAdmin())
         ->test('pages.admin.dashboard')
-        ->set('date', '2026-08-20')
+        ->set('date', '2026-08-04')
         ->set('activeTab', 'month')
         ->call('switchTab', 'day');
 
-    expect($component->get('date'))->toBe('2026-08-20')
+    expect($component->get('date'))->toBe('2026-08-04')
         ->and($component->get('month'))->toBe('2026-08');
 });
 
@@ -183,4 +186,48 @@ it('lets nextPeriod step forward again once a past day has been selected', funct
         ->call('nextPeriod');
 
     expect($component->get('date'))->toBe('2026-08-06');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Граница «не дальше текущего периода» (#89)
+|--------------------------------------------------------------------------
+*/
+
+it('clamps a future date typed into the picker back to today', function () {
+    // Граница жила только в nextPeriod(); у пикера даты хука-подрезки не было,
+    // и 2030-01-15 открывал пустой будущий день.
+    Livewire::actingAs(monthAdmin())
+        ->test('pages.admin.dashboard')
+        ->set('activeTab', 'day')
+        ->set('date', '2030-01-15')
+        ->assertSet('date', '2026-08-06');
+});
+
+it('clamps a future month typed into the picker back to the current one', function () {
+    Livewire::actingAs(monthAdmin())
+        ->test('pages.admin.dashboard')
+        ->set('activeTab', 'month')
+        ->set('month', '2030-01')
+        ->assertSet('month', '2026-08');
+});
+
+it('still allows looking back at any past period', function () {
+    Livewire::actingAs(monthAdmin())
+        ->test('pages.admin.dashboard')
+        ->set('activeTab', 'day')
+        ->set('date', '2025-03-04')
+        ->assertSet('date', '2025-03-04')
+        ->set('activeTab', 'month')
+        ->set('month', '2025-03')
+        ->assertSet('month', '2025-03');
+});
+
+it('keeps the today button lit after a future date is clamped', function () {
+    $component = Livewire::actingAs(monthAdmin())
+        ->test('pages.admin.dashboard')
+        ->set('activeTab', 'day')
+        ->set('date', '2030-01-15');
+
+    expect($component->instance()->isLatestPeriod())->toBeTrue();
 });

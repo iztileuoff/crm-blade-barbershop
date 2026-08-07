@@ -11,6 +11,17 @@ return [
     'retry' => 'Qayta urinish',
     'dismiss' => 'Yopish',
 
+    // Server javob berdi — lekin rad etib. Qayta urinishdan foyda yo'q: o'sha
+    // so'rov o'sha javobni beradi, shuning uchun sahifani yangilash taklif etiladi.
+    'server_error_title' => 'Serverda xatolik',
+    'server_error_body' => 'So\'rovni bajara olmadik. Bir daqiqadan so\'ng qayta urinib ko\'ring.',
+    'forbidden_title' => 'Ruxsat yo\'q',
+    'forbidden_body' => 'Bu amal sizga ochiq emas. Huquqlar o\'zgargan bo\'lishi mumkin — sahifani yangilang.',
+    'missing_title' => 'Hech narsa topilmadi',
+    'missing_body' => 'Yozuv o\'chirilgan yoki o\'zgartirilgan ko\'rinadi. Sahifani yangilang.',
+    'rejected_title' => 'So\'rov rad etildi',
+    'rejected_body' => 'Server so\'rovni rad etdi. Sahifani yangilab, qayta urinib ko\'ring.',
+
     // Ish jarayonida 419: sessiya tugadi, lekin ekrandagi forma tirik —
     // "Yangilash" bosish o'rniga yangi vkladkada kirishni taklif qilamiz.
     'session_expired_title' => 'Sessiya tugadi',

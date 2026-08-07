@@ -132,3 +132,88 @@ it('does not leak another client\'s debt', function () {
 
     expect(debtReply(770006))->toContain('нет задолженности');
 });
+
+/*
+|--------------------------------------------------------------------------
+| «Мои записи»: потолок на число сообщений (#84)
+|--------------------------------------------------------------------------
+*/
+
+/**
+ * Сколько сообщений бот отправил в ответ на нажатие кнопки.
+ *
+ * @return array<int, string>
+ */
+function botReplies(int $chatId, string $button): array
+{
+    $bot = Nutgram::fake();
+    (function () use ($bot) {
+        require base_path('routes/telegram.php');
+    })();
+    $bot->setCommonChat(Chat::make(id: $chatId, type: ChatType::PRIVATE));
+
+    $bot->hearText(Keyboards::label($button))->reply();
+
+    return array_map(
+        fn (array $entry) => (string) $entry['request']->getBody(),
+        $bot->getRequestHistory(),
+    );
+}
+
+function futureVisit(Client $client, int $daysAhead, ?Barber $barber = null): Appointment
+{
+    return Appointment::create([
+        'client_id' => $client->id,
+        'barber_id' => ($barber ?? Barber::factory()->create())->id,
+        'starts_at' => now()->addDays($daysAhead)->setTime(12, 0),
+        'ends_at' => now()->addDays($daysAhead)->setTime(13, 0),
+        'status' => AppointmentStatus::Confirmed,
+        'price' => 50000,
+    ]);
+}
+
+it('sends one message per upcoming appointment while there are few of them', function () {
+    $client = debtorClient(771001);
+    foreach (range(1, 3) as $day) {
+        futureVisit($client, $day);
+    }
+
+    // Заголовок + по сообщению на запись.
+    expect(botReplies(771001, Keyboards::CLIENT_APPOINTMENTS))->toHaveCount(4);
+});
+
+it('caps the burst instead of walking into the telegram flood limit', function () {
+    // Каждая запись уходит отдельным сообщением, а Telegram держит около
+    // одного сообщения в секунду на чат: без потолка 25 записей — это 26
+    // синхронных вызовов внутри одного вебхука.
+    $client = debtorClient(771002);
+    $barber = Barber::factory()->create();
+    foreach (range(1, 25) as $day) {
+        futureVisit($client, $day, $barber);
+    }
+
+    $replies = botReplies(771002, Keyboards::CLIENT_APPOINTMENTS);
+
+    expect($replies)->toHaveCount(11);
+});
+
+it('says out loud that the list was cut, instead of passing it off as complete', function () {
+    $client = debtorClient(771003);
+    $barber = Barber::factory()->create();
+    foreach (range(1, 25) as $day) {
+        futureVisit($client, $day, $barber);
+    }
+
+    $header = botReplies(771003, Keyboards::CLIENT_APPOINTMENTS)[0];
+
+    expect($header)->toContain('10')->toContain('25');
+});
+
+it('does not mention any cut when everything fits', function () {
+    $client = debtorClient(771004);
+    futureVisit($client, 1);
+
+    $header = botReplies(771004, Keyboards::CLIENT_APPOINTMENTS)[0];
+
+    expect($header)->not->toContain(__('telegram.upcoming_truncated', ['shown' => 1, 'total' => 1]));
+});

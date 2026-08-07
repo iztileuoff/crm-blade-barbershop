@@ -14,4 +14,5 @@ return [
     'work_end' => 'Jumıs tamamlanıwı',
     'save' => 'Sazlamalardı saqlaw',
     'err_work_end_before_start' => 'Jumıs tamamlanıwı baslanıwınan keyin bolıwı kerek',
+    'err_telegram_handle' => 'Bot atın kiritiń: latın háripleri, sanlar hám «_», 5 ten 32 belgige shekem. Siltemeni tolıq qoyıwǵa da boladı — ol qısqartıladı.',
 ];

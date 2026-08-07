@@ -71,6 +71,7 @@ return [
 
     'no_upcoming_appointments' => '📭 У вас нет предстоящих записей.',
     'your_appointments_title' => '📅 <b>Ваши записи</b>',
+    'upcoming_truncated' => '<i>Показаны ближайшие :shown из :total — за остальными обратитесь в салон.</i>',
     'no_history' => '📭 История визитов пока пуста.',
     'history_title' => '🕓 <b>Последние визиты</b>',
     'no_debt' => '✅ За вами нет задолженности.',

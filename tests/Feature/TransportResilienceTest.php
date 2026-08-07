@@ -83,3 +83,46 @@ it('keeps app.js free of hardcoded Russian text — every user-facing string mus
 
     expect($code)->not->toMatch('/[\x{0400}-\x{04FF}]/u');
 });
+
+/*
+|--------------------------------------------------------------------------
+| Род отказа, а не «что-то упало» (#83)
+|--------------------------------------------------------------------------
+*/
+
+it('has its own wording for every kind of failure app.js can report', function () {
+    $this->get(route('admin.dashboard'))
+        ->assertOk()
+        ->assertSee(__('errors.connection_lost_title'))
+        ->assertSee(__('errors.server_error_title'))
+        ->assertSee(__('errors.forbidden_title'))
+        ->assertSee(__('errors.missing_title'))
+        ->assertSee(__('errors.rejected_title'));
+});
+
+it('offers retry only for the failures a retry could actually fix', function () {
+    // 403 повторяется в тот же 403 — «Повторить» там превращалось в
+    // бесконечный цикл по одной и той же отклонённой команде.
+    $markup = file_get_contents(resource_path('views/components/transport-status.blade.php'));
+
+    // Повтор показывается по списку, а не по каждому виду отдельно: разъехаться
+    // с app.js может только сам список.
+    expect($markup)->toContain("'retry' => true")
+        ->toContain('retryableKinds.includes(errorKind)')
+        ->toContain('! retryableKinds.includes(errorKind)');
+
+    $this->get(route('admin.dashboard'))
+        ->assertOk()
+        ->assertSee(__('errors.retry'))
+        ->assertSee(__('errors.page_reload'));
+});
+
+it('classifies every status app.js can see', function () {
+    // Единственный ветвящийся по коду кусок JS — проверяем, что ни один
+    // класс отказа не потерялся между app.js и разметкой.
+    $js = file_get_contents(resource_path('js/app.js'));
+
+    foreach (['server', 'forbidden', 'missing', 'rejected', 'network'] as $kind) {
+        expect($js)->toContain("'{$kind}'");
+    }
+});

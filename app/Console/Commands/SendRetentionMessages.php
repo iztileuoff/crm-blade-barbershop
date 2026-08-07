@@ -52,8 +52,14 @@ class SendRetentionMessages extends Command
             $window = $backlog ? "{$days}+ дн. назад (backlog)" : "ровно {$days} дн. назад";
             $this->info('Пробный запуск (--dry-run): SMS НЕ отправляются.');
             $this->info("Клиентов под условие ({$window}): {$clients->count()}");
+            // Текст — по клиенту, а не один на прогон: с тех пор как рассылка
+            // говорит на языке клиента, список без текстов не показывает, что
+            // именно уедет, и опечатка в uz/kaa-шаблоне уходит незамеченной.
             foreach ($clients as $client) {
-                $this->line("  • {$client->phone} (последний визит: {$client->last_visit_at?->toDateString()}, язык: ".NotificationTemplates::localeFor($client->locale).')');
+                $locale = NotificationTemplates::localeFor($client->locale);
+
+                $this->line("  • {$client->phone} (последний визит: {$client->last_visit_at?->toDateString()}, язык: {$locale})");
+                $this->line('    '.NotificationTemplates::renderSms('retention', [], $client->locale));
             }
 
             return self::SUCCESS;
@@ -84,8 +90,14 @@ class SendRetentionMessages extends Command
             return self::FAILURE;
         }
 
-        $message = NotificationTemplates::renderSms('retention');
-        $this->info("Тестовая отправка на {$normalized}: {$message}");
+        // Язык клиента, если этот номер в базе: иначе живая проверка доставки
+        // подтверждала бы текст на языке салона, который на этот номер
+        // рассылка никогда не отправит.
+        $client = Client::where('phone', $normalized)->first();
+        $locale = NotificationTemplates::localeFor($client?->locale);
+
+        $message = NotificationTemplates::renderSms('retention', [], $client?->locale);
+        $this->info("Тестовая отправка на {$normalized} (язык: {$locale}): {$message}");
 
         if ($sms->sendSms($normalized, $message, null, 'retention')) {
             $this->info('Отправлено успешно.');

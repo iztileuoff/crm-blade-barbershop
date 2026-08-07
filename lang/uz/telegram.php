@@ -71,6 +71,7 @@ return [
 
     'no_upcoming_appointments' => '📭 Sizda kelayotgan yozuvlar yoʻq.',
     'your_appointments_title' => '📅 <b>Sizning yozuvlaringiz</b>',
+    'upcoming_truncated' => '<i>:total tadan eng yaqin :shown tasi koʻrsatildi — qolgani uchun salonga murojaat qiling.</i>',
     'no_history' => '📭 Tashriflar tarixi hali boʻsh.',
     'history_title' => '🕓 <b>Soʻnggi tashriflar</b>',
     'no_debt' => '✅ Sizda qarzdorlik yoʻq.',

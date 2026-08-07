@@ -8,7 +8,9 @@ use App\Support\NotificationTemplates;
 
 /**
  * Формирует тексты сообщений об записях для Telegram (HTML parse mode).
- * Все динамические значения экранируются через e().
+ * Все динамические значения экранируются через {@see TelegramHtml::escape()},
+ * а не через хелпер Blade: он кодирует апостроф, и имя доезжает до клиента
+ * как «O&#039;ktam».
  */
 class AppointmentFormatter
 {
@@ -20,13 +22,13 @@ class AppointmentFormatter
     private static function vars(Appointment $appointment): array
     {
         return [
-            'time' => e($appointment->starts_at->format('H:i')),
-            'date' => e(Client::formatRussianDate($appointment->starts_at)),
-            'client' => e($appointment->client?->name ?? 'Клиент'),
-            'barber' => e($appointment->barber?->name ?? 'Мастер'),
-            'services' => e(self::services($appointment)),
-            'price' => e($appointment->formattedPrice),
-            'status' => e($appointment->status->label()),
+            'time' => TelegramHtml::escape($appointment->starts_at->format('H:i')),
+            'date' => TelegramHtml::escape(Client::formatRussianDate($appointment->starts_at)),
+            'client' => TelegramHtml::escape($appointment->client?->name ?? 'Клиент'),
+            'barber' => TelegramHtml::escape($appointment->barber?->name ?? 'Мастер'),
+            'services' => TelegramHtml::escape(self::services($appointment)),
+            'price' => TelegramHtml::escape($appointment->formattedPrice),
+            'status' => TelegramHtml::escape($appointment->status->label()),
         ];
     }
 
@@ -44,10 +46,10 @@ class AppointmentFormatter
     {
         return sprintf(
             '🕐 <b>%s</b> — %s · %s (%s)',
-            e($appointment->starts_at->format('H:i')),
-            e($appointment->client?->name ?? 'Клиент'),
-            e(self::services($appointment)),
-            e($appointment->status->label()),
+            TelegramHtml::escape($appointment->starts_at->format('H:i')),
+            TelegramHtml::escape($appointment->client?->name ?? 'Клиент'),
+            TelegramHtml::escape(self::services($appointment)),
+            TelegramHtml::escape($appointment->status->label()),
         );
     }
 
@@ -58,11 +60,11 @@ class AppointmentFormatter
     {
         return sprintf(
             '📅 <b>%s, %s</b> · %s · %s — %s',
-            e(Client::formatRussianDate($appointment->starts_at)),
-            e($appointment->starts_at->format('H:i')),
-            e($appointment->barber?->name ?? 'Мастер'),
-            e(self::services($appointment)),
-            e($appointment->formattedPrice),
+            TelegramHtml::escape(Client::formatRussianDate($appointment->starts_at)),
+            TelegramHtml::escape($appointment->starts_at->format('H:i')),
+            TelegramHtml::escape($appointment->barber?->name ?? 'Мастер'),
+            TelegramHtml::escape(self::services($appointment)),
+            TelegramHtml::escape($appointment->formattedPrice),
         );
     }
 

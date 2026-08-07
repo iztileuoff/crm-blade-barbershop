@@ -47,3 +47,59 @@ it('refuses a closing time equal to the opening time', function () {
 
     expect(Setting::get('work_end'))->toBeNull();
 });
+
+/*
+|--------------------------------------------------------------------------
+| Telegram-хендл салона (#92)
+|--------------------------------------------------------------------------
+*/
+
+it('stores a pasted telegram url as a bare handle', function () {
+    Livewire::actingAs(settingsAdmin())
+        ->test('pages.admin.settings')
+        ->set('telegram', 'https://t.me/blade_barbershop')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(Setting::get('telegram'))->toBe('blade_barbershop')
+        ->and(Setting::telegramUrl())->toBe('https://t.me/blade_barbershop');
+});
+
+it('strips a leading at sign from the handle', function () {
+    Livewire::actingAs(settingsAdmin())
+        ->test('pages.admin.settings')
+        ->set('telegram', '@blade_barbershop')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(Setting::get('telegram'))->toBe('blade_barbershop');
+});
+
+it('refuses a telegram handle that is not a handle at all', function () {
+    Livewire::actingAs(settingsAdmin())
+        ->test('pages.admin.settings')
+        ->set('telegram', 'наш телеграм — спросите у администратора')
+        ->call('save')
+        ->assertHasErrors('telegram');
+
+    expect(Setting::get('telegram'))->toBeNull();
+});
+
+it('builds the bot link in exactly one place', function () {
+    // Раньше ссылку независимо собирали макет публичной брони и компонент
+    // записи, и вставленный целиком адрес давал t.me/https://t.me/...
+    Setting::set('telegram', 'https://t.me/blade_barbershop');
+
+    expect(Setting::telegramUrl())->toBe('https://t.me/blade_barbershop');
+
+    $this->get(route('booking'))
+        ->assertOk()
+        ->assertSee('https://t.me/blade_barbershop', escape: false)
+        ->assertDontSee('t.me/https', escape: false);
+});
+
+it('has no bot link at all when the handle is empty', function () {
+    Setting::set('telegram', null);
+
+    expect(Setting::telegramUrl())->toBeNull();
+});

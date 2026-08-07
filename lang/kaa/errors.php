@@ -11,6 +11,17 @@ return [
     'retry' => 'Qayta urınıw',
     'dismiss' => 'Jabıw',
 
+    // Server juwap berdi — biraq bas tartıp. Qayta urınıwdan payda joq: sol
+    // soraw sol juwaptı beredi, sonlıqtan bettі jańalaw usınıladı.
+    'server_error_title' => 'Serverde qátelik',
+    'server_error_body' => 'Sorawdı orınlay almadıq. Bir minuttan soń qayta urınıp kóriń.',
+    'forbidden_title' => 'Ruqsat joq',
+    'forbidden_body' => 'Bul ámel sizge ashıq emes. Huqıqlar ózgergen bolıwı múmkin — bettі jańalań.',
+    'missing_title' => 'Hesh nárse tabılmadı',
+    'missing_body' => 'Jazıw óshirilgen yamasa ózgertilgen kórinedi. Bettі jańalań.',
+    'rejected_title' => 'Soraw bas tartıldı',
+    'rejected_body' => 'Server sorawdı qabıl etpedi. Bettі jańalap, qayta urınıp kóriń.',
+
     // Jumıs waqtında 419: sessiya tamamlandı, biraq ekrandaǵı forma tiri —
     // «Jańalaw» basıwdıń ornına jańa vkladkada kiriwdi usınamız.
     'session_expired_title' => 'Sessiya tamamlandı',

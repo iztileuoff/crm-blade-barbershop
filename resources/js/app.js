@@ -24,6 +24,32 @@ document.addEventListener('livewire:init', () => {
     const findRetryTarget = () => [...document.querySelectorAll('[data-loading]')]
         .find((el) => ! [...el.attributes].some((attr) => attr.name.startsWith('wire:poll'))) ?? null
 
+    // Род отказа, а не «что-то упало». Сервер, ответивший 403, не «потерял
+    // связь», и повтор того же запроса даст тот же 403 — кнопка «Повторить»
+    // на таком коде превращается в бесконечный цикл по одной и той же
+    // отклонённой команде. Текст и наличие повтора выбирает разметка
+    // transport-status по этому виду.
+    const classifyStatus = (status) => {
+        if (status >= 500) {
+            return 'server'
+        }
+
+        if (status === 403) {
+            return 'forbidden'
+        }
+
+        if (status === 404) {
+            return 'missing'
+        }
+
+        return 'rejected'
+    }
+
+    const reportError = (kind) => {
+        retryTarget = findRetryTarget()
+        window.dispatchEvent(new CustomEvent('transport-error', { detail: { kind } }))
+    }
+
     Livewire.interceptRequest(({ onError, onFailure }) => {
         onError(({ response, preventDefault }) => {
             // Не даём Livewire показать нативный confirm() на 419 или
@@ -31,21 +57,17 @@ document.addEventListener('livewire:init', () => {
             // не оставляют пользователю ничего, кроме перезагрузки страницы.
             preventDefault()
 
-            retryTarget = findRetryTarget()
-
             if (response.status === 419) {
+                retryTarget = findRetryTarget()
                 window.dispatchEvent(new CustomEvent('transport-session-expired'))
                 return
             }
 
-            window.dispatchEvent(new CustomEvent('transport-error'))
+            reportError(classifyStatus(response.status))
         })
 
         // Запрос не дошёл вообще — обрыв сети, DNS, таймаут. response нет.
-        onFailure(() => {
-            retryTarget = findRetryTarget()
-            window.dispatchEvent(new CustomEvent('transport-error'))
-        })
+        onFailure(() => reportError('network'))
     })
 
     // Кнопка «Повторить» в баннере/модалке шлёт это событие, а не сама

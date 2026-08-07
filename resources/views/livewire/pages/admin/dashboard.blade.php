@@ -41,7 +41,13 @@ class extends Component
             preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $this->date, $parts) === 1
             && checkdate((int) $parts[2], (int) $parts[3], (int) $parts[1])
         ) {
-            return Carbon::create((int) $parts[1], (int) $parts[2], (int) $parts[3], 0, 0, 0, 'Asia/Tashkent');
+            $day = Carbon::create((int) $parts[1], (int) $parts[2], (int) $parts[3], 0, 0, 0, 'Asia/Tashkent');
+            $today = Carbon::now('Asia/Tashkent')->startOfDay();
+
+            // Граница «не дальше текущего периода» живёт здесь, а не только в
+            // nextPeriod(): пикер даты — такой же вход, и через него 2030-01-15
+            // открывал пустой будущий день, где «Сегодня» ещё и не подсвечено.
+            return $day->greaterThan($today) ? $today : $day;
         }
 
         return Carbon::now('Asia/Tashkent')->startOfDay();
@@ -65,7 +71,11 @@ class extends Component
             $month = (int) $parts[2];
 
             if ($month >= 1 && $month <= 12) {
-                return Carbon::create((int) $parts[1], $month, 1, 0, 0, 0, 'Asia/Tashkent')->startOfMonth();
+                $start = Carbon::create((int) $parts[1], $month, 1, 0, 0, 0, 'Asia/Tashkent')->startOfMonth();
+                $current = Carbon::now('Asia/Tashkent')->startOfMonth();
+
+                // Та же граница, что и в dayStart().
+                return $start->greaterThan($current) ? $current : $start;
             }
         }
 
@@ -94,6 +104,16 @@ class extends Component
         // останется в пикере и уедет в $month следующей же строкой.
         $this->date = $this->dayStart()->toDateString();
         $this->syncMonthWithDate();
+    }
+
+    /**
+     * У пикера месяца хука не было вовсе — подрезанное значение читалось из
+     * monthStart(), но в самом поле оставалось будущим, и шапка расходилась с
+     * данными.
+     */
+    public function updatedMonth(): void
+    {
+        $this->month = $this->monthStart()->format('Y-m');
     }
 
     /**

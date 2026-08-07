@@ -45,8 +45,7 @@
         {{-- Public sticky header for guests --}}
         @php
             $shopPhone = \App\Models\Setting::get('shop_phone');
-            $shopTelegram = trim((string) \App\Models\Setting::get('telegram', ''));
-            $shopTelegramUrl = $shopTelegram !== '' ? 'https://t.me/'.ltrim($shopTelegram, '@') : null;
+            $shopTelegramUrl = \App\Models\Setting::telegramUrl();
         @endphp
         <header class="sticky top-0 z-50 border-b border-content/[0.06] bg-surface/80 backdrop-blur-xl">
             <div class="mx-auto flex max-w-lg items-center justify-between px-4 py-3">

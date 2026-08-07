@@ -506,3 +506,49 @@ it('does not 500 the public page when the schedule column holds malformed values
         'date' => $date,
     ]))->assertOk();
 });
+
+it('shows an invalid stored window as it is instead of quietly replacing it with defaults', function () {
+    // Иначе день с 20:00–09:00 рисуется правдоподобными 09:00–20:00, админ
+    // сохраняет форму — и настоящие данные заменены, ни разу не побывав на
+    // экране.
+    $barber = Barber::factory()->create([
+        'schedule' => [
+            'mon' => ['start' => '20:00', 'end' => '09:00', 'off' => false],
+        ],
+    ]);
+
+    Livewire::actingAs(scheduleAdmin())
+        ->test('pages.admin.barbers')
+        ->call('edit', $barber->id)
+        ->assertSet('schedule.mon.start', '20:00')
+        ->assertSet('schedule.mon.end', '09:00')
+        ->assertSet('schedule.mon.off', false);
+});
+
+it('makes the admin resolve that invalid window before the barber can be saved', function () {
+    $barber = Barber::factory()->create([
+        'schedule' => [
+            'mon' => ['start' => '20:00', 'end' => '09:00', 'off' => false],
+        ],
+    ]);
+
+    Livewire::actingAs(scheduleAdmin())
+        ->test('pages.admin.barbers')
+        ->call('edit', $barber->id)
+        ->call('save')
+        ->assertHasErrors('schedule.mon.end');
+});
+
+it('still falls back to defaults when the stored day is not readable at all', function () {
+    $barber = Barber::factory()->create([
+        'schedule' => [
+            'tue' => ['start' => 123, 'end' => null],
+        ],
+    ]);
+
+    Livewire::actingAs(scheduleAdmin())
+        ->test('pages.admin.barbers')
+        ->call('edit', $barber->id)
+        ->assertSet('schedule.tue.start', '09:00')
+        ->assertSet('schedule.tue.end', '20:00');
+});

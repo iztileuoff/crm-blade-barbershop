@@ -152,3 +152,81 @@ it('does not re-nudge a client messaged within the retention window', function (
         ->and($recentlyMessaged->fresh()->last_retention_sent_at->toDateString())
         ->toBe(Carbon::now()->subDays(5)->toDateString());
 });
+
+/*
+|--------------------------------------------------------------------------
+| Предпросмотр: что именно уйдёт этому клиенту (#91)
+|--------------------------------------------------------------------------
+*/
+
+it('shows the actual text each client would get on a dry run', function () {
+    // С тех пор как рассылка говорит на языке клиента, список одних телефонов
+    // не показывает, что уедет: опечатка в uz/kaa-шаблоне уходила незамеченной.
+    config(['services.barbershop.retention_days' => 14]);
+
+    Client::factory()->create([
+        'phone' => '998901112233',
+        'locale' => 'uz',
+        'last_visit_at' => Carbon::now()->subDays(14),
+        'last_retention_sent_at' => null,
+    ]);
+
+    $this->mock(SmsService::class)->shouldNotReceive('sendSms');
+
+    $this->artisan('app:send-retention-messages', ['--dry-run' => true])
+        ->expectsOutputToContain(NotificationTemplates::renderSms('retention', [], 'uz'))
+        ->assertSuccessful();
+});
+
+it('previews each client in their own language, not one text for the run', function () {
+    config(['services.barbershop.retention_days' => 14]);
+
+    foreach (['uz', 'kaa'] as $index => $locale) {
+        Client::factory()->create([
+            'phone' => '99890111223'.$index,
+            'locale' => $locale,
+            'last_visit_at' => Carbon::now()->subDays(14),
+            'last_retention_sent_at' => null,
+        ]);
+    }
+
+    $this->mock(SmsService::class)->shouldNotReceive('sendSms');
+
+    $this->artisan('app:send-retention-messages', ['--dry-run' => true])
+        ->expectsOutputToContain(NotificationTemplates::renderSms('retention', [], 'uz'))
+        ->expectsOutputToContain(NotificationTemplates::renderSms('retention', [], 'kaa'))
+        ->assertSuccessful();
+});
+
+it('sends the single test sms in the stored locale of that number', function () {
+    // Иначе живая проверка доставки подтверждает текст на языке салона,
+    // который на этот номер рассылка никогда не отправит.
+    $client = Client::factory()->create([
+        'phone' => '998901112244',
+        'locale' => 'kaa',
+        'last_visit_at' => Carbon::now()->subDays(21),
+        'last_retention_sent_at' => null,
+    ]);
+
+    $this->mock(SmsService::class)
+        ->shouldReceive('sendSms')
+        ->once()
+        ->with('998901112244', NotificationTemplates::renderSms('retention', [], 'kaa'), null, 'retention')
+        ->andReturnTrue();
+
+    $this->artisan('app:send-retention-messages', ['--phone' => '998901112244'])
+        ->assertSuccessful();
+
+    expect($client->fresh()->last_retention_sent_at)->toBeNull();
+});
+
+it('falls back to the salon language for a test number that is not a client', function () {
+    $this->mock(SmsService::class)
+        ->shouldReceive('sendSms')
+        ->once()
+        ->with('998909998877', NotificationTemplates::renderSms('retention'), null, 'retention')
+        ->andReturnTrue();
+
+    $this->artisan('app:send-retention-messages', ['--phone' => '998909998877'])
+        ->assertSuccessful();
+});

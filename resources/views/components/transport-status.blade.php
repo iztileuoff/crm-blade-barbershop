@@ -17,8 +17,35 @@
 --}}
 @props(['guest' => false])
 
-<div x-data="{ showError: false, showExpired: false, offline: ! navigator.onLine }"
-     x-on:transport-error.window="showError = true; clearTimeout($el._transportErrTimer); $el._transportErrTimer = setTimeout(() => showError = false, 10000)"
+@php
+    /**
+     * Виды отказа, которые различает app.js. `retry` — можно ли осмысленно
+     * повторить тот же запрос: на 403/404 и прочих отказах сервера повтор
+     * заведомо даёт тот же ответ, там предлагаем обновить страницу.
+     *
+     * @var array<string, array{title: string, body: string, retry: bool}>
+     */
+    $transportKinds = [
+        'network' => ['title' => __('errors.connection_lost_title'), 'body' => __('errors.connection_lost_body'), 'retry' => true],
+        'server' => ['title' => __('errors.server_error_title'), 'body' => __('errors.server_error_body'), 'retry' => true],
+        'forbidden' => ['title' => __('errors.forbidden_title'), 'body' => __('errors.forbidden_body'), 'retry' => false],
+        'missing' => ['title' => __('errors.missing_title'), 'body' => __('errors.missing_body'), 'retry' => false],
+        'rejected' => ['title' => __('errors.rejected_title'), 'body' => __('errors.rejected_body'), 'retry' => false],
+    ];
+@endphp
+
+{{-- В x-data едут только ASCII-списки видов: @js() экранирует не-ASCII в
+     \uXXXX, и русский текст, уехавший в атрибут, перестал бы читаться и в
+     исходнике, и ассертами. Сам текст остаётся разметкой ниже. --}}
+<div x-data="{
+        showError: false,
+        showExpired: false,
+        offline: ! navigator.onLine,
+        errorKind: 'network',
+        knownKinds: @js(array_keys($transportKinds)),
+        retryableKinds: @js(array_keys(array_filter($transportKinds, fn ($copy) => $copy['retry']))),
+     }"
+     x-on:transport-error.window="errorKind = knownKinds.includes($event.detail?.kind) ? $event.detail.kind : 'network'; showError = true; clearTimeout($el._transportErrTimer); $el._transportErrTimer = setTimeout(() => showError = false, 10000)"
      x-on:transport-session-expired.window="showExpired = true"
      x-on:offline.window="offline = true"
      x-on:online.window="offline = false">
@@ -48,12 +75,25 @@
         <div class="pointer-events-auto flex max-w-sm items-start gap-3 rounded-xl border border-danger/20 bg-surface-raised px-4 py-3 shadow-xl">
             <svg class="mt-0.5 h-5 w-5 shrink-0 text-danger" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9.303-3.376c.866 1.5-.217 3.374-1.948 3.374H4.645c-1.73 0-2.813-1.874-1.948-3.374L9.4 3.378c.866-1.5 3.032-1.5 3.898 0l6.85 11.872ZM12 17.25h.007v.008H12v-.008Z" /></svg>
             <div class="min-w-0 flex-1">
-                <div class="text-sm font-bold text-content">{{ __('errors.connection_lost_title') }}</div>
-                <div class="mt-0.5 text-xs text-content/60">{{ __('errors.connection_lost_body') }}</div>
+                @foreach ($transportKinds as $kind => $copy)
+                    <div x-show="errorKind === '{{ $kind }}'" x-cloak>
+                        <div class="text-sm font-bold text-content">{{ $copy['title'] }}</div>
+                        <div class="mt-0.5 text-xs text-content/60">{{ $copy['body'] }}</div>
+                    </div>
+                @endforeach
                 <div class="mt-2 flex items-center gap-4">
-                    <button type="button" @click="showError = false; $dispatch('transport-retry')"
+                    <button type="button" x-show="retryableKinds.includes(errorKind)"
+                            @click="showError = false; $dispatch('transport-retry')"
                             class="text-xs font-bold text-danger transition hover:text-danger/80">
                         {{ __('errors.retry') }}
+                    </button>
+                    {{-- Повтор отклонённого запроса даст тот же отказ — вместо
+                         него обновление страницы, которое вернёт актуальные
+                         данные и права. --}}
+                    <button type="button" x-show="! retryableKinds.includes(errorKind)" x-cloak
+                            @click="window.location.reload()"
+                            class="text-xs font-bold text-danger transition hover:text-danger/80">
+                        {{ __('errors.page_reload') }}
                     </button>
                     <button type="button" @click="showError = false"
                             class="text-xs font-medium text-content/40 transition hover:text-content/70">

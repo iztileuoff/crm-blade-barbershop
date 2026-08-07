@@ -71,6 +71,7 @@ return [
 
     'no_upcoming_appointments' => '📭 Sizde aldaǵı jazılıwlar joq.',
     'your_appointments_title' => '📅 <b>Sizdiń jazılıwlarıńız</b>',
+    'upcoming_truncated' => '<i>:total ishinen eń jaqın :shown kórsetildi — qalǵanı ushın salonǵa múrájat etiń.</i>',
     'no_history' => '📭 Kelıw tariyxı házirshe bos.',
     'history_title' => '🕓 <b>Aqırǵı kelıwler</b>',
     'no_debt' => '✅ Sizde qarızdarlıq joq.',

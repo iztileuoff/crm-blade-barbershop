@@ -60,15 +60,13 @@ class extends Component
     }
 
     /**
-     * Ссылка на бота вида https://t.me/username — админ хранит хендл в
-     * settings.telegram как «@handle» или «handle», без домена.
+     * Ссылка на бота — из {@see Setting::telegramUrl()}: сборка одна на
+     * приложение, макет публичной брони берёт её оттуда же.
      */
     #[Computed]
     public function shopTelegramUrl(): ?string
     {
-        $handle = trim((string) Setting::get('telegram', ''));
-
-        return $handle !== '' ? 'https://t.me/'.ltrim($handle, '@') : null;
+        return Setting::telegramUrl();
     }
 
     /**

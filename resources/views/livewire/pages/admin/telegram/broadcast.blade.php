@@ -5,6 +5,7 @@ use App\Jobs\SendTelegramBroadcast;
 use App\Models\Client;
 use App\Models\TelegramBroadcast;
 use App\Models\User;
+use App\Telegram\TelegramHtml;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
@@ -169,7 +170,7 @@ class extends Component
         // и второй воркер подобрал бы его на полпути — часть клиентов получила
         // бы рассылку дважды.
         foreach (array_chunk($recipients, SendTelegramBroadcast::CHUNK) as $chunk) {
-            SendTelegramBroadcast::dispatch($broadcast->id, $chunk, e($this->message));
+            SendTelegramBroadcast::dispatch($broadcast->id, $chunk, TelegramHtml::escape($this->message));
         }
 
         $this->sentTo = count($recipients);
@@ -235,7 +236,10 @@ class extends Component
                     @error('audience') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                 </div>
 
-                <div x-data="{ n: @js(strlen($message)) }">
+                {{-- mb_strlen, а не strlen: JS считает символы, и на байтах
+                     кириллический черновик после перерисовки показывал вдвое
+                     больше — «2400/2000» красным на валидном сообщении. --}}
+                <div x-data="{ n: @js(mb_strlen((string) $message)) }">
                     <div class="mb-1.5 flex items-center justify-between">
                         <label for="broadcast-message" class="block text-xs font-semibold text-content/50">{{ __('telegram.message_label') }}</label>
                         <span class="text-xs tabular-nums" :class="n > 2000 ? 'text-danger font-bold' : 'text-content-subtle'" x-text="n + '/2000'"></span>

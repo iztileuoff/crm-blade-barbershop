@@ -13,7 +13,12 @@
     <input type="text" x-on:focus="open = true" wire:model.live.debounce.300ms="{{ $searchModel }}"
         x-on:input="highlighted = -1"
         x-on:keydown.down.prevent="open = true; highlighted = Math.min(highlighted + 1, $refs.searchSelectList.children.length - 1)"
-        x-on:keydown.up.prevent="highlighted = Math.max(highlighted - 1, 0)"
+        {{-- Как и стрелка вниз, сначала открывает список: иначе одно нажатие ↑
+             подсвечивало первый вариант при закрытой выпадашке, и следующий
+             Enter выбирал клиента, которого пользователь не видел. Нижняя
+             граница -1, а не 0, чтобы можно было вернуться к «ничего не
+             выбрано». --}}
+        x-on:keydown.up.prevent="open = true; highlighted = Math.max(highlighted - 1, -1)"
         x-on:keydown.escape="open = false; highlighted = -1"
         x-on:keydown.enter.prevent="if (open && highlighted >= 0) { $refs.searchSelectList.children[highlighted]?.click() }"
         placeholder="{{ $placeholder ?? __('common.search').'...' }}"
