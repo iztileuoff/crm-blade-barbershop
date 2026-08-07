@@ -1,5 +1,6 @@
 <?php
 
+use App\Services\SmsService;
 use App\Support\NotificationTemplates;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
@@ -8,6 +9,15 @@ new
 #[Layout('components.layouts.app')]
 class extends Component
 {
+    /**
+     * Число SMS-частей (сегментов) для текста шаблона — та же логика,
+     * что считает стоимость на странице истории.
+     */
+    public function segments(string $text): int
+    {
+        return SmsService::segments($text);
+    }
+
     /**
      * Зафиксированные SMS-шаблоны для показа: тип => [подпись, плейсхолдеры].
      *
@@ -58,9 +68,19 @@ class extends Component
     {
         return NotificationTemplates::smsLocale();
     }
+
+    /**
+     * Текст с подставленным примером времени — чтобы {time} читался как
+     * реальное сообщение, а не как сырой плейсхолдер.
+     */
+    public function preview(string $text): string
+    {
+        return str_replace('{time}', '14:30', $text);
+    }
 }; ?>
 
 <div class="animate-fade-in-up">
+    <x-slot:title>{{ __('sms.templates_title').' — Blade Barbershop' }}</x-slot:title>
     <div class="mb-8">
         <h1 class="font-display text-4xl font-semibold uppercase tracking-tight text-content">{{ __('sms.templates_title') }}</h1>
         <p class="mt-1 text-sm text-content/40">{{ __('sms.templates_subtitle') }}</p>
@@ -98,6 +118,10 @@ class extends Component
                                 @endif
                             </div>
                             <p class="rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content/80">{{ $text }}</p>
+                            @if(str_contains($text, '{'))
+                                <p class="mt-1.5 px-1 text-xs italic text-content-subtle">{{ $this->preview($text) }}</p>
+                            @endif
+                            <p class="mt-1 px-1 text-[11px] text-content-subtle">{{ mb_strlen($text) }} {{ __('sms.chars') }} · ≈{{ $this->segments($text) }} SMS</p>
                         </div>
                     @endforeach
                 </div>

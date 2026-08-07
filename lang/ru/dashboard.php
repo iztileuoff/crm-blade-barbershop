@@ -2,12 +2,16 @@
 
 return [
     'title' => 'Касса',
+    'page_title' => 'Касса — Blade Barbershop',
     'summary_day' => 'Сводка за день',
     'summary_month' => 'Сводка за месяц',
     'tab_day' => 'День',
     'tab_month' => 'Месяц',
+    'previous_period' => 'Предыдущий период',
+    'next_period' => 'Следующий период',
     'auto_refresh' => 'Обновление каждые 60 сек',
     'updated_at' => 'Обновлено в :time',
+    'chart_aria_label' => 'График выручки по дням за :month, итого :total',
 
     'services' => 'Услуги',
     'products' => 'Товары',

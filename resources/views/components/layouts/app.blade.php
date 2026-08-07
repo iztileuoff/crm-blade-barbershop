@@ -22,6 +22,8 @@
 </head>
 <body x-data="{ open: false, collapsed: localStorage.getItem('sidebarCollapsed') === '1' }"
       x-init="$watch('collapsed', value => localStorage.setItem('sidebarCollapsed', value ? '1' : '0'))"
+      @keydown.escape.window="open = false"
+      :class="{ 'overflow-hidden': open }"
       class="min-h-full bg-surface font-sans text-content antialiased">
     <x-admin-header />
 
@@ -30,9 +32,10 @@
         <header class="sticky top-0 z-30 hidden items-center justify-between border-b border-content/[0.06] bg-surface/80 px-6 py-3 backdrop-blur-xl lg:flex">
             {{-- Collapse / expand toggle --}}
             <button type="button" @click="collapsed = !collapsed"
+                    x-data="{ expandLabel: @js(__('common.expand')), collapseLabel: @js(__('common.collapse')) }"
                     class="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium text-content-muted transition-colors hover:bg-content/[0.04] hover:text-content">
                 <svg class="h-5 w-5 shrink-0 transition-transform duration-300" :class="{ 'rotate-180': collapsed }" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M18.75 19.5 11.25 12l7.5-7.5m-7.5 15L3.75 12l7.5-7.5" /></svg>
-                <span x-text="collapsed ? '{{ __('common.expand') }}' : '{{ __('common.collapse') }}'">{{ __('common.collapse') }}</span>
+                <span x-text="collapsed ? expandLabel : collapseLabel">{{ __('common.collapse') }}</span>
             </button>
 
             <div class="flex items-center gap-2.5">

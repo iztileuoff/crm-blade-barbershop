@@ -9,18 +9,27 @@
     'onClear' => null,
 ])
 
-<div x-data="{ open: false }" @click.outside="open = false" class="relative">
-    <input type="text" x-on:focus="open = true" x-on:keydown.enter.prevent wire:model.live.debounce.300ms="{{ $searchModel }}"
+<div x-data="{ open: false, highlighted: -1 }" @click.outside="open = false" class="relative">
+    <input type="text" x-on:focus="open = true" wire:model.live.debounce.300ms="{{ $searchModel }}"
+        x-on:input="highlighted = -1"
+        x-on:keydown.down.prevent="open = true; highlighted = Math.min(highlighted + 1, $refs.searchSelectList.children.length - 1)"
+        x-on:keydown.up.prevent="highlighted = Math.max(highlighted - 1, 0)"
+        x-on:keydown.escape="open = false; highlighted = -1"
+        x-on:keydown.enter.prevent="if (open && highlighted >= 0) { $refs.searchSelectList.children[highlighted]?.click() }"
         placeholder="{{ $placeholder ?? __('common.search').'...' }}"
         aria-label="{{ $placeholder ?? __('common.search') }}"
+        role="combobox" :aria-expanded="open" aria-autocomplete="list"
         class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content placeholder-content/20 outline-none">
 
-    <div x-show="open" x-transition
+    <div x-show="open" x-transition x-ref="searchSelectList" role="listbox"
         class="absolute z-100 mt-2 w-full rounded-xl border border-content/[0.08] bg-surface-raised shadow-xl max-h-60 overflow-y-auto">
         @forelse($options as $option)
             <button type="button" wire:key="opt-{{ $option->id }}"
-                wire:click="{{ $onSelect }}({{ $option->id }}, '{{ addslashes($option->{$labelField}) }}{{ $subLabelField && $option->{$subLabelField} ? ' (' . addslashes($option->{$subLabelField}) . ')' : '' }}')"
-                @click="open = false" class="w-full text-left px-4 py-2 text-sm text-content hover:bg-content/10">
+                wire:click="{{ $onSelect }}({{ $option->id }}, @js($option->{$labelField}.($subLabelField && $option->{$subLabelField} ? ' ('.$option->{$subLabelField}.')' : '')))"
+                @click="open = false; highlighted = -1"
+                x-on:mouseenter="highlighted = {{ $loop->index }}"
+                :class="{ 'bg-content/10': highlighted === {{ $loop->index }} }"
+                role="option" class="w-full text-left px-4 py-2 text-sm text-content hover:bg-content/10">
                 {{ $option->{$labelField} }}
                 @if($subLabelField && $option->{$subLabelField})
                     ({{ $option->{$subLabelField} }})

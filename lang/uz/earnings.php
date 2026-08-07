@@ -2,6 +2,7 @@
 
 return [
     'title' => 'Mening daromadim',
+    'page_title' => 'Mening daromadim — Blade Barbershop',
     'subtitle' => 'Qabul qilingan pulning ulushi — Telegram-botdagidek',
     'percent_label' => 'Sizning ulushingiz',
     'today' => 'Bugun',

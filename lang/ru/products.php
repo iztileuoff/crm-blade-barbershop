@@ -2,6 +2,7 @@
 
 return [
     'title' => 'Товары',
+    'page_title' => 'Товары — Blade Barbershop',
     'subtitle' => 'Складской учёт — шампуни, воски, масла',
     'add' => 'Добавить товар',
     'edit_title' => 'Редактировать товар',
@@ -15,6 +16,8 @@ return [
     'filter_none' => 'Нет в наличии',
     'receive' => 'Приёмка',
     'receive_placeholder' => '+ шт',
+    'decrease_stock' => 'Уменьшить остаток',
+    'increase_stock' => 'Увеличить остаток',
     'err_receive_quantity' => 'Введите количество от 1 до :max.',
     'empty' => 'Товары не добавлены',
 ];

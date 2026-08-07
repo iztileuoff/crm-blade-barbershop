@@ -253,6 +253,7 @@ class extends Component
 }; ?>
 
 <div class="animate-fade-in-up">
+    <x-slot:title>{{ __('sms.history_title').' — Blade Barbershop' }}</x-slot:title>
     @php($m = $this->metrics())
 
     <div class="mb-8 flex flex-wrap items-end justify-between gap-4">
@@ -266,24 +267,28 @@ class extends Component
         <div class="flex flex-wrap items-center gap-3">
             <div class="relative">
                 <svg class="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-content-subtle" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
-                <input type="text" wire:model.live.debounce.300ms="search" placeholder="{{ __('sms.search_placeholder') }}"
+                <input type="text" wire:model.live.debounce.300ms="search" placeholder="{{ __('sms.search_placeholder') }}" aria-label="{{ __('sms.search_placeholder') }}"
                        class="w-56 rounded-xl border border-content/[0.08] bg-content/[0.04] py-2.5 pl-10 pr-4 text-sm text-content placeholder-content/20 outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
             </div>
-            <select wire:model.live="context"
+            <select wire:model.live="context" aria-label="{{ __('sms.col_type') }}"
                     class="rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-2.5 text-sm text-content outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20 dark:[color-scheme:dark]">
                 <option value="">{{ __('sms.all_types') }}</option>
                 @foreach($this->contextLabels() as $value => $label)
                     <option value="{{ $value }}">{{ $label }}</option>
                 @endforeach
             </select>
-            <select wire:model.live="status"
+            <select wire:model.live="status" aria-label="{{ __('common.status') }}"
                     class="rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-2.5 text-sm text-content outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20 dark:[color-scheme:dark]">
                 <option value="">{{ __('sms.all_statuses') }}</option>
-                <option value="sent">{{ __('sms.sent') }}</option>
-                <option value="failed">{{ __('sms.error') }}</option>
-                @foreach($this->deliveryLabels() as $value => $label)
-                    <option value="{{ $value }}">{{ $label }}</option>
-                @endforeach
+                <optgroup label="{{ __('sms.group_send_status') }}">
+                    <option value="sent">{{ __('sms.sent') }}</option>
+                    <option value="failed">{{ __('sms.error') }}</option>
+                </optgroup>
+                <optgroup label="{{ __('sms.group_delivery_status') }}">
+                    @foreach($this->deliveryLabels() as $value => $label)
+                        <option value="{{ $value }}">{{ $label }}</option>
+                    @endforeach
+                </optgroup>
             </select>
         </div>
     </div>
@@ -401,7 +406,7 @@ class extends Component
                 </thead>
                 <tbody class="divide-y divide-content/[0.04]">
                     @forelse ($this->messages as $message)
-                        <tr class="transition-colors hover:bg-content/[0.02]">
+                        <tr wire:key="sms-message-{{ $message->id }}" class="transition-colors hover:bg-content/[0.02]">
                             <td class="whitespace-nowrap px-6 py-4">
                                 <div class="font-bold text-content">{{ $message->client?->name ?? '—' }}</div>
                                 <div class="text-xs text-brass-ink/60">{{ \App\Models\Client::formatPhone($message->phone) }}</div>

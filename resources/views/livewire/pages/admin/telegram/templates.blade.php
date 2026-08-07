@@ -79,6 +79,7 @@ class extends Component
 }; ?>
 
 <div class="animate-fade-in-up">
+    <x-slot:title>{{ __('telegram.templates_title').' — Blade Barbershop' }}</x-slot:title>
     <div class="mb-8">
         <h1 class="font-display text-4xl font-semibold uppercase tracking-tight text-content">{{ __('telegram.templates_title') }}</h1>
         <p class="mt-1 text-sm text-content/40">{{ __('telegram.templates_subtitle') }}</p>
@@ -91,19 +92,29 @@ class extends Component
 
     <form wire:submit="save" class="space-y-6">
         @foreach($this->fields() as $key => $field)
-            <div class="overflow-hidden rounded-2xl border border-content/[0.06] bg-content/[0.03] shadow-xl backdrop-blur-md">
+            <div wire:key="tpl-field-{{ $key }}" x-data class="overflow-hidden rounded-2xl border border-content/[0.06] bg-content/[0.03] shadow-xl backdrop-blur-md">
                 <div class="border-b border-content/[0.06] bg-content/[0.03] px-6 py-4">
-                    <h3 class="text-sm font-bold text-content">{{ $field['label'] }}</h3>
+                    <label for="tpl-{{ $key }}" class="text-sm font-bold text-content">{{ $field['label'] }}</label>
                     <p class="mt-0.5 text-xs text-content/40">{{ $field['hint'] }}</p>
                 </div>
                 <div class="p-6">
-                    <textarea wire:model="values.{{ $key }}" rows="4"
+                    <textarea id="tpl-{{ $key }}" x-ref="textarea" wire:model="values.{{ $key }}" rows="4"
                               class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 font-mono text-sm text-content placeholder-content/20 outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20"></textarea>
                     @error('values.'.$key) <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                     <div class="mt-3 flex flex-wrap items-center gap-2">
                         <span class="text-xs text-content/40">{{ __('telegram.variables') }}</span>
                         @foreach($field['placeholders'] as $placeholder)
-                            <code class="rounded-md bg-content/[0.06] px-2 py-0.5 text-xs font-medium text-brass-ink/80">{{ $placeholder }}</code>
+                            {{-- Клик вставляет плейсхолдер в каретку textarea, а не только показывает его --}}
+                            <button type="button"
+                                    x-on:click="
+                                        const el = $refs.textarea;
+                                        const start = el.selectionStart ?? el.value.length;
+                                        const end = el.selectionEnd ?? el.value.length;
+                                        el.focus();
+                                        el.setRangeText(@js($placeholder), start, end, 'end');
+                                        el.dispatchEvent(new Event('input'));
+                                    "
+                                    class="rounded-md bg-content/[0.06] px-2 py-0.5 text-xs font-medium text-brass-ink/80 transition hover:bg-brass/20 hover:text-brass-ink focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brass">{{ $placeholder }}</button>
                         @endforeach
                     </div>
                 </div>

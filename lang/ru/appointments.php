@@ -2,12 +2,20 @@
 
 return [
     'title' => 'Записи',
+    'page_title' => 'Записи — Blade Barbershop',
     'subtitle' => 'Управление журналом посещений',
     'all_barbers' => 'Все мастера',
     'new' => 'Новая запись',
     'empty' => 'На этот день записей нет',
     'barber_unlinked' => 'Профиль мастера не привязан к вашему аккаунту — обратитесь к администратору.',
     'restricted_banner' => 'Этот раздел недоступен для вашей роли.',
+    'prev_day' => 'Предыдущий день',
+    'next_day' => 'Следующий день',
+
+    // Day summary (по уже загруженной коллекции, без нового запроса)
+    'day_summary_count' => ':count записей',
+    'day_summary_total' => 'на сумму :amount',
+    'day_summary_debt' => 'из них в долг :amount',
 
     // Modal
     'edit_title' => 'Редактирование записи',
@@ -19,6 +27,7 @@ return [
     'debt_hint' => 'Если клиент не оплачивает сейчас',
     'debt_client_required' => 'Клиент обязателен при долге',
     'add_service' => 'Добавить услугу',
+    'remove_service' => 'Удалить услугу',
     'select_service' => 'Выберите услугу...',
     'duplicate' => 'дубль',
     'no_services_hint' => 'Нет услуг — нажмите «Добавить услугу»',

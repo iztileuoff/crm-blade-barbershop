@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'page_title' => 'Услуги — Blade Barbershop',
     'subtitle' => 'Управление перечнем услуг',
     'add' => 'Добавить услугу',
     'edit_title' => 'Изменение услуги',
@@ -10,6 +11,12 @@ return [
     'name_uz' => 'Название (узб.)',
     'name_kaa' => 'Название (каракалп.)',
     'icon' => 'Иконка',
+    'icon_scissors' => 'Ножницы',
+    'icon_sparkles' => 'Блёстки',
+    'icon_paint_brush' => 'Кисть',
+    'icon_face_smile' => 'Улыбка',
+    'icon_swatch' => 'Палитра',
+    'icon_beaker' => 'Колба',
     'duration' => 'Длительность (мин)',
     'duration_short' => 'Длительность',
     'active' => 'Активна',

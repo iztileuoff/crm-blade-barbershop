@@ -120,6 +120,7 @@ class extends Component
 }; ?>
 
 <div class="animate-fade-in-up">
+    <x-slot:title>{{ __('telegram.linked_title').' — Blade Barbershop' }}</x-slot:title>
     <div class="mb-8 flex flex-wrap items-start justify-between gap-4">
         <div>
             <h1 class="font-display text-4xl font-semibold uppercase tracking-tight text-content">{{ __('telegram.linked_title') }}</h1>
@@ -127,7 +128,7 @@ class extends Component
         </div>
         <div class="relative">
             <svg class="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-content-subtle" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
-            <input type="text" wire:model.live.debounce.300ms="search" placeholder="{{ __('telegram.search_placeholder') }}"
+            <input type="text" wire:model.live.debounce.300ms="search" placeholder="{{ __('telegram.search_placeholder') }}" aria-label="{{ __('telegram.search_placeholder') }}"
                    class="w-64 rounded-xl border border-content/[0.08] bg-content/[0.04] py-2.5 pl-10 pr-4 text-sm text-content placeholder-content/20 outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
         </div>
     </div>
@@ -141,7 +142,7 @@ class extends Component
         ] as $key => $label)
             <button type="button" wire:click="setFilter('{{ $key }}')" wire:key="filter-{{ $key }}"
                     @class([
-                        'rounded-xl border px-4 py-2 text-sm font-bold transition',
+                        'rounded-xl border px-4 py-2 text-sm font-bold transition focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brass',
                         'border-brass bg-brass text-on-brass' => $filter === $key,
                         'border-content/[0.08] bg-content/[0.04] text-content/50 hover:bg-content/[0.08] hover:text-content' => $filter !== $key,
                     ])>

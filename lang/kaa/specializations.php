@@ -2,6 +2,7 @@
 
 return [
     'title' => 'Qániygelikler',
+    'page_title' => 'Qániygelikler — Blade Barbershop',
     'subtitle' => 'Barberler kategoriyaları hám sheberlik dárejeleri',
     'add' => 'Qániygelik qosıw',
     'edit_title' => 'Qániygelikti ózgertiw',

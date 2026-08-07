@@ -2,6 +2,7 @@
 
 return [
     'title' => 'Мой заработок',
+    'page_title' => 'Мой заработок — Blade Barbershop',
     'subtitle' => 'Доля с принятых денег — как в Telegram-боте',
     'percent_label' => 'Ваша доля',
     'today' => 'Сегодня',

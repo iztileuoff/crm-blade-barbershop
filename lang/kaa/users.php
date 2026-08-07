@@ -2,6 +2,7 @@
 
 return [
     'title' => 'Paydalanıwshılar',
+    'page_title' => 'Paydalanıwshılar — Blade Barbershop',
     'subtitle' => 'Sistemaǵa kiriwdi basqarıw',
     'add' => 'Paydalanıwshı qosıw',
     'edit_title' => 'Paydalanıwshını ózgertiw',

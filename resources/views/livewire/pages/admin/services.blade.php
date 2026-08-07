@@ -122,6 +122,8 @@ class extends Component
     }
 }; ?>
 
+<x-slot:title>{{ __('services.page_title') }}</x-slot:title>
+
 <div class="animate-fade-in-up">
     <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>
@@ -132,7 +134,7 @@ class extends Component
             {{-- Деактивированные позиции никуда не деваются: их можно спрятать --}}
             <label class="relative inline-flex cursor-pointer items-center">
                 <input type="checkbox" wire:model.live="showInactive" class="peer sr-only">
-                <div class="h-6 w-11 rounded-full bg-content/10 transition-colors peer-checked:bg-brass after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-content after:transition-all peer-checked:after:translate-x-full"></div>
+                <div class="h-6 w-11 rounded-full bg-content/10 transition-colors peer-checked:bg-brass peer-focus-visible:ring-2 peer-focus-visible:ring-brass/40 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-surface after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-content after:transition-all peer-checked:after:translate-x-full"></div>
                 <span class="ml-3 text-sm font-medium text-content/60">{{ __('common.show_inactive') }}</span>
             </label>
             <button type="button" wire:click="openCreate"
@@ -151,30 +153,34 @@ class extends Component
             <form wire:submit="save" class="p-6">
                 <div class="grid gap-6 sm:grid-cols-2">
                     <div class="sm:col-span-2">
-                        <label class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('services.name_ru') }}</label>
-                        <input type="text" wire:model="name_ru" placeholder="{{ __('services.name_placeholder') }}"
+                        <label for="service-name-ru" class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('services.name_ru') }}</label>
+                        <input type="text" id="service-name-ru" wire:model="name_ru" placeholder="{{ __('services.name_placeholder') }}"
+                               x-data x-init="$nextTick(() => $el.focus())"
                                class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content placeholder-content/20 outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
                         @error('name_ru') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                     </div>
                     <div class="sm:col-span-2">
-                        <label class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('services.name_uz') }}</label>
-                        <input type="text" wire:model="name_uz" placeholder="{{ __('services.name_placeholder') }}"
+                        <label for="service-name-uz" class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('services.name_uz') }}</label>
+                        <input type="text" id="service-name-uz" wire:model="name_uz" placeholder="{{ __('services.name_placeholder') }}"
                                class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content placeholder-content/20 outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
                         @error('name_uz') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                     </div>
                     <div class="sm:col-span-2">
-                        <label class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('services.name_kaa') }}</label>
-                        <input type="text" wire:model="name_kaa" placeholder="{{ __('services.name_placeholder') }}"
+                        <label for="service-name-kaa" class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('services.name_kaa') }}</label>
+                        <input type="text" id="service-name-kaa" wire:model="name_kaa" placeholder="{{ __('services.name_placeholder') }}"
                                class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content placeholder-content/20 outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
                         @error('name_kaa') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                     </div>
                     <div class="sm:col-span-2">
-                        <label class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('services.icon') }}</label>
-                        <div class="flex flex-wrap gap-2.5">
+                        <label id="service-icon-label" class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('services.icon') }}</label>
+                        <div class="flex flex-wrap gap-2.5" role="group" aria-labelledby="service-icon-label">
                             @foreach (\App\Models\Service::ICONS as $iconKey)
+                                @php($iconLabel = __('services.icon_'.str_replace('-', '_', $iconKey)))
                                 <button type="button" wire:click="$set('icon', '{{ $iconKey }}')"
+                                        title="{{ $iconLabel }}" aria-label="{{ $iconLabel }}"
+                                        aria-pressed="{{ $icon === $iconKey ? 'true' : 'false' }}"
                                         @class([
-                                            'flex h-12 w-12 items-center justify-center rounded-xl border transition',
+                                            'flex h-12 w-12 items-center justify-center rounded-xl border transition focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brass/40',
                                             'border-brass bg-brass/15 text-brass-ink' => $icon === $iconKey,
                                             'border-content/[0.08] bg-content/[0.04] text-content/40 hover:border-content/20 hover:text-content/70' => $icon !== $iconKey,
                                         ])>
@@ -185,15 +191,15 @@ class extends Component
                         @error('icon') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                     </div>
                     <div>
-                        <label class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('services.duration') }}</label>
-                        <input type="number" wire:model="duration_minutes" min="5" max="480" step="5"
+                        <label for="service-duration" class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('services.duration') }}</label>
+                        <input type="number" id="service-duration" wire:model="duration_minutes" min="5" max="480" step="5"
                                class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
                         @error('duration_minutes') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                     </div>
                     <div class="flex items-center pt-4">
-                        <label class="relative inline-flex cursor-pointer items-center">
-                            <input type="checkbox" wire:model="is_active" class="peer sr-only">
-                            <div class="h-6 w-11 rounded-full bg-content/10 transition-colors peer-checked:bg-brass after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-content after:transition-all peer-checked:after:translate-x-full"></div>
+                        <label for="service-is-active" class="relative inline-flex cursor-pointer items-center">
+                            <input type="checkbox" id="service-is-active" wire:model="is_active" class="peer sr-only">
+                            <div class="h-6 w-11 rounded-full bg-content/10 transition-colors peer-checked:bg-brass peer-focus-visible:ring-2 peer-focus-visible:ring-brass/40 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-surface after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-content after:transition-all peer-checked:after:translate-x-full"></div>
                             <span class="ml-3 text-sm font-medium text-content/70">{{ __('services.active') }}</span>
                         </label>
                     </div>
@@ -225,7 +231,7 @@ class extends Component
                 </thead>
                 <tbody class="divide-y divide-content/[0.04]">
                     @forelse ($this->services as $service)
-                        <tr class="transition-colors hover:bg-content/[0.02]">
+                        <tr wire:key="service-{{ $service->id }}" class="transition-colors hover:bg-content/[0.02]">
                             <td class="px-6 py-4">
                                 <div class="flex items-center gap-3">
                                     <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brass/10">
@@ -257,12 +263,14 @@ class extends Component
                             <td class="px-6 py-4">
                                 <div class="flex items-center justify-end gap-2">
                                     <button type="button" wire:click="edit({{ $service->id }})"
-                                            class="flex h-9 w-9 items-center justify-center rounded-lg border border-content/[0.06] text-content/40 transition hover:border-content/10 hover:text-content">
+                                            title="{{ __('common.edit') }}" aria-label="{{ __('common.edit') }}"
+                                            class="flex h-9 w-9 items-center justify-center rounded-lg border border-content/[0.06] text-content/40 transition hover:border-content/10 hover:text-content focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brass/40">
                                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" /></svg>
                                     </button>
                                     <button type="button" wire:click="delete({{ $service->id }})"
                                             wire:confirm="{{ __('services.delete_confirm', ['name' => $service->name]) }}"
-                                            class="flex h-9 w-9 items-center justify-center rounded-lg border border-content/[0.06] text-danger/50 transition hover:border-danger/20 hover:text-danger">
+                                            title="{{ __('common.delete') }}" aria-label="{{ __('common.delete') }}"
+                                            class="flex h-9 w-9 items-center justify-center rounded-lg border border-content/[0.06] text-danger/50 transition hover:border-danger/20 hover:text-danger focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-danger/40">
                                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" /></svg>
                                     </button>
                                 </div>

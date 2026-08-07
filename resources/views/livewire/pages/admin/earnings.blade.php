@@ -68,6 +68,8 @@ class extends Component
     }
 }; ?>
 
+<x-slot:title>{{ __('earnings.page_title') }}</x-slot:title>
+
 <div class="animate-fade-in-up">
     <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>

@@ -179,6 +179,7 @@ class extends Component
 }; ?>
 
 <div class="animate-fade-in-up">
+    <x-slot:title>{{ __('telegram.broadcast_title').' — Blade Barbershop' }}</x-slot:title>
     <div class="mb-8">
         <h1 class="font-display text-4xl font-semibold uppercase tracking-tight text-content">{{ __('telegram.broadcast_title') }}</h1>
         <p class="mt-1 text-sm text-content/40">{{ __('telegram.broadcast_subtitle') }}</p>
@@ -214,12 +215,12 @@ class extends Component
             <div class="space-y-6 p-6">
                 <div>
                     <label class="mb-2 block text-xs font-semibold text-content/50">{{ __('telegram.audience_label') }}</label>
-                    <div class="grid gap-3 sm:grid-cols-3">
+                    <div class="grid gap-3 sm:grid-cols-3" role="radiogroup" aria-label="{{ __('telegram.audience_label') }}">
                         @php($counts = ['clients' => $this->clientCount, 'barbers' => $this->barberCount, 'all' => $this->clientCount + $this->barberCount])
                         @foreach($this->audienceLabels() as $value => $label)
                             @php($count = $counts[$value])
                             <label @class([
-                                'flex cursor-pointer items-center justify-between gap-2 rounded-xl border px-4 py-3 text-sm transition',
+                                'flex cursor-pointer items-center justify-between gap-2 rounded-xl border px-4 py-3 text-sm transition has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brass/40 has-[:focus-visible]:ring-offset-2 has-[:focus-visible]:ring-offset-surface',
                                 'border-brass/40 bg-brass/10 text-brass-ink' => $audience === $value,
                                 'border-content/[0.08] bg-content/[0.04] text-content/60 hover:border-content/20' => $audience !== $value,
                             ])>
@@ -234,9 +235,12 @@ class extends Component
                     @error('audience') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                 </div>
 
-                <div>
-                    <label class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('telegram.message_label') }}</label>
-                    <textarea wire:model="message" rows="5" placeholder="{{ __('telegram.message_placeholder') }}"
+                <div x-data="{ n: @js(strlen($message)) }">
+                    <div class="mb-1.5 flex items-center justify-between">
+                        <label for="broadcast-message" class="block text-xs font-semibold text-content/50">{{ __('telegram.message_label') }}</label>
+                        <span class="text-xs tabular-nums" :class="n > 2000 ? 'text-danger font-bold' : 'text-content-subtle'" x-text="n + '/2000'"></span>
+                    </div>
+                    <textarea id="broadcast-message" wire:model="message" x-on:input="n = $event.target.value.length" autofocus rows="5" placeholder="{{ __('telegram.message_placeholder') }}"
                               class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content placeholder-content/20 outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20"></textarea>
                     @error('message') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                 </div>
@@ -271,7 +275,7 @@ class extends Component
                     </thead>
                     <tbody class="divide-y divide-content/[0.04]">
                         @forelse ($this->recentBroadcasts as $broadcast)
-                            <tr class="transition-colors hover:bg-content/[0.02]">
+                            <tr wire:key="broadcast-{{ $broadcast->id }}" class="transition-colors hover:bg-content/[0.02]">
                                 <td class="whitespace-nowrap px-6 py-4">
                                     <div class="font-bold text-content">{{ $broadcast->created_at?->format('d.m.Y H:i') }}</div>
                                     @if ($broadcast->user)

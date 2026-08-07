@@ -34,6 +34,8 @@ return [
     'errors_label' => 'Ошибок',
     'all_types' => 'Все типы',
     'all_statuses' => 'Все статусы',
+    'group_send_status' => 'Статус отправки',
+    'group_delivery_status' => 'Статус доставки',
     'sent' => 'Отправлено',
     'context_reminder' => 'Напоминание',
     'context_retention' => 'Удержание',
@@ -71,4 +73,5 @@ return [
     'field_retention_hint' => 'Отправляется клиенту, который давно не приходил.',
     'field_cancelled_label' => 'Отмена записи',
     'field_cancelled_hint' => 'Отправляется клиенту без Telegram, когда салон отменяет запись.',
+    'chars' => 'симв.',
 ];

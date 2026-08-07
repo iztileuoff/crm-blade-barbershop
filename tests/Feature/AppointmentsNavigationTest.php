@@ -69,6 +69,72 @@ it('keeps the appointments list, header and form date in sync when the date inpu
         ->assertSee(Carbon::parse('2026-08-10')->translatedFormat('d F Y'));
 });
 
+// Issue #77: the day summary (count/sum/debt) is read straight off the
+// already-loaded $this->appointments collection — no second query — so it
+// needs its own coverage that the arithmetic (and the cancelled/other-day
+// exclusions) actually lands on the numbers the header renders.
+it('shows the right count, sum and debt in the day summary for a seeded day', function () {
+    $barber = Barber::factory()->create();
+
+    Appointment::create([
+        'client_id' => Client::factory()->create()->id,
+        'barber_id' => $barber->id,
+        'status' => AppointmentStatus::Completed,
+        'starts_at' => Carbon::parse('2026-08-10 10:00:00', 'Asia/Tashkent'),
+        'ends_at' => Carbon::parse('2026-08-10 11:00:00', 'Asia/Tashkent'),
+        'price' => 30000,
+    ]);
+
+    Appointment::create([
+        'client_id' => Client::factory()->create()->id,
+        'barber_id' => $barber->id,
+        'status' => AppointmentStatus::Confirmed,
+        'starts_at' => Carbon::parse('2026-08-10 12:00:00', 'Asia/Tashkent'),
+        'ends_at' => Carbon::parse('2026-08-10 13:00:00', 'Asia/Tashkent'),
+        'price' => 20000,
+        'debt_amount' => 5000,
+    ]);
+
+    // Cancelled: still counted in "how many today", but excluded from the sum
+    // and the debt — it never booked real revenue.
+    Appointment::create([
+        'client_id' => Client::factory()->create()->id,
+        'barber_id' => $barber->id,
+        'status' => AppointmentStatus::Cancelled,
+        'starts_at' => Carbon::parse('2026-08-10 15:00:00', 'Asia/Tashkent'),
+        'ends_at' => Carbon::parse('2026-08-10 16:00:00', 'Asia/Tashkent'),
+        'price' => 100000,
+        'debt_amount' => 100000,
+    ]);
+
+    // A different day entirely — must not leak into the summary.
+    Appointment::create([
+        'client_id' => Client::factory()->create()->id,
+        'barber_id' => $barber->id,
+        'status' => AppointmentStatus::Completed,
+        'starts_at' => Carbon::parse('2026-08-11 10:00:00', 'Asia/Tashkent'),
+        'ends_at' => Carbon::parse('2026-08-11 11:00:00', 'Asia/Tashkent'),
+        'price' => 999999,
+    ]);
+
+    $component = Livewire::actingAs(navAdmin())
+        ->test('pages.admin.appointments')
+        ->set('date', '2026-08-10');
+
+    expect($component->instance()->daySummary)->toBe([
+        'count' => 3,
+        'total' => 50000,
+        'debt' => 5000,
+    ]);
+
+    $currency = __('common.currency');
+
+    $component
+        ->assertSee(__('appointments.day_summary_count', ['count' => 3]))
+        ->assertSee(__('appointments.day_summary_total', ['amount' => '50 000 '.$currency]))
+        ->assertSee(__('appointments.day_summary_debt', ['amount' => '5 000 '.$currency]));
+});
+
 it('falls back to today without a 500 when the date is cleared', function () {
     $component = Livewire::actingAs(navAdmin())
         ->test('pages.admin.appointments')

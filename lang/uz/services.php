@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'page_title' => 'Xizmatlar — Blade Barbershop',
     'subtitle' => 'Xizmatlar roʻyxatini boshqarish',
     'add' => 'Xizmat qoʻshish',
     'edit_title' => 'Xizmatni oʻzgartirish',
@@ -10,6 +11,12 @@ return [
     'name_uz' => 'Nomi (oʻzbek)',
     'name_kaa' => 'Nomi (qoraqalpoq)',
     'icon' => 'Belgi',
+    'icon_scissors' => 'Qaychi',
+    'icon_sparkles' => 'Yaltiroqlar',
+    'icon_paint_brush' => 'Boʻyoq choʻtkasi',
+    'icon_face_smile' => 'Tabassum',
+    'icon_swatch' => 'Palitra',
+    'icon_beaker' => 'Kolba',
     'duration' => 'Davomiyligi (daq)',
     'duration_short' => 'Davomiyligi',
     'active' => 'Faol',

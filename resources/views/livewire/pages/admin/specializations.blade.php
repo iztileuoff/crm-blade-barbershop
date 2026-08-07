@@ -84,6 +84,8 @@ class extends Component
     }
 }; ?>
 
+<x-slot:title>{{ __('specializations.page_title') }}</x-slot:title>
+
 <div class="animate-fade-in-up">
     <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>
@@ -105,14 +107,15 @@ class extends Component
             <form wire:submit="save" class="p-6">
                 <div class="grid gap-6 sm:grid-cols-2">
                     <div>
-                        <label class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('common.title_field') }}</label>
-                        <input type="text" wire:model="name" placeholder="{{ __('specializations.placeholder_name') }}"
+                        <label for="specialization-name" class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('common.title_field') }}</label>
+                        <input type="text" id="specialization-name" wire:model="name" placeholder="{{ __('specializations.placeholder_name') }}"
+                               x-data x-init="$nextTick(() => $el.focus())"
                                class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content placeholder-content/20 outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
                         @error('name') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                     </div>
                     <div>
-                        <label class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('common.description') }} {{ __('common.optional') }}</label>
-                        <input type="text" wire:model="description" placeholder="{{ __('specializations.placeholder_description') }}"
+                        <label for="specialization-description" class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('common.description') }} {{ __('common.optional') }}</label>
+                        <input type="text" id="specialization-description" wire:model="description" placeholder="{{ __('specializations.placeholder_description') }}"
                                class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content placeholder-content/20 outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
                         @error('description') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                     </div>
@@ -143,14 +146,14 @@ class extends Component
                 </thead>
                 <tbody class="divide-y divide-content/[0.04]">
                     @forelse ($this->specializations as $specialization)
-                        <tr class="transition-colors hover:bg-content/[0.02]">
+                        <tr wire:key="specialization-{{ $specialization->id }}" class="transition-colors hover:bg-content/[0.02]">
                             <td class="px-6 py-4 font-bold text-content">
                                 {{ $specialization->name }}
                                 @if ($specialization->description)
                                     <div class="mt-0.5 text-xs font-normal text-content/40 sm:hidden">{{ $specialization->description }}</div>
                                 @endif
                             </td>
-                            <td class="hidden px-6 py-4 text-content/50 sm:table-cell">{{ $specialization->description ?: '—' }}</td>
+                            <td class="hidden max-w-xs truncate px-6 py-4 text-content/50 sm:table-cell">{{ $specialization->description ?: '—' }}</td>
                             <td class="px-6 py-4 text-center">
                                 <span class="inline-flex h-6 w-6 items-center justify-center rounded-lg bg-content/5 text-xs font-bold text-content/40">
                                     {{ $specialization->barbers_count }}
@@ -159,12 +162,14 @@ class extends Component
                             <td class="px-6 py-4">
                                 <div class="flex items-center justify-end gap-2">
                                     <button type="button" wire:click="edit({{ $specialization->id }})"
-                                            class="flex h-9 w-9 items-center justify-center rounded-lg border border-content/[0.06] text-content/40 transition hover:border-content/10 hover:text-content">
+                                            title="{{ __('common.edit') }}" aria-label="{{ __('common.edit') }}"
+                                            class="flex h-9 w-9 items-center justify-center rounded-lg border border-content/[0.06] text-content/40 transition hover:border-content/10 hover:text-content focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brass/40">
                                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" /></svg>
                                     </button>
                                     <button type="button" wire:click="delete({{ $specialization->id }})"
                                             wire:confirm="{{ __('specializations.delete_confirm', ['name' => $specialization->name]) }}"
-                                            class="flex h-9 w-9 items-center justify-center rounded-lg border border-content/[0.06] text-danger/50 transition hover:border-danger/20 hover:text-danger">
+                                            title="{{ __('common.delete') }}" aria-label="{{ __('common.delete') }}"
+                                            class="flex h-9 w-9 items-center justify-center rounded-lg border border-content/[0.06] text-danger/50 transition hover:border-danger/20 hover:text-danger focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-danger/40">
                                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" /></svg>
                                     </button>
                                 </div>

@@ -123,6 +123,48 @@ it('formats model money accessors with the active locale\'s currency word, not a
     'karakalpak' => ['kaa', 'sum'],
 ]);
 
+it('renders client-form validation errors in uz and kaa, never falling back to Russian', function (string $locale) {
+    // Issue #77: before this pass every locale saw the Russian validation copy
+    // regardless of the active session locale. #[Validate] rules with no custom
+    // messages lean on lang/{locale}/validation.php, so the fix — and the
+    // regression this guards — lives entirely in the lang files, not the component.
+    app()->setLocale($locale);
+
+    $expectedName = __('validation.required', ['attribute' => __('validation.attributes.name')]);
+    $expectedPhone = __('validation.required', ['attribute' => __('validation.attributes.phone')]);
+    $russianName = trans('validation.required', ['attribute' => trans('validation.attributes.name', [], 'ru')], 'ru');
+
+    $errors = Livewire::test('pages.admin.clients')
+        ->call('save')
+        ->assertHasErrors(['name', 'phone'])
+        ->errors();
+
+    expect($errors->first('name'))->toBe($expectedName)
+        ->and($errors->first('phone'))->toBe($expectedPhone)
+        ->and($errors->first('name'))->not->toBe($russianName);
+})->with([
+    'uzbek' => 'uz',
+    'karakalpak' => 'kaa',
+]);
+
+it('renders specialization-form validation errors in uz and kaa, never falling back to Russian', function (string $locale) {
+    app()->setLocale($locale);
+
+    $expectedName = __('validation.required', ['attribute' => __('validation.attributes.name')]);
+    $russianName = trans('validation.required', ['attribute' => trans('validation.attributes.name', [], 'ru')], 'ru');
+
+    $errors = Livewire::test('pages.admin.specializations')
+        ->call('save')
+        ->assertHasErrors(['name'])
+        ->errors();
+
+    expect($errors->first('name'))->toBe($expectedName)
+        ->and($errors->first('name'))->not->toBe($russianName);
+})->with([
+    'uzbek' => 'uz',
+    'karakalpak' => 'kaa',
+]);
+
 it('keeps a single currency word on a client page mixing accessor-formatted and template-formatted money', function (string $locale, string $currency, array $otherCurrencies) {
     app()->setLocale($locale);
 

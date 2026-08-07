@@ -25,6 +25,8 @@ class extends Component
 
     public string $clientSearch = '';
 
+    public string $productSearch = '';
+
     #[Validate('nullable|string|max:500')]
     public string $note = '';
 
@@ -78,7 +80,11 @@ class extends Component
     #[Computed]
     public function availableProducts(): Collection
     {
-        return Product::active()->where('stock', '>', 0)->orderBy('name')->get();
+        return Product::active()
+            ->where('stock', '>', 0)
+            ->when(trim($this->productSearch) !== '', fn ($q) => $q->where('name', 'like', '%'.trim($this->productSearch).'%'))
+            ->orderBy('name')
+            ->get();
     }
 
     #[Computed]
@@ -345,11 +351,13 @@ class extends Component
 
     private function resetForm(): void
     {
-        $this->reset(['client_id', 'clientSearch', 'note', 'cartItems', 'debt_amount', 'debtEnabled', 'cash_amount', 'card_amount']);
+        $this->reset(['client_id', 'clientSearch', 'productSearch', 'note', 'cartItems', 'debt_amount', 'debtEnabled', 'cash_amount', 'card_amount']);
         $this->payment_type = 'cash';
         $this->resetErrorBag();
     }
 }; ?>
+
+<x-slot:title>{{ __('orders.page_title') }}</x-slot:title>
 
 <div class="animate-fade-in-up">
     <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
@@ -436,13 +444,21 @@ class extends Component
                 {{-- Left: product selector --}}
                 <div class="border-b border-content/[0.06] p-6 lg:border-b-0 lg:border-r">
                     <p class="mb-4 text-xs font-semibold uppercase tracking-wider text-content/40">{{ __('orders.select_products') }}</p>
+                    <div class="relative mb-4">
+                        <svg class="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-content-subtle" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
+                        <input type="text" wire:model.live.debounce.300ms="productSearch"
+                               placeholder="{{ __('orders.product_search_placeholder') }}"
+                               aria-label="{{ __('orders.product_search_placeholder') }}"
+                               x-data x-init="$nextTick(() => $el.focus())"
+                               class="w-full rounded-xl border border-content/[0.08] bg-content/[0.04] py-2.5 pl-10 pr-4 text-sm text-content placeholder-content/20 outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
+                    </div>
                     @if ($this->availableProducts->isEmpty())
-                        <p class="text-sm text-content-muted">{{ __('orders.no_products') }}</p>
+                        <p class="text-sm text-content-muted">{{ trim($productSearch) !== '' ? __('common.nothing_found') : __('orders.no_products') }}</p>
                     @else
                         <div class="grid gap-2 sm:grid-cols-2">
                             @foreach ($this->availableProducts as $product)
-                                <button type="button" wire:click="addToCart({{ $product->id }})"
-                                        class="group flex items-center justify-between rounded-xl border border-content/[0.06] bg-content/[0.02] px-4 py-3 text-left transition hover:border-brass/30 hover:bg-brass/[0.05]">
+                                <button type="button" wire:click="addToCart({{ $product->id }})" wire:key="tile-{{ $product->id }}"
+                                        class="group flex items-center justify-between rounded-xl border border-content/[0.06] bg-content/[0.02] px-4 py-3 text-left transition hover:border-brass/30 hover:bg-brass/[0.05] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brass/40">
                                     <div>
                                         <div class="text-sm font-bold text-content">{{ $product->name }}</div>
                                         <div class="text-xs text-brass-ink/70">{{ $product->formattedPrice }}</div>
@@ -483,16 +499,20 @@ class extends Component
                                     </div>
                                     <div class="flex shrink-0 items-center gap-1.5">
                                         <button type="button" wire:click="updateQuantity({{ $index }}, {{ $item['quantity'] - 1 }})"
-                                                class="flex h-7 w-7 items-center justify-center rounded-lg border border-content/[0.06] text-content/40 transition hover:text-danger">
+                                                title="{{ __('orders.decrease_qty') }}" aria-label="{{ __('orders.decrease_qty') }}"
+                                                class="flex h-7 w-7 items-center justify-center rounded-lg border border-content/[0.06] text-content/40 transition hover:text-danger focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-danger/40">
                                             <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14" /></svg>
                                         </button>
                                         <span class="w-6 text-center text-sm font-bold text-content tabular-nums">{{ $item['quantity'] }}</span>
                                         <button type="button" wire:click="updateQuantity({{ $index }}, {{ $item['quantity'] + 1 }})"
-                                                class="flex h-7 w-7 items-center justify-center rounded-lg border border-content/[0.06] text-content/40 transition hover:text-success">
+                                                title="{{ __('orders.increase_qty') }}" aria-label="{{ __('orders.increase_qty') }}"
+                                                class="flex h-7 w-7 items-center justify-center rounded-lg border border-content/[0.06] text-content/40 transition hover:text-success focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-success/40">
                                             <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
                                         </button>
                                     </div>
-                                    <button type="button" wire:click="removeFromCart({{ $index }})" class="text-content-subtle transition hover:text-danger">
+                                    <button type="button" wire:click="removeFromCart({{ $index }})"
+                                            title="{{ __('orders.remove_item') }}" aria-label="{{ __('orders.remove_item') }}"
+                                            class="text-content-subtle transition hover:text-danger focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-danger/40 rounded">
                                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
                                     </button>
                                 </div>
@@ -502,9 +522,9 @@ class extends Component
 
                     {{-- Payment method --}}
                     <div class="mb-4">
-                        <label class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('orders.payment_method') }}</label>
+                        <label for="order-payment-type" class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('orders.payment_method') }}</label>
                         <div class="relative">
-                            <select wire:model.live="payment_type"
+                            <select id="order-payment-type" wire:model.live="payment_type"
                                     class="block w-full appearance-none rounded-xl border border-content/[0.08] bg-surface-sunken py-3 pl-4 pr-10 text-sm text-content outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20 [&>option]:bg-surface-raised">
                                 <option value="cash">{{ __('enums.payment_type.cash') }}</option>
                                 <option value="card">{{ __('enums.payment_type.card') }}</option>
@@ -518,18 +538,18 @@ class extends Component
                         @if ($payment_type === 'both')
                             <div class="mt-3 grid grid-cols-2 gap-4 rounded-xl border border-royal/20 bg-royal/5 p-4">
                                 <div>
-                                    <label class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('enums.payment_type.cash') }} ({{ __('common.currency') }})</label>
+                                    <label for="order-cash-amount" class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('enums.payment_type.cash') }} ({{ __('common.currency') }})</label>
                                     <div class="relative">
-                                        <input type="number" wire:model.live="cash_amount"
+                                        <input type="number" id="order-cash-amount" wire:model.live="cash_amount"
                                                placeholder="0" min="0"
                                                class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] py-3 pl-4 pr-12 text-sm text-content outline-none transition focus:border-success/40 focus:ring-1 focus:ring-success/20">
                                         <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-medium text-content/25">{{ __('common.currency') }}</span>
                                     </div>
                                 </div>
                                 <div>
-                                    <label class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('enums.payment_type.card') }} ({{ __('common.currency') }})</label>
+                                    <label for="order-card-amount" class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('enums.payment_type.card') }} ({{ __('common.currency') }})</label>
                                     <div class="relative">
-                                        <input type="number" wire:model.live="card_amount"
+                                        <input type="number" id="order-card-amount" wire:model.live="card_amount"
                                                placeholder="0" min="0"
                                                class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] py-3 pl-4 pr-12 text-sm text-content outline-none transition focus:border-info/40 focus:ring-1 focus:ring-info/20">
                                         <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-medium text-content/25">{{ __('common.currency') }}</span>
@@ -575,7 +595,7 @@ class extends Component
                         ])>
                             <div class="flex items-center justify-between gap-3">
                                 <div>
-                                    <label @class([
+                                    <label id="order-debt-toggle-label" @class([
                                         'text-xs font-semibold transition-colors',
                                         'text-danger/80' => $debtEnabled,
                                         'text-content/50' => ! $debtEnabled,
@@ -584,8 +604,9 @@ class extends Component
                                 </div>
                                 <button type="button" wire:click="$toggle('debtEnabled')"
                                         role="switch" aria-checked="{{ $debtEnabled ? 'true' : 'false' }}"
+                                        aria-labelledby="order-debt-toggle-label"
                                         @class([
-                                            'relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors outline-none',
+                                            'relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors outline-none focus-visible:ring-2 focus-visible:ring-danger/40 focus-visible:ring-offset-2 focus-visible:ring-offset-surface',
                                             'bg-danger' => $debtEnabled,
                                             'bg-content/[0.12]' => ! $debtEnabled,
                                         ])>
@@ -598,7 +619,8 @@ class extends Component
                             </div>
                             @if ($debtEnabled)
                                 <div class="relative mt-3">
-                                    <input type="number" wire:model.live="debt_amount"
+                                    <input type="number" id="order-debt-amount" wire:model.live="debt_amount"
+                                           aria-label="{{ __('orders.on_debt') }}"
                                            placeholder="0" min="0"
                                            class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] py-3 pl-4 pr-12 text-sm text-content outline-none transition focus:border-danger/40 focus:ring-1 focus:ring-danger/20">
                                     <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-medium text-content/25">{{ __('common.currency') }}</span>
@@ -611,8 +633,8 @@ class extends Component
 
                     {{-- Note --}}
                     <div class="mb-6">
-                        <label class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('common.note') }}</label>
-                        <input type="text" wire:model="note" placeholder="{{ __('orders.note_placeholder') }}"
+                        <label for="order-note" class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('common.note') }}</label>
+                        <input type="text" id="order-note" wire:model="note" placeholder="{{ __('orders.note_placeholder') }}"
                                class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content placeholder-content/20 outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
                         @error('note') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                     </div>
@@ -661,7 +683,7 @@ class extends Component
                 </thead>
                 <tbody class="divide-y divide-content/[0.04]">
                     @forelse ($this->orders as $order)
-                        <tr class="transition-colors hover:bg-content/[0.02]">
+                        <tr wire:key="order-{{ $order->id }}" class="transition-colors hover:bg-content/[0.02]">
                             <td class="whitespace-nowrap px-6 py-4">
                                 <div class="font-bold text-content">{{ $order->created_at->format('H:i') }}</div>
                                 <div class="text-[10px] text-content-muted">{{ $order->created_at->format('d.m') }}</div>
@@ -712,7 +734,8 @@ class extends Component
                                 <div class="flex items-center justify-end">
                                     <button type="button" wire:click="deleteOrder({{ $order->id }})"
                                             wire:confirm="{{ __('orders.delete_confirm') }}"
-                                            class="flex h-8 w-8 items-center justify-center rounded-lg border border-content/[0.06] text-danger/50 transition hover:border-danger/20 hover:text-danger">
+                                            title="{{ __('common.delete') }}" aria-label="{{ __('common.delete') }}"
+                                            class="flex h-8 w-8 items-center justify-center rounded-lg border border-content/[0.06] text-danger/50 transition hover:border-danger/20 hover:text-danger focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-danger/40">
                                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" /></svg>
                                     </button>
                                 </div>

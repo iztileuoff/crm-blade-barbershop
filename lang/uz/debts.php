@@ -2,6 +2,7 @@
 
 return [
     'title' => 'Qarzlar',
+    'page_title' => 'Qarzlar — Blade Barbershop',
     'subtitle' => 'Toʻlanmagan yozuvlar va savdolar',
     'total_debts' => 'Jami qarzlar',
     'positions' => ':count ta pozitsiya',

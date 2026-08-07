@@ -103,7 +103,10 @@ class extends Component
 
     public function mount(): void
     {
-        $this->date = Carbon::now()->toDateString();
+        // ?date= приходит с карточек дашборда («записей на этот день») — тот же
+        // клиентский ввод, что и у date-пикера ниже, поэтому валидируется тем
+        // же правилом, а не читается напрямую.
+        $this->date = $this->validDateOrToday(request()->query('date'));
         $this->form_date = $this->date;
 
         // pull(), а не get(): баннер должен показаться ровно один раз, даже
@@ -156,6 +159,24 @@ class extends Component
         } catch (Exception) {
             return Carbon::now('Asia/Tashkent')->startOfDay();
         }
+    }
+
+    /**
+     * Валидная дата вида YYYY-MM-DD или сегодня. Общее правило для mount()
+     * (?date= из ссылки) и updatedDate() (пикер): оба источника клиентские,
+     * и кривое значение не должно молча укладываться в 1969-й или ронять день.
+     */
+    private function validDateOrToday(mixed $value): string
+    {
+        if (
+            is_string($value) &&
+            preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $value, $matches) === 1 &&
+            checkdate((int) $matches[2], (int) $matches[3], (int) $matches[1])
+        ) {
+            return $value;
+        }
+
+        return Carbon::now('Asia/Tashkent')->toDateString();
     }
 
     /**
@@ -313,6 +334,26 @@ class extends Component
     }
 
     /**
+     * Сводка дня по уже загруженной коллекции $this->appointments — без
+     * нового запроса. Отменённые записи не в счёт: они не бронируют время и
+     * не должны раздувать сумму дня, которая нужна для быстрой прикидки, а не
+     * для кассы (та считается на дашборде по другим правилам).
+     *
+     * @return array{count: int, total: int, debt: int}
+     */
+    #[Computed]
+    public function daySummary(): array
+    {
+        $active = $this->appointments->reject(fn (Appointment $a) => $a->status === AppointmentStatus::Cancelled);
+
+        return [
+            'count' => $this->appointments->count(),
+            'total' => (int) $active->sum(fn (Appointment $a) => (int) ($a->price ?? 0)),
+            'debt' => (int) $active->sum(fn (Appointment $a) => $a->outstandingDebt),
+        ];
+    }
+
+    /**
      * Колонка сортировки только из белого списка: поле приходит с клиента, и
      * произвольное имя роняло бы запрос.
      */
@@ -387,18 +428,8 @@ class extends Component
      */
     public function updatedDate($value): void
     {
-        if (
-            ! preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', (string) $value, $matches) ||
-            ! checkdate((int) $matches[2], (int) $matches[3], (int) $matches[1])
-        ) {
-            $this->date = Carbon::now('Asia/Tashkent')->toDateString();
-            $this->form_date = $this->date;
-
-            return;
-        }
-
-        $this->date = $value;
-        $this->form_date = $value;
+        $this->date = $this->validDateOrToday($value);
+        $this->form_date = $this->date;
     }
 
     public function nextDay(): void
@@ -804,17 +835,33 @@ class extends Component
     }
 }; ?>
 
+<x-slot:title>{{ __('appointments.page_title') }}</x-slot:title>
+
 <div class="animate-fade-in-up">
     <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>
             <h1 class="font-display text-4xl font-semibold uppercase tracking-tight text-content">{{ __('appointments.title') }}</h1>
-            <p class="mt-1 text-sm text-content/40">{{ __('appointments.subtitle') }}</p>
+            <p class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-content/40">
+                <span>{{ __('appointments.subtitle') }}</span>
+                {{-- Сводка дня — по уже загруженной $this->appointments, без нового запроса. --}}
+                <span class="text-content/25" aria-hidden="true">·</span>
+                <span>{{ __('appointments.day_summary_count', ['count' => $this->daySummary['count']]) }}</span>
+                @if ($this->daySummary['total'] > 0)
+                    <span class="text-content/25" aria-hidden="true">·</span>
+                    <span>{{ __('appointments.day_summary_total', ['amount' => number_format($this->daySummary['total'], 0, '.', ' ').' '.__('common.currency')]) }}</span>
+                @endif
+                @if ($this->daySummary['debt'] > 0)
+                    <span class="text-content/25" aria-hidden="true">·</span>
+                    <span class="text-danger/60">{{ __('appointments.day_summary_debt', ['amount' => number_format($this->daySummary['debt'], 0, '.', ' ').' '.__('common.currency')]) }}</span>
+                @endif
+            </p>
         </div>
         @unless ($isBarberView)
             <div class="flex items-center gap-3">
                 <div class="relative">
                     <select wire:model.live="barberFilter"
-                            class="appearance-none rounded-xl border border-content/[0.08] bg-surface-sunken py-2.5 pl-4 pr-10 text-sm text-content outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20 [&>option]:bg-surface-raised">
+                            aria-label="{{ __('common.barber') }}"
+                            class="appearance-none rounded-xl border border-content/[0.08] bg-surface-sunken py-2.5 pl-4 pr-10 text-sm text-content outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20 focus-visible:ring-2 focus-visible:ring-brass/40 [&>option]:bg-surface-raised">
                         <option value="">{{ __('appointments.all_barbers') }}</option>
                         @foreach ($this->barbers as $barber)
                             <option value="{{ $barber->id }}">{{ $barber->name }}</option>
@@ -849,14 +896,16 @@ class extends Component
     {{-- Date Selector --}}
     <div class="mb-8 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-content/[0.06] bg-content/[0.03] p-4 backdrop-blur-md">
         <div class="flex items-center gap-3">
-            <button wire:click="prevDay" class="flex h-10 w-10 items-center justify-center rounded-xl border border-content/[0.06] text-content/40 transition hover:border-content/10 hover:text-content">
+            <button type="button" wire:click="prevDay" title="{{ __('appointments.prev_day') }}" aria-label="{{ __('appointments.prev_day') }}"
+                    class="flex h-10 w-10 items-center justify-center rounded-xl border border-content/[0.06] text-content/40 transition hover:border-content/10 hover:text-content focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass/40">
                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" /></svg>
             </button>
 
-            <input type="date" wire:model.live="date"
+            <input type="date" wire:model.live="date" aria-label="{{ __('common.date') }}"
                    class="rounded-xl border border-content/10 bg-content/5 px-4 py-2 text-sm text-content shadow-sm transition-colors focus:border-brass focus:outline-none focus:ring-1 focus:ring-brass dark:[color-scheme:dark]">
 
-            <button wire:click="nextDay" class="flex h-10 w-10 items-center justify-center rounded-xl border border-content/[0.06] text-content/40 transition hover:border-content/10 hover:text-content">
+            <button type="button" wire:click="nextDay" title="{{ __('appointments.next_day') }}" aria-label="{{ __('appointments.next_day') }}"
+                    class="flex h-10 w-10 items-center justify-center rounded-xl border border-content/[0.06] text-content/40 transition hover:border-content/10 hover:text-content focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass/40">
                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" /></svg>
             </button>
         </div>
@@ -868,7 +917,7 @@ class extends Component
 
         <button type="button" wire:click="setDate('{{ Carbon::now('Asia/Tashkent')->toDateString() }}')"
                 @class([
-                    'rounded-xl px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition',
+                    'rounded-xl px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass/40',
                     'bg-brass text-on-brass' => $this->isToday,
                     'border border-content/[0.06] text-content/40 hover:border-content/10 hover:text-content' => ! $this->isToday,
                 ])>
@@ -895,12 +944,15 @@ class extends Component
              x-on:keydown.escape.window="@if ($this->formHasContent) confirm(@js(__('appointments.discard_confirm'))) && @endif $wire.cancel()">
             {{-- Без wire:click: случайный тап рядом с модалкой на планшете не должен стирать заполненную форму --}}
             <div class="absolute inset-0 bg-surface/80 backdrop-blur-sm"></div>
-            <div class="relative z-10 flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-content/[0.12] bg-surface-raised shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_32px_64px_rgba(0,0,0,0.8)]">
+            <div class="relative z-10 flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-content/[0.12] bg-surface-raised shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_32px_64px_rgba(0,0,0,0.8)]"
+                 role="dialog" aria-modal="true" aria-labelledby="appointment-modal-title"
+                 x-trap.inert.noscroll="true">
                 <div class="flex items-center justify-between border-b border-content/[0.06] px-6 py-4">
-                    <h3 class="text-sm font-bold text-content">{{ $editingId ? __('appointments.edit_title') : __('appointments.create_title') }}</h3>
+                    <h3 id="appointment-modal-title" class="text-sm font-bold text-content">{{ $editingId ? __('appointments.edit_title') : __('appointments.create_title') }}</h3>
                     <button type="button" wire:click="cancel"
                             @if ($this->formHasContent) wire:confirm="{{ __('appointments.discard_confirm') }}" @endif
-                            class="flex h-8 w-8 items-center justify-center rounded-lg text-content-subtle transition hover:bg-content/[0.06] hover:text-content">
+                            title="{{ __('common.close') }}" aria-label="{{ __('common.close') }}"
+                            class="flex h-8 w-8 items-center justify-center rounded-lg text-content-subtle transition hover:bg-content/[0.06] hover:text-content focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass/40">
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
                     </button>
                 </div>
@@ -922,9 +974,9 @@ class extends Component
                                 @error('client_id') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                             </div>
                             <div>
-                                <label class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('common.barber') }}</label>
+                                <label for="appointment-barber_id" class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('common.barber') }}</label>
                                 <div class="relative">
-                                    <select wire:model.live="barber_id"
+                                    <select id="appointment-barber_id" wire:model.live="barber_id"
                                             class="block w-full appearance-none rounded-xl border border-content/[0.08] bg-surface-sunken py-3 pl-4 pr-10 text-sm text-content outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20 [&>option]:bg-surface-raised">
                                         <option value="">{{ __('appointments.select_barber') }}</option>
                                         @foreach ($this->barbers as $barber)
@@ -942,15 +994,15 @@ class extends Component
                                 @error('barber_id') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                             </div>
                             <div>
-                                <label class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('common.date') }}</label>
-                                <input type="date" wire:model="form_date"
+                                <label for="appointment-form_date" class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('common.date') }}</label>
+                                <input id="appointment-form_date" type="date" wire:model="form_date"
                                        class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
                                 @error('form_date') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                             </div>
                             <div>
-                                <label class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('appointments.payment_method') }}</label>
+                                <label for="appointment-payment_type" class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('appointments.payment_method') }}</label>
                                 <div class="relative">
-                                    <select wire:model.live="payment_type"
+                                    <select id="appointment-payment_type" wire:model.live="payment_type"
                                             class="block w-full appearance-none rounded-xl border border-content/[0.08] bg-surface-sunken py-3 pl-4 pr-10 text-sm text-content outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20 [&>option]:bg-surface-raised">
                                         <option value="cash">{{ __('enums.payment_type.cash') }}</option>
                                         <option value="card">{{ __('enums.payment_type.card') }}</option>
@@ -967,9 +1019,9 @@ class extends Component
                                 <div class="sm:col-span-2">
                                     <div class="grid grid-cols-2 gap-4 rounded-xl border border-royal/20 bg-royal/5 p-4">
                                         <div>
-                                            <label class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('enums.payment_type.cash') }} ({{ __('common.currency') }})</label>
+                                            <label for="appointment-cash_amount" class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('enums.payment_type.cash') }} ({{ __('common.currency') }})</label>
                                             <div class="relative">
-                                                <input type="number" wire:model.live="cash_amount"
+                                                <input id="appointment-cash_amount" type="number" wire:model.live="cash_amount"
                                                        placeholder="0" min="0"
                                                        class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] py-3 pl-4 pr-12 text-sm text-content outline-none transition focus:border-success/40 focus:ring-1 focus:ring-success/20">
                                                 <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-medium text-content/25">{{ __('common.currency') }}</span>
@@ -977,9 +1029,9 @@ class extends Component
                                             @error('cash_amount') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                                         </div>
                                         <div>
-                                            <label class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('enums.payment_type.card') }} ({{ __('common.currency') }})</label>
+                                            <label for="appointment-card_amount" class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('enums.payment_type.card') }} ({{ __('common.currency') }})</label>
                                             <div class="relative">
-                                                <input type="number" wire:model.live="card_amount"
+                                                <input id="appointment-card_amount" type="number" wire:model.live="card_amount"
                                                        placeholder="0" min="0"
                                                        class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] py-3 pl-4 pr-12 text-sm text-content outline-none transition focus:border-info/40 focus:ring-1 focus:ring-info/20">
                                                 <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-medium text-content/25">{{ __('common.currency') }}</span>
@@ -1008,8 +1060,9 @@ class extends Component
                                         </div>
                                         <button type="button" wire:click="$toggle('debtEnabled')"
                                                 role="switch" aria-checked="{{ $debtEnabled ? 'true' : 'false' }}"
+                                                aria-label="{{ __('appointments.on_debt') }}"
                                                 @class([
-                                                    'relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors outline-none',
+                                                    'relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors outline-none focus-visible:ring-2 focus-visible:ring-brass/40',
                                                     'bg-danger' => $debtEnabled,
                                                     'bg-content/[0.12]' => ! $debtEnabled,
                                                 ])>
@@ -1022,7 +1075,7 @@ class extends Component
                                     </div>
                                     @if ($debtEnabled)
                                         <div class="relative mt-3">
-                                            <input type="number" wire:model.live="debt_amount"
+                                            <input type="number" wire:model.live="debt_amount" aria-label="{{ __('appointments.on_debt') }}"
                                                    placeholder="0" min="0"
                                                    class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] py-3 pl-4 pr-12 text-sm text-content outline-none transition focus:border-danger/40 focus:ring-1 focus:ring-danger/20">
                                             <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-medium text-content/25">{{ __('common.currency') }}</span>
@@ -1083,6 +1136,7 @@ class extends Component
                                         ])>
                                             <span class="w-5 shrink-0 text-center text-xs font-bold text-content-muted">{{ $i + 1 }}</span>
                                             <select wire:model.live="selectedServices.{{ $i }}.service_id"
+                                                    aria-label="{{ __('appointments.select_service') }}"
                                                     @class([
                                                         'min-w-0 flex-1 rounded-lg border bg-transparent px-3 py-2 text-sm text-content outline-none transition [&>option]:bg-surface',
                                                         'border-danger/40 focus:border-danger/60' => $isDuplicate,
@@ -1100,13 +1154,14 @@ class extends Component
                                                 <span class="shrink-0 text-[10px] font-bold text-danger">{{ __('appointments.duplicate') }}</span>
                                             @endif
                                             <div class="relative w-36 shrink-0">
-                                                <input type="number" wire:model.live="selectedServices.{{ $i }}.amount"
+                                                <input type="number" wire:model.live="selectedServices.{{ $i }}.amount" aria-label="{{ __('common.amount') }}"
                                                        placeholder="0" min="0"
                                                        class="block w-full rounded-lg border border-content/[0.08] bg-transparent py-2 pl-3 pr-10 text-sm text-content outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
                                                 <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-medium text-content/25">{{ __('common.currency') }}</span>
                                             </div>
                                             <button type="button" wire:click="removeService({{ $i }})"
-                                                    class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-content-subtle transition hover:bg-danger/10 hover:text-danger">
+                                                    title="{{ __('appointments.remove_service') }}" aria-label="{{ __('appointments.remove_service') }}"
+                                                    class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-content-subtle transition hover:bg-danger/10 hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass/40">
                                                 <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
                                             </button>
                                         </div>
@@ -1133,8 +1188,9 @@ class extends Component
                                     <div class="flex items-center gap-1 rounded-xl border border-content/[0.06] bg-content/[0.03] p-1">
                                         @foreach ([15 => '15 '.__('common.minutes_short'), 30 => '30 '.__('common.minutes_short'), 60 => __('appointments.one_hour')] as $step => $label)
                                             <button type="button" wire:click="setTimeStep({{ $step }})"
+                                                    aria-pressed="{{ $timeStep === $step ? 'true' : 'false' }}"
                                                     @class([
-                                                        'rounded-lg px-3 py-1 text-xs font-bold transition',
+                                                        'rounded-lg px-3 py-1 text-xs font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass/40',
                                                         'bg-brass text-black' => $timeStep === $step,
                                                         'text-content/40 hover:text-content' => $timeStep !== $step,
                                                     ])>
@@ -1145,8 +1201,8 @@ class extends Component
                                 </div>
                                 <div class="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label class="mb-1.5 block text-xs font-semibold text-content/40">{{ __('appointments.start') }}</label>
-                                        <select wire:model.live="form_start_time"
+                                        <label for="appointment-form_start_time" class="mb-1.5 block text-xs font-semibold text-content/40">{{ __('appointments.start') }}</label>
+                                        <select id="appointment-form_start_time" wire:model.live="form_start_time"
                                                 class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20 [&>option]:bg-surface">
                                             <option value="">{{ __('appointments.select_placeholder') }}</option>
                                             @foreach ($this->timeSlots as $slot)
@@ -1156,8 +1212,8 @@ class extends Component
                                         @error('form_start_time') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                                     </div>
                                     <div>
-                                        <label class="mb-1.5 block text-xs font-semibold text-content/40">{{ __('appointments.end') }}</label>
-                                        <select wire:model.live="form_end_time"
+                                        <label for="appointment-form_end_time" class="mb-1.5 block text-xs font-semibold text-content/40">{{ __('appointments.end') }}</label>
+                                        <select id="appointment-form_end_time" wire:model.live="form_end_time"
                                                 class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20 [&>option]:bg-surface">
                                             <option value="">{{ __('appointments.select_placeholder') }}</option>
                                             @foreach ($this->timeSlots as $slot)
@@ -1170,8 +1226,8 @@ class extends Component
                             </div>
 
                             <div class="sm:col-span-2">
-                                <label class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('appointments.note') }}</label>
-                                <textarea wire:model="note" rows="2" placeholder="{{ __('appointments.note_placeholder') }}"
+                                <label for="appointment-note" class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('appointments.note') }}</label>
+                                <textarea id="appointment-note" wire:model="note" rows="2" placeholder="{{ __('appointments.note_placeholder') }}"
                                           class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content placeholder-content/20 outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20"></textarea>
                                 @error('note') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                             </div>
@@ -1218,7 +1274,7 @@ class extends Component
                 </thead>
                 <tbody class="divide-y divide-content/[0.04]">
                     @forelse ($this->appointments as $appointment)
-                        <tr class="transition-colors hover:bg-content/[0.02]">
+                        <tr wire:key="appointment-{{ $appointment->id }}" class="transition-colors hover:bg-content/[0.02]">
                             <td class="whitespace-nowrap px-6 py-4">
                                 <div class="font-bold text-content">{{ $appointment->starts_at->format('H:i') }}</div>
                                 <div class="text-[10px] text-content-muted">{{ $appointment->ends_at->format('H:i') }}</div>
@@ -1312,44 +1368,46 @@ class extends Component
                                 <div class="flex items-center justify-end gap-1.5">
                                     @if ($appointment->status === AppointmentStatus::Pending)
                                         <button type="button" wire:click="markConfirmed({{ $appointment->id }})"
-                                                title="{{ __('common.confirm') }}"
-                                                class="flex h-8 w-8 items-center justify-center rounded-lg bg-info/10 text-info transition hover:bg-info hover:text-black">
+                                                title="{{ __('common.confirm') }}" aria-label="{{ __('common.confirm') }}"
+                                                class="flex h-8 w-8 items-center justify-center rounded-lg bg-info/10 text-info transition hover:bg-info hover:text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass/40">
                                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
                                         </button>
                                         <button type="button" wire:click="markCancelled({{ $appointment->id }})"
                                                 wire:confirm="{{ __('appointments.cancel_confirm') }}"
-                                                title="{{ __('appointments.cancel_action') }}"
-                                                class="flex h-8 w-8 items-center justify-center rounded-lg bg-danger/10 text-danger transition hover:bg-danger hover:text-black">
+                                                title="{{ __('appointments.cancel_action') }}" aria-label="{{ __('appointments.cancel_action') }}"
+                                                class="flex h-8 w-8 items-center justify-center rounded-lg bg-danger/10 text-danger transition hover:bg-danger hover:text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass/40">
                                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
                                         </button>
                                     @elseif ($appointment->status === AppointmentStatus::Confirmed)
                                         <button type="button" wire:click="markCompleted({{ $appointment->id }})"
                                                 wire:confirm="{{ __('appointments.complete_confirm') }}"
-                                                title="{{ __('appointments.complete') }}"
-                                                class="flex h-8 w-8 items-center justify-center rounded-lg bg-success/10 text-success transition hover:bg-success hover:text-black">
+                                                title="{{ __('appointments.complete') }}" aria-label="{{ __('appointments.complete') }}"
+                                                class="flex h-8 w-8 items-center justify-center rounded-lg bg-success/10 text-success transition hover:bg-success hover:text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass/40">
                                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
                                         </button>
                                         <button type="button" wire:click="markCancelled({{ $appointment->id }})"
                                                 wire:confirm="{{ __('appointments.cancel_confirm') }}"
-                                                title="{{ __('appointments.cancel_action') }}"
-                                                class="flex h-8 w-8 items-center justify-center rounded-lg bg-danger/10 text-danger transition hover:bg-danger hover:text-black">
+                                                title="{{ __('appointments.cancel_action') }}" aria-label="{{ __('appointments.cancel_action') }}"
+                                                class="flex h-8 w-8 items-center justify-center rounded-lg bg-danger/10 text-danger transition hover:bg-danger hover:text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass/40">
                                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
                                         </button>
                                     @else
                                         <button type="button" wire:click="markConfirmed({{ $appointment->id }})"
-                                                title="{{ __('appointments.return_to_confirmed') }}"
-                                                class="flex h-8 w-8 items-center justify-center rounded-lg bg-content/[0.04] text-content/40 transition hover:bg-brass/10 hover:text-brass-ink">
+                                                title="{{ __('appointments.return_to_confirmed') }}" aria-label="{{ __('appointments.return_to_confirmed') }}"
+                                                class="flex h-8 w-8 items-center justify-center rounded-lg bg-content/[0.04] text-content/40 transition hover:bg-brass/10 hover:text-brass-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass/40">
                                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" /></svg>
                                         </button>
                                     @endif
                                     @unless ($isBarberView)
                                         <button type="button" wire:click="edit({{ $appointment->id }})"
-                                                class="flex h-8 w-8 items-center justify-center rounded-lg border border-content/[0.06] text-content/40 transition hover:border-content/10 hover:text-content">
+                                                title="{{ __('common.edit') }}" aria-label="{{ __('common.edit') }}"
+                                                class="flex h-8 w-8 items-center justify-center rounded-lg border border-content/[0.06] text-content/40 transition hover:border-content/10 hover:text-content focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass/40">
                                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" /></svg>
                                         </button>
                                         <button type="button" wire:click="delete({{ $appointment->id }})"
                                                 wire:confirm="{{ __('appointments.delete_confirm') }}"
-                                                class="flex h-8 w-8 items-center justify-center rounded-lg border border-content/[0.06] text-content-subtle transition hover:text-danger">
+                                                title="{{ __('common.delete') }}" aria-label="{{ __('common.delete') }}"
+                                                class="flex h-8 w-8 items-center justify-center rounded-lg border border-content/[0.06] text-content-subtle transition hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass/40">
                                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" /></svg>
                                         </button>
                                     @endunless

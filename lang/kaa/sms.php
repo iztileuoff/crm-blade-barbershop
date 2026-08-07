@@ -34,6 +34,8 @@ return [
     'errors_label' => 'Qátelikler',
     'all_types' => 'Barlıq túrler',
     'all_statuses' => 'Barlıq halatlar',
+    'group_send_status' => 'Jiberiw halatı',
+    'group_delivery_status' => 'Jetkeriw halatı',
     'sent' => 'Jiberildi',
     'context_reminder' => 'Esletpe',
     'context_retention' => 'Uslap qalıw',
@@ -71,4 +73,5 @@ return [
     'field_retention_hint' => 'Uzaq waqıt kelmegen klientke jiberiledi.',
     'field_cancelled_label' => 'Jazılıw biykarlandı',
     'field_cancelled_hint' => 'Salon jazılıwdı biykarlaǵanda Telegramsız klientke jiberiledi.',
+    'chars' => 'belgi',
 ];

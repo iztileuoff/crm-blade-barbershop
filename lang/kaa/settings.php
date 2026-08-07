@@ -2,6 +2,7 @@
 
 return [
     'title' => 'Sazlamalar',
+    'page_title' => 'Sazlamalar — Blade Barbershop',
     'subtitle' => 'Salon haqqında maǵlıwmat hám baylanıslar',
     'saved' => 'Sazlamalar saqlandı',
     'main_info' => 'Tiykarǵı maǵlıwmat',

@@ -9,6 +9,7 @@ return [
     'back' => 'Artqa',
 
     'steps' => [
+        'nav_label' => 'Bant etiw basqıshları',
         'service' => 'Xızmet',
         'barber' => 'Barber',
         'time' => 'Waqıt',
@@ -34,6 +35,7 @@ return [
         'horizon' => 'Kelesi 14 kúnge jazılıw múmkin',
         'no_slots' => 'Bul kúni bos waqıt joq. Basqa sánani saylań.',
         'taken' => 'Bul waqıtqa álleqashan jazılıw bar',
+        'taken_short' => 'band',
     ],
 
     'confirm' => [

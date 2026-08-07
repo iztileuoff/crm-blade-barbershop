@@ -237,6 +237,8 @@ class extends Component
     }
 }; ?>
 
+<x-slot:title>{{ __('debts.page_title') }}</x-slot:title>
+
 <div class="animate-fade-in-up">
     <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>
@@ -246,6 +248,7 @@ class extends Component
         <div class="relative">
             <svg class="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-content-subtle" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
             <input type="text" wire:model.live.debounce.300ms="search" placeholder="{{ __('debts.search_placeholder') }}"
+                   aria-label="{{ __('debts.search_placeholder') }}"
                    class="w-64 rounded-xl border border-content/[0.08] bg-content/[0.04] py-2.5 pl-10 pr-4 text-sm text-content placeholder-content/20 outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
         </div>
     </div>
@@ -280,11 +283,14 @@ class extends Component
              x-data
              x-on:keydown.escape.window="$wire.cancelPay()">
             <div class="absolute inset-0 bg-surface/80 backdrop-blur-sm" wire:click="cancelPay"></div>
-            <div class="relative z-10 w-full max-w-sm overflow-hidden rounded-2xl border border-content/[0.12] bg-surface-raised shadow-[0_32px_64px_rgba(0,0,0,0.8)]">
+            <div class="relative z-10 w-full max-w-sm overflow-hidden rounded-2xl border border-content/[0.12] bg-surface-raised shadow-[0_32px_64px_rgba(0,0,0,0.8)]"
+                 role="dialog" aria-modal="true" aria-labelledby="pay-debt-title"
+                 x-trap.noscroll="true">
                 <div class="flex items-center justify-between border-b border-content/[0.06] px-6 py-4">
-                    <h3 class="text-sm font-bold text-content">{{ __('debts.pay_debt') }}</h3>
+                    <h3 id="pay-debt-title" class="text-sm font-bold text-content">{{ __('debts.pay_debt') }}</h3>
                     <button type="button" wire:click="cancelPay"
-                            class="flex h-8 w-8 items-center justify-center rounded-lg text-content-subtle transition hover:bg-content/[0.06] hover:text-content">
+                            title="{{ __('common.close') }}" aria-label="{{ __('common.close') }}"
+                            class="flex h-8 w-8 items-center justify-center rounded-lg text-content-subtle transition hover:bg-content/[0.06] hover:text-content focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brass/40">
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
                     </button>
                 </div>
@@ -299,7 +305,7 @@ class extends Component
                         <label for="payAmount" class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('debts.pay_amount') }}</label>
                         <div class="relative">
                             <input id="payAmount" type="number" wire:model="payAmount"
-                                   placeholder="0" min="1" max="{{ $maxPay }}"
+                                   placeholder="0" min="1" max="{{ $maxPay }}" autofocus
                                    x-data x-init="$nextTick(() => { $el.focus(); $el.select(); })"
                                    class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] py-3 pl-4 pr-12 text-sm text-content outline-none transition focus:border-success/40 focus:ring-1 focus:ring-success/20">
                             <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-medium text-content/25">{{ __('common.currency') }}</span>
@@ -309,25 +315,27 @@ class extends Component
                     <button type="button"
                             x-data
                             x-on:click="$wire.payAmount = {{ $maxPay }}"
-                            class="mb-4 text-xs text-brass-ink/70 hover:text-brass-ink">
+                            class="mb-4 rounded text-xs text-brass-ink/70 hover:text-brass-ink focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brass/40">
                         {{ __('debts.pay_full', ['amount' => number_format($maxPay, 0, '.', ' ').' '.__('common.currency')]) }}
                     </button>
 
                     {{-- Способ оплаты: платёж идёт в кассу дня платежа именно этим способом --}}
                     <div class="mb-4">
-                        <label class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('debts.pay_method') }}</label>
-                        <div class="grid grid-cols-2 gap-2">
+                        <label id="pay-method-label" class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('debts.pay_method') }}</label>
+                        <div class="grid grid-cols-2 gap-2" role="radiogroup" aria-labelledby="pay-method-label">
                             <button type="button" wire:click="$set('payPaymentType', 'cash')"
+                                    role="radio" aria-checked="{{ $payPaymentType === 'cash' ? 'true' : 'false' }}"
                                     @class([
-                                        'rounded-xl border px-4 py-2.5 text-xs font-bold transition',
+                                        'rounded-xl border px-4 py-2.5 text-xs font-bold transition focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-success/40',
                                         'border-success/40 bg-success/10 text-success' => $payPaymentType === 'cash',
                                         'border-content/[0.08] text-content/50 hover:bg-content/[0.06]' => $payPaymentType !== 'cash',
                                     ])>
                                 {{ __('enums.payment_type.cash') }}
                             </button>
                             <button type="button" wire:click="$set('payPaymentType', 'card')"
+                                    role="radio" aria-checked="{{ $payPaymentType === 'card' ? 'true' : 'false' }}"
                                     @class([
-                                        'rounded-xl border px-4 py-2.5 text-xs font-bold transition',
+                                        'rounded-xl border px-4 py-2.5 text-xs font-bold transition focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-info/40',
                                         'border-info/40 bg-info/10 text-info' => $payPaymentType === 'card',
                                         'border-content/[0.08] text-content/50 hover:bg-content/[0.06]' => $payPaymentType !== 'card',
                                     ])>
@@ -365,7 +373,7 @@ class extends Component
                         </thead>
                         <tbody class="divide-y divide-content/[0.04]">
                             @foreach ($this->appointmentDebts as $appointment)
-                                <tr class="transition-colors hover:bg-content/[0.02]">
+                                <tr wire:key="appointment-debt-{{ $appointment->id }}" class="transition-colors hover:bg-content/[0.02]">
                                     <td class="hidden whitespace-nowrap px-6 py-4 sm:table-cell">
                                         <div class="font-bold text-content">{{ $appointment->starts_at->format('d.m.Y') }}</div>
                                         <div class="text-[10px] text-content-muted">{{ $appointment->starts_at->format('H:i') }}</div>
@@ -397,7 +405,7 @@ class extends Component
                                     </td>
                                     <td class="whitespace-nowrap px-6 py-4 text-right">
                                         <button type="button" wire:click="openPayAppointment({{ $appointment->id }})"
-                                                class="inline-flex items-center gap-1.5 rounded-xl bg-success/10 px-3 py-2 text-xs font-bold text-success transition hover:bg-success hover:text-black">
+                                                class="inline-flex items-center gap-1.5 rounded-xl bg-success/10 px-3 py-2 text-xs font-bold text-success transition hover:bg-success hover:text-black focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-success/40">
                                             <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
                                             {{ __('debts.pay') }}
                                         </button>
@@ -432,7 +440,7 @@ class extends Component
                         </thead>
                         <tbody class="divide-y divide-content/[0.04]">
                             @foreach ($this->orderDebts as $order)
-                                <tr class="transition-colors hover:bg-content/[0.02]">
+                                <tr wire:key="order-debt-{{ $order->id }}" class="transition-colors hover:bg-content/[0.02]">
                                     <td class="hidden whitespace-nowrap px-6 py-4 sm:table-cell">
                                         <div class="font-bold text-content">{{ $order->created_at->format('d.m.Y') }}</div>
                                         <div class="text-[10px] text-content-muted">{{ $order->created_at->format('H:i') }}</div>
@@ -477,7 +485,7 @@ class extends Component
                                     </td>
                                     <td class="whitespace-nowrap px-6 py-4 text-right">
                                         <button type="button" wire:click="openPayOrder({{ $order->id }})"
-                                                class="inline-flex items-center gap-1.5 rounded-xl bg-success/10 px-3 py-2 text-xs font-bold text-success transition hover:bg-success hover:text-black">
+                                                class="inline-flex items-center gap-1.5 rounded-xl bg-success/10 px-3 py-2 text-xs font-bold text-success transition hover:bg-success hover:text-black focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-success/40">
                                             <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
                                             {{ __('debts.pay') }}
                                         </button>

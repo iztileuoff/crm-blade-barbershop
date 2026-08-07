@@ -2,6 +2,7 @@
 
 return [
     'title' => 'Tovar satıwı',
+    'page_title' => 'Tovar satıwı — Blade Barbershop',
     'subtitle' => 'Kassa — bólshek satıw',
     'new' => 'Jańa satıw',
     'revenue_day' => 'Kúnlik túsim',
@@ -12,6 +13,10 @@ return [
 
     'select_products' => 'Tovarlardı saylań',
     'no_products' => 'Satıwda tovar joq.',
+    'product_search_placeholder' => 'Tovardı atı boyınsha izlew...',
+    'decrease_qty' => 'Sanın azaytıw',
+    'increase_qty' => 'Sanın kóbeytiw',
+    'remove_item' => 'Sebetten shıǵarıw',
     'cart' => 'Sebet',
     'cart_empty' => 'Tovarlar qosılmaǵan',
     'cart_count' => ':count tovar',

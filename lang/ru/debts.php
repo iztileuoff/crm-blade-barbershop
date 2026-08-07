@@ -2,6 +2,7 @@
 
 return [
     'title' => 'Долги',
+    'page_title' => 'Долги — Blade Barbershop',
     'subtitle' => 'Неоплаченные записи и продажи',
     'total_debts' => 'Всего долгов',
     'positions' => ':count позиций',

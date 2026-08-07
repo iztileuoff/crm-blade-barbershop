@@ -2,6 +2,7 @@
 
 return [
     'title' => 'Qarızlar',
+    'page_title' => 'Qarızlar — Blade Barbershop',
     'subtitle' => 'Tólenbegen jazılıwlar hám satıwlar',
     'total_debts' => 'Jámi qarızlar',
     'positions' => ':count pozitsiya',

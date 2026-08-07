@@ -2,6 +2,7 @@
 
 return [
     'title' => 'Mijozlar',
+    'page_title' => 'Mijozlar — Blade Barbershop',
     'subtitle' => 'Mijozlar bazasi va tashriflar tarixi',
     'total_label' => 'Jami',
     'search_placeholder' => 'Ism yoki telefon boʻyicha qidiruv...',

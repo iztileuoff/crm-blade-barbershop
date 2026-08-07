@@ -2,6 +2,7 @@
 
 return [
     'title' => 'Продажи товаров',
+    'page_title' => 'Продажи товаров — Blade Barbershop',
     'subtitle' => 'Касса — розничные продажи',
     'new' => 'Новая продажа',
     'revenue_day' => 'Получено за день',
@@ -12,6 +13,10 @@ return [
 
     'select_products' => 'Выберите товары',
     'no_products' => 'Нет товаров в наличии.',
+    'product_search_placeholder' => 'Поиск товара по названию...',
+    'decrease_qty' => 'Уменьшить количество',
+    'increase_qty' => 'Увеличить количество',
+    'remove_item' => 'Убрать из корзины',
     'cart' => 'Корзина',
     'cart_empty' => 'Товары не добавлены',
     'cart_count' => ':count товаров',

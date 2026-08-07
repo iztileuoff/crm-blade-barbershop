@@ -2,12 +2,20 @@
 
 return [
     'title' => 'Yozuvlar',
+    'page_title' => 'Yozuvlar — Blade Barbershop',
     'subtitle' => 'Tashriflar jurnalini boshqarish',
     'all_barbers' => 'Barcha barberlar',
     'new' => 'Yangi yozuv',
     'empty' => 'Bu kunga yozuvlar yoʻq',
     'barber_unlinked' => 'Hisobingizga barber profili bogʻlanmagan — administratorga murojaat qiling.',
     'restricted_banner' => 'Bu boʻlim sizning rolingiz uchun mavjud emas.',
+    'prev_day' => 'Oldingi kun',
+    'next_day' => 'Keyingi kun',
+
+    // Day summary (allaqachon yuklangan toʻplam boʻyicha, yangi soʻrovsiz)
+    'day_summary_count' => ':count yozuv',
+    'day_summary_total' => ':amount summasiga',
+    'day_summary_debt' => 'shundan qarzga :amount',
 
     // Modal
     'edit_title' => 'Yozuvni tahrirlash',
@@ -19,6 +27,7 @@ return [
     'debt_hint' => 'Agar mijoz hozir toʻlamasa',
     'debt_client_required' => 'Qarz boʻlsa mijoz majburiy',
     'add_service' => 'Xizmat qoʻshish',
+    'remove_service' => 'Xizmatni olib tashlash',
     'select_service' => 'Xizmatni tanlang...',
     'duplicate' => 'takror',
     'no_services_hint' => 'Xizmat yoʻq — «Xizmat qoʻshish» tugmasini bosing',

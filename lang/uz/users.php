@@ -2,6 +2,7 @@
 
 return [
     'title' => 'Foydalanuvchilar',
+    'page_title' => 'Foydalanuvchilar — Blade Barbershop',
     'subtitle' => 'Tizimga kirishni boshqarish',
     'add' => 'Foydalanuvchi qoʻshish',
     'edit_title' => 'Foydalanuvchini oʻzgartirish',

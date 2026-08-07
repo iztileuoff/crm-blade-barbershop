@@ -2,12 +2,16 @@
 
 return [
     'title' => 'Kassa',
+    'page_title' => 'Kassa — Blade Barbershop',
     'summary_day' => 'Kúnlik esabat',
     'summary_month' => 'Aylıq esabat',
     'tab_day' => 'Kún',
     'tab_month' => 'Ay',
+    'previous_period' => 'Aldıńǵı dáwir',
+    'next_period' => 'Keyingi dáwir',
     'auto_refresh' => 'Hár 60 sekundta jańalanadı',
     'updated_at' => ':time de jańalandı',
+    'chart_aria_label' => ':month ushın kúnlik túsim grafigi, jámi :total',
 
     'services' => 'Xızmetler',
     'products' => 'Tovarlar',

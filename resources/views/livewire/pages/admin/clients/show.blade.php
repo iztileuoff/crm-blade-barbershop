@@ -303,6 +303,8 @@ class extends Component
     }
 }; ?>
 
+<x-slot:title>{{ $client->name }} — Blade Barbershop</x-slot:title>
+
 <div class="animate-fade-in-up">
     <a href="{{ route('admin.clients') }}" wire:navigate
        class="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-content/40 transition hover:text-content">
@@ -351,6 +353,7 @@ class extends Component
                     <div>
                         <label for="client-name" class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('common.name') }}</label>
                         <input id="client-name" type="text" wire:model="name" placeholder="{{ __('clients.name_placeholder') }}"
+                               x-data x-init="$nextTick(() => $el.focus())"
                                class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content placeholder-content/20 outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
                         @error('name') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                     </div>
@@ -383,7 +386,8 @@ class extends Component
         <div>
             <p class="text-xs font-semibold uppercase tracking-wider text-content-muted">{{ __('common.birth_date') }}</p>
             <p class="mt-1 text-sm text-content/80">
-                {{ $client->formattedBirthDate }}
+                {{-- Один формат даты на всю карточку — совпадает с таблицами истории ниже (d.m.Y) --}}
+                {{ $client->birth_date?->format('d.m.Y') ?? '—' }}
                 @if ($client->birth_date)
                     <span class="text-content/40">· {{ __('clients.age', ['age' => $client->birth_date->age]) }}</span>
                 @endif
@@ -391,11 +395,11 @@ class extends Component
         </div>
         <div>
             <p class="text-xs font-semibold uppercase tracking-wider text-content-muted">{{ __('clients.client_since') }}</p>
-            <p class="mt-1 text-sm text-content/80">{{ $client->created_at ? \App\Models\Client::formatLocalizedDate($client->created_at) : '—' }}</p>
+            <p class="mt-1 text-sm text-content/80">{{ $client->created_at?->format('d.m.Y') ?? '—' }}</p>
         </div>
         <div>
             <p class="text-xs font-semibold uppercase tracking-wider text-content-muted">{{ __('clients.last_visit') }}</p>
-            <p class="mt-1 text-sm text-content/80">{{ $client->formattedLastVisit }}</p>
+            <p class="mt-1 text-sm text-content/80">{{ $client->last_visit_at?->format('d.m.Y') ?? '—' }}</p>
         </div>
         <div>
             <p class="text-xs font-semibold uppercase tracking-wider text-content-muted">{{ __('clients.telegram') }}</p>
@@ -445,15 +449,16 @@ class extends Component
 
     {{-- History tabs. Вкладки серверные: скрытая история не должна квepиться --}}
     <div class="overflow-hidden rounded-2xl border border-content/[0.06] bg-content/[0.03] shadow-xl backdrop-blur-md">
-        <div class="flex flex-wrap gap-1 border-b border-content/[0.06] bg-content/[0.03] p-2">
+        <div class="flex flex-wrap gap-1 border-b border-content/[0.06] bg-content/[0.03] p-2" role="tablist">
             @foreach ([
                 'appointments' => __('clients.tab_appointments').' ('.$this->appointmentsCount.')',
                 'orders' => __('clients.tab_orders').' ('.$this->ordersCount.')',
                 'sms' => __('clients.tab_sms').' ('.$this->smsCount.')',
             ] as $key => $label)
                 <button type="button" wire:click="showTab('{{ $key }}')" wire:key="tab-{{ $key }}"
+                        role="tab" aria-selected="{{ $tab === $key ? 'true' : 'false' }}"
                         @class([
-                            'rounded-lg px-4 py-2 text-sm font-bold transition',
+                            'rounded-lg px-4 py-2 text-sm font-bold transition focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brass/40',
                             'bg-brass text-on-brass' => $tab === $key,
                             'text-content/50 hover:bg-content/[0.06] hover:text-content' => $tab !== $key,
                         ])>
@@ -477,7 +482,7 @@ class extends Component
                 </thead>
                 <tbody class="divide-y divide-content/[0.04]">
                     @forelse ($this->appointmentHistory as $appointment)
-                        <tr class="transition-colors hover:bg-content/[0.02]">
+                        <tr wire:key="history-appointment-{{ $appointment->id }}" class="transition-colors hover:bg-content/[0.02]">
                             <td class="whitespace-nowrap px-6 py-4 text-content/70">{{ $appointment->starts_at->format('d.m.Y H:i') }}</td>
                             <td class="px-6 py-4 text-content/70">{{ $appointment->barber?->name ?? '—' }}</td>
                             <td class="px-6 py-4 text-content/50">{{ $appointment->services->pluck('name')->join(', ') ?: '—' }}</td>
@@ -509,7 +514,7 @@ class extends Component
                 </thead>
                 <tbody class="divide-y divide-content/[0.04]">
                     @forelse ($this->orderHistory as $order)
-                        <tr class="transition-colors hover:bg-content/[0.02]">
+                        <tr wire:key="history-order-{{ $order->id }}" class="transition-colors hover:bg-content/[0.02]">
                             <td class="whitespace-nowrap px-6 py-4 text-content/70">{{ $order->created_at?->format('d.m.Y H:i') ?? '—' }}</td>
                             <td class="px-6 py-4 text-content/50">
                                 @foreach ($order->items as $item)
@@ -542,7 +547,7 @@ class extends Component
                 </thead>
                 <tbody class="divide-y divide-content/[0.04]">
                     @forelse ($this->smsHistory as $sms)
-                        <tr class="transition-colors hover:bg-content/[0.02]">
+                        <tr wire:key="history-sms-{{ $sms->id }}" class="transition-colors hover:bg-content/[0.02]">
                             <td class="whitespace-nowrap px-6 py-4 text-content/70">{{ $sms->created_at?->format('d.m.Y H:i') ?? '—' }}</td>
                             <td class="px-6 py-4 text-content/50">{{ __('sms.context_'.$sms->context) }}</td>
                             <td class="px-6 py-4 text-content/50">{{ $sms->message }}</td>

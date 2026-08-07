@@ -2,6 +2,7 @@
 
 return [
     'title' => 'Mahsulot savdosi',
+    'page_title' => 'Mahsulot savdosi — Blade Barbershop',
     'subtitle' => 'Kassa — chakana savdo',
     'new' => 'Yangi savdo',
     'revenue_day' => 'Kunlik tushum',
@@ -12,6 +13,10 @@ return [
 
     'select_products' => 'Mahsulotlarni tanlang',
     'no_products' => 'Sotuvda mahsulot yoʻq.',
+    'product_search_placeholder' => 'Mahsulotni nomi boʻyicha qidiring...',
+    'decrease_qty' => 'Sonini kamaytirish',
+    'increase_qty' => 'Sonini oshirish',
+    'remove_item' => 'Savatdan olib tashlash',
     'cart' => 'Savat',
     'cart_empty' => 'Mahsulotlar qoʻshilmagan',
     'cart_count' => ':count mahsulot',

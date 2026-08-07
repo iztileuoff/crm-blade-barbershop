@@ -2,6 +2,7 @@
 
 return [
     'title' => 'Meniń daramatım',
+    'page_title' => 'Meniń daramatım — Blade Barbershop',
     'subtitle' => 'Qabıl etilgen aqshanıń úlesi — Telegram-bottaǵıday',
     'percent_label' => 'Sizdiń úlesińiz',
     'today' => 'Búgin',

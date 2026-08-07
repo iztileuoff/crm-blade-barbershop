@@ -88,8 +88,8 @@
         <div class="flex items-center gap-2">
             <x-language-switcher class="flex h-10 items-center gap-1.5 rounded-xl border border-content/[0.06] px-2.5 text-content/50 transition hover:border-brass/40 hover:text-brass-ink" />
             <x-theme-toggle class="flex h-10 w-10 items-center justify-center rounded-xl border border-content/[0.06] text-content/50 transition hover:border-brass/40 hover:text-brass-ink" />
-            <button type="button" @click="open = true" aria-label="{{ __('nav.open_menu') }}"
-                    class="flex h-10 w-10 items-center justify-center rounded-xl border border-content/[0.06] text-content/40 transition hover:border-content/10 hover:text-content">
+            <button type="button" @click="open = true" aria-label="{{ __('nav.open_menu') }}" title="{{ __('nav.open_menu') }}"
+                    class="flex h-10 w-10 items-center justify-center rounded-xl border border-content/[0.06] text-content/40 transition hover:border-content/10 hover:text-content focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brass">
                 <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" /></svg>
             </button>
         </div>
@@ -120,8 +120,8 @@
                     <div class="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-brass-ink/70">{{ __('nav.admin_panel') }}</div>
                 </div>
             </a>
-            <button type="button" @click="open = false" aria-label="{{ __('nav.close_menu') }}"
-                    class="flex h-8 w-8 items-center justify-center rounded-lg text-content/40 transition hover:text-content lg:hidden">
+            <button type="button" @click="open = false" aria-label="{{ __('nav.close_menu') }}" title="{{ __('nav.close_menu') }}"
+                    class="flex h-8 w-8 items-center justify-center rounded-lg text-content/40 transition hover:text-content focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brass lg:hidden">
                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
             </button>
         </div>
@@ -199,6 +199,17 @@
                 @endforeach
             </div>
         </nav>
+
+        {{-- Who's logged in (mobile drawer only — desktop shows this in the top header) --}}
+        @auth
+            <div class="flex items-center gap-2.5 border-t border-content/[0.06] px-4 py-3 lg:hidden" :class="{ 'lg:justify-center': collapsed }">
+                <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brass/15 text-xs font-bold text-brass-ink ring-1 ring-content/10">{{ mb_substr(auth()->user()->name, 0, 1) }}</div>
+                <div class="min-w-0 leading-tight">
+                    <div class="truncate text-sm font-semibold text-content">{{ auth()->user()->name }}</div>
+                    <div class="mt-0.5 text-[10px] font-medium text-content-muted">{{ auth()->user()->role->label() }}</div>
+                </div>
+            </div>
+        @endauth
 
         {{-- Logout (mobile drawer only — desktop uses the top header) --}}
         @auth

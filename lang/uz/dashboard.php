@@ -2,12 +2,16 @@
 
 return [
     'title' => 'Kassa',
+    'page_title' => 'Kassa — Blade Barbershop',
     'summary_day' => 'Kunlik hisobot',
     'summary_month' => 'Oylik hisobot',
     'tab_day' => 'Kun',
     'tab_month' => 'Oy',
+    'previous_period' => 'Oldingi davr',
+    'next_period' => 'Keyingi davr',
     'auto_refresh' => 'Har 60 soniyada yangilanadi',
     'updated_at' => ':time da yangilandi',
+    'chart_aria_label' => ':month uchun kunlik tushum grafigi, jami :total',
 
     'services' => 'Xizmatlar',
     'products' => 'Mahsulotlar',

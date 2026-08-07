@@ -2,6 +2,7 @@
 
 return [
     'title' => 'Mutaxassisliklar',
+    'page_title' => 'Mutaxassisliklar — Blade Barbershop',
     'subtitle' => 'Barberlar toifalari va mahorat darajalari',
     'add' => 'Mutaxassislik qoʻshish',
     'edit_title' => 'Mutaxassislikni oʻzgartirish',

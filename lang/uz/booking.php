@@ -9,6 +9,7 @@ return [
     'back' => 'Orqaga',
 
     'steps' => [
+        'nav_label' => 'Band qilish bosqichlari',
         'service' => 'Xizmat',
         'barber' => 'Barber',
         'time' => 'Vaqt',
@@ -34,6 +35,7 @@ return [
         'horizon' => 'Keyingi 14 kun uchun band qilish mumkin',
         'no_slots' => 'Bu kuni boʻsh vaqt yoʻq. Boshqa sanani tanlang.',
         'taken' => 'Bu vaqtga allaqachon yozuv bor',
+        'taken_short' => 'band',
     ],
 
     'confirm' => [

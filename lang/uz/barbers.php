@@ -2,6 +2,7 @@
 
 return [
     'title' => 'Barberlar',
+    'page_title' => 'Barberlar — Blade Barbershop',
     'subtitle' => 'Jamoa va ish jadvalini boshqarish',
     'add' => 'Barber qoʻshish',
     'edit_title' => 'Barberni oʻzgartirish',

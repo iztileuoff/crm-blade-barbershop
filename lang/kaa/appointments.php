@@ -2,12 +2,20 @@
 
 return [
     'title' => 'Jazılıwlar',
+    'page_title' => 'Jazılıwlar — Blade Barbershop',
     'subtitle' => 'Keliwler jurnalın basqarıw',
     'all_barbers' => 'Barlıq barberler',
     'new' => 'Jańa jazılıw',
     'empty' => 'Bul kúnge jazılıwlar joq',
     'barber_unlinked' => 'Akkauntıńızǵa barber profili baylanıspaǵan — administratorǵa jolıǵıń.',
     'restricted_banner' => 'Bul bólim sizdiń rolińiz ushın qol jetimli emes.',
+    'prev_day' => 'Aldıńǵı kún',
+    'next_day' => 'Keyingi kún',
+
+    // Day summary (qolda bar jámi boyınsha, jańa soraw jiberilmeydi)
+    'day_summary_count' => ':count jazılıw',
+    'day_summary_total' => ':amount summasına',
+    'day_summary_debt' => 'sonnan qarızǵa :amount',
 
     // Modal
     'edit_title' => 'Jazılıwdı ózgertiw',
@@ -19,6 +27,7 @@ return [
     'debt_hint' => 'Eger klient házir tólemese',
     'debt_client_required' => 'Qarız bolsa klient májbúriy',
     'add_service' => 'Xızmet qosıw',
+    'remove_service' => 'Xızmetti alıp taslaw',
     'select_service' => 'Xızmetti saylań...',
     'duplicate' => 'qaytalanıw',
     'no_services_hint' => 'Xızmet joq — «Xızmet qosıw» túymesin basıń',

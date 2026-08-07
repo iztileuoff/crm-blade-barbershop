@@ -2,6 +2,7 @@
 
 return [
     'title' => 'Klientler',
+    'page_title' => 'Klientler — Blade Barbershop',
     'subtitle' => 'Klientler bazası hám keliwler tariyxı',
     'total_label' => 'Jámi',
     'search_placeholder' => 'At yamasa telefon boyınsha izlew...',

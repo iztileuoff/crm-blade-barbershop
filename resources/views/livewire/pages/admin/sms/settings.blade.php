@@ -84,6 +84,7 @@ class extends Component
 }; ?>
 
 <div class="animate-fade-in-up">
+    <x-slot:title>{{ __('sms.settings_title').' — Blade Barbershop' }}</x-slot:title>
     <div class="mb-8">
         <h1 class="font-display text-4xl font-semibold uppercase tracking-tight text-content">{{ __('sms.settings_title') }}</h1>
         <p class="mt-1 text-sm text-content/40">{{ __('sms.settings_subtitle') }}</p>
@@ -115,7 +116,7 @@ class extends Component
                 <span class="font-mono text-sm text-content">{{ $from ?: '—' }}</span>
             </div>
             <div class="flex items-center justify-between px-6 py-4">
-                <span class="text-sm text-content/50">API endpoint</span>
+                <span class="text-sm text-content/50">{{ __('sms.api_endpoint') }}</span>
                 <span class="font-mono text-sm text-content/60">{{ $baseUrl ?: '—' }}</span>
             </div>
             @if ($checked)
@@ -156,7 +157,7 @@ class extends Component
                     <p class="text-sm font-medium text-content">{{ __('sms.locale_label') }}</p>
                     <p class="mt-0.5 text-xs text-content/40">{{ __('sms.locale_hint') }}</p>
                 </div>
-                <select wire:model.live="smsLocale"
+                <select wire:model.live="smsLocale" aria-label="{{ __('sms.locale_label') }}"
                         class="shrink-0 rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-2.5 text-sm text-content outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20 dark:[color-scheme:dark]">
                     @foreach($this->locales() as $value => $label)
                         <option value="{{ $value }}">{{ $label }}</option>
@@ -165,22 +166,22 @@ class extends Component
             </div>
             <div class="flex items-center justify-between gap-4 px-6 py-4">
                 <div>
-                    <p class="text-sm font-medium text-content">{{ __('sms.toggle_reminder_label') }}</p>
+                    <p id="reminders-toggle-label" class="text-sm font-medium text-content">{{ __('sms.toggle_reminder_label') }}</p>
                     <p class="mt-0.5 text-xs text-content/40">{{ __('sms.toggle_reminder_hint') }}</p>
                 </div>
                 <label class="relative inline-flex shrink-0 cursor-pointer items-center">
-                    <input type="checkbox" wire:model.live="remindersEnabled" class="peer sr-only">
-                    <div class="h-6 w-11 rounded-full bg-content/10 transition-colors peer-checked:bg-brass after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-content after:transition-all peer-checked:after:translate-x-full"></div>
+                    <input type="checkbox" wire:model.live="remindersEnabled" aria-labelledby="reminders-toggle-label" class="peer sr-only">
+                    <div class="h-6 w-11 rounded-full bg-content/10 transition-colors peer-checked:bg-brass peer-focus-visible:ring-2 peer-focus-visible:ring-brass/40 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-surface after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-content after:transition-all peer-checked:after:translate-x-full"></div>
                 </label>
             </div>
             <div class="flex items-center justify-between gap-4 px-6 py-4">
                 <div>
-                    <p class="text-sm font-medium text-content">{{ __('sms.toggle_retention_label') }}</p>
+                    <p id="retention-toggle-label" class="text-sm font-medium text-content">{{ __('sms.toggle_retention_label') }}</p>
                     <p class="mt-0.5 text-xs text-content/40">{{ __('sms.toggle_retention_hint') }}</p>
                 </div>
                 <label class="relative inline-flex shrink-0 cursor-pointer items-center">
-                    <input type="checkbox" wire:model.live="retentionEnabled" class="peer sr-only">
-                    <div class="h-6 w-11 rounded-full bg-content/10 transition-colors peer-checked:bg-brass after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-content after:transition-all peer-checked:after:translate-x-full"></div>
+                    <input type="checkbox" wire:model.live="retentionEnabled" aria-labelledby="retention-toggle-label" class="peer sr-only">
+                    <div class="h-6 w-11 rounded-full bg-content/10 transition-colors peer-checked:bg-brass peer-focus-visible:ring-2 peer-focus-visible:ring-brass/40 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-surface after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-content after:transition-all peer-checked:after:translate-x-full"></div>
                 </label>
             </div>
         </div>

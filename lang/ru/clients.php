@@ -2,6 +2,7 @@
 
 return [
     'title' => 'Клиенты',
+    'page_title' => 'Клиенты — Blade Barbershop',
     'subtitle' => 'База клиентов и история посещений',
     'total_label' => 'Всего',
     'search_placeholder' => 'Поиск по имени или телефону...',

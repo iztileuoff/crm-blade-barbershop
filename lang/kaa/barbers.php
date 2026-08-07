@@ -2,6 +2,7 @@
 
 return [
     'title' => 'Barberler',
+    'page_title' => 'Barberler — Blade Barbershop',
     'subtitle' => 'Jámáát hám jumıs grafigin basqarıw',
     'add' => 'Barber qosıw',
     'edit_title' => 'Barberdi ózgertiw',

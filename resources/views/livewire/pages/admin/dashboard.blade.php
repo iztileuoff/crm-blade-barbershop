@@ -713,6 +713,8 @@ class extends Component
     }
 }; ?>
 
+<x-slot:title>{{ __('dashboard.page_title') }}</x-slot:title>
+
 <div class="animate-fade-in-up">
     {{-- Header --}}
     <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
@@ -731,9 +733,11 @@ class extends Component
             {{-- Tab toggle --}}
             <div class="flex items-center rounded-xl border border-content/10 bg-content/[0.04] p-1">
                 <button
+                    type="button"
                     wire:click="switchTab('day')"
+                    role="tab" aria-selected="{{ $activeTab === 'day' ? 'true' : 'false' }}"
                     @class([
-                        'rounded-lg px-4 py-1.5 text-xs font-bold transition-all',
+                        'rounded-lg px-4 py-1.5 text-xs font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass/40',
                         'bg-brass text-on-brass shadow' => $activeTab === 'day',
                         'text-content/40 hover:text-content/70' => $activeTab !== 'day',
                     ])
@@ -741,9 +745,11 @@ class extends Component
                     {{ __('dashboard.tab_day') }}
                 </button>
                 <button
+                    type="button"
                     wire:click="switchTab('month')"
+                    role="tab" aria-selected="{{ $activeTab === 'month' ? 'true' : 'false' }}"
                     @class([
-                        'rounded-lg px-4 py-1.5 text-xs font-bold transition-all',
+                        'rounded-lg px-4 py-1.5 text-xs font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass/40',
                         'bg-brass text-on-brass shadow' => $activeTab === 'month',
                         'text-content/40 hover:text-content/70' => $activeTab !== 'month',
                     ])
@@ -755,8 +761,10 @@ class extends Component
             {{-- Date / Month picker with step controls, как в ленте записей --}}
             <div class="flex items-center gap-2">
                 <button
+                    type="button"
                     wire:click="previousPeriod"
-                    class="flex h-10 w-10 items-center justify-center rounded-xl border border-content/[0.06] text-content/40 transition hover:border-content/10 hover:text-content"
+                    title="{{ __('dashboard.previous_period') }}" aria-label="{{ __('dashboard.previous_period') }}"
+                    class="flex h-10 w-10 items-center justify-center rounded-xl border border-content/[0.06] text-content/40 transition hover:border-content/10 hover:text-content focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass/40"
                 >
                     <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" /></svg>
                 </button>
@@ -765,28 +773,33 @@ class extends Component
                     <input
                         type="date"
                         wire:model.live="date"
+                        aria-label="{{ __('common.date') }}"
                         class="rounded-xl border border-content/10 bg-content/5 px-4 py-2 text-sm text-content shadow-sm transition-colors focus:border-brass focus:outline-none focus:ring-1 focus:ring-brass dark:[color-scheme:dark]"
                     >
                 @else
                     <input
                         type="month"
                         wire:model.live="month"
+                        aria-label="{{ __('common.date') }}"
                         class="rounded-xl border border-content/10 bg-content/5 px-4 py-2 text-sm text-content shadow-sm transition-colors focus:border-brass focus:outline-none focus:ring-1 focus:ring-brass dark:[color-scheme:dark]"
                     >
                 @endif
 
                 <button
+                    type="button"
                     wire:click="nextPeriod"
                     @disabled($this->isLatestPeriod())
-                    class="flex h-10 w-10 items-center justify-center rounded-xl border border-content/[0.06] text-content/40 transition hover:border-content/10 hover:text-content disabled:cursor-not-allowed disabled:opacity-30"
+                    title="{{ __('dashboard.next_period') }}" aria-label="{{ __('dashboard.next_period') }}"
+                    class="flex h-10 w-10 items-center justify-center rounded-xl border border-content/[0.06] text-content/40 transition hover:border-content/10 hover:text-content disabled:cursor-not-allowed disabled:opacity-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass/40"
                 >
                     <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" /></svg>
                 </button>
 
                 <button
+                    type="button"
                     wire:click="goToToday"
                     @class([
-                        'rounded-xl px-3 py-2 text-xs font-bold transition',
+                        'rounded-xl px-3 py-2 text-xs font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass/40',
                         'bg-brass text-on-brass' => $this->isLatestPeriod(),
                         'border border-content/10 bg-content/5 text-content/60 hover:border-brass/30 hover:text-content' => ! $this->isLatestPeriod(),
                     ])
@@ -911,8 +924,8 @@ class extends Component
             wire:target="date,month,switchTab,previousPeriod,nextPeriod,goToToday"
             class="mb-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4"
         >
-            {{-- Total appointments --}}
-            <div class="overflow-hidden rounded-2xl border border-content/[0.06] bg-gradient-to-br from-content/[0.04] to-content/[0.01] p-6 shadow-xl backdrop-blur-md">
+            {{-- Total appointments — ссылка на записи этого же дня (#date=). --}}
+            <a href="{{ route('admin.appointments', ['date' => $date]) }}" class="block overflow-hidden rounded-2xl border border-content/[0.06] bg-gradient-to-br from-content/[0.04] to-content/[0.01] p-6 shadow-xl backdrop-blur-md transition hover:border-brass/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass/40">
                 <div class="flex items-center justify-between">
                     <span class="text-xs font-bold uppercase tracking-widest text-content/40">{{ __('dashboard.appointments_day') }}</span>
                     <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-brass/10 text-brass-ink">
@@ -921,10 +934,10 @@ class extends Component
                 </div>
                 <div class="mt-4 font-display text-4xl font-bold tabular-nums text-content">{{ $this->totalAppointments }}</div>
                 <div class="mt-1 text-xs text-content-muted">{{ __('dashboard.all_day_appointments') }}</div>
-            </div>
+            </a>
 
             {{-- Pending --}}
-            <div class="overflow-hidden rounded-2xl border border-brass/20 bg-gradient-to-br from-brass/10 to-brass/[0.02] p-6 shadow-xl backdrop-blur-md">
+            <a href="{{ route('admin.appointments', ['date' => $date]) }}" class="block overflow-hidden rounded-2xl border border-brass/20 bg-gradient-to-br from-brass/10 to-brass/[0.02] p-6 shadow-xl backdrop-blur-md transition hover:border-brass/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass/40">
                 <div class="flex items-center justify-between">
                     <span class="text-xs font-bold uppercase tracking-widest text-brass-ink/70">{{ __('dashboard.pending') }}</span>
                     <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-brass/15 text-brass-ink">
@@ -933,10 +946,10 @@ class extends Component
                 </div>
                 <div class="mt-4 font-display text-4xl font-bold tabular-nums text-content">{{ $this->pendingCount }}</div>
                 <div class="mt-1 text-xs text-brass-ink/60">{{ __('dashboard.need_confirmation') }}</div>
-            </div>
+            </a>
 
             {{-- Completed --}}
-            <div class="overflow-hidden rounded-2xl border border-content/[0.06] bg-gradient-to-br from-content/[0.04] to-content/[0.01] p-6 shadow-xl backdrop-blur-md">
+            <a href="{{ route('admin.appointments', ['date' => $date]) }}" class="block overflow-hidden rounded-2xl border border-content/[0.06] bg-gradient-to-br from-content/[0.04] to-content/[0.01] p-6 shadow-xl backdrop-blur-md transition hover:border-brass/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass/40">
                 <div class="flex items-center justify-between">
                     <span class="text-xs font-bold uppercase tracking-widest text-content/40">{{ __('dashboard.completed') }}</span>
                     <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-info/10 text-info">
@@ -945,10 +958,10 @@ class extends Component
                 </div>
                 <div class="mt-4 font-display text-4xl font-bold tabular-nums text-content">{{ $this->completedCount }}</div>
                 <div class="mt-1 text-xs text-content-muted">{{ __('dashboard.closed_visits') }}</div>
-            </div>
+            </a>
 
             {{-- Cancelled --}}
-            <div class="overflow-hidden rounded-2xl border border-danger/20 bg-gradient-to-br from-danger/10 to-danger/[0.02] p-6 shadow-xl backdrop-blur-md">
+            <a href="{{ route('admin.appointments', ['date' => $date]) }}" class="block overflow-hidden rounded-2xl border border-danger/20 bg-gradient-to-br from-danger/10 to-danger/[0.02] p-6 shadow-xl backdrop-blur-md transition hover:border-danger/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass/40">
                 <div class="flex items-center justify-between">
                     <span class="text-xs font-bold uppercase tracking-widest text-danger/70">{{ __('dashboard.cancelled') }}</span>
                     <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-danger/15 text-danger">
@@ -957,7 +970,7 @@ class extends Component
                 </div>
                 <div class="mt-4 font-display text-4xl font-bold tabular-nums text-content">{{ $this->cancelledCount }}</div>
                 <div class="mt-1 text-xs text-danger/60">{{ __('dashboard.cancelled_appointments') }}</div>
-            </div>
+            </a>
         </div>
 
         {{-- Product sales summary --}}
@@ -988,7 +1001,7 @@ class extends Component
                         </thead>
                         <tbody class="divide-y divide-content/[0.04]">
                             @foreach ($this->productOrders as $order)
-                                <tr class="transition-colors hover:bg-content/[0.02]">
+                                <tr wire:key="dashboard-order-{{ $order->id }}" class="transition-colors hover:bg-content/[0.02]">
                                     <td class="whitespace-nowrap px-6 py-4 font-bold text-content">
                                         {{ $order->created_at->format('H:i') }}
                                     </td>
@@ -1049,7 +1062,7 @@ class extends Component
                     </thead>
                     <tbody class="divide-y divide-content/[0.04]">
                         @forelse ($this->barberStats as $stat)
-                            <tr class="group transition-colors hover:bg-content/[0.02]">
+                            <tr wire:key="daily-barber-stat-{{ $stat->id }}" class="group transition-colors hover:bg-content/[0.02]">
                                 <td class="sticky left-0 z-10 bg-surface-sunken px-6 py-4 transition-colors group-hover:bg-surface">
                                     <div class="flex items-center gap-3">
                                         @if ($stat->photoUrl)
@@ -1413,7 +1426,10 @@ class extends Component
                     $barW = max(4, $xStep - 4);
                 @endphp
 
-                <svg viewBox="0 0 {{ $svgW }} {{ $svgH + 28 }}" class="w-full" xmlns="http://www.w3.org/2000/svg">
+                {{-- role="img" + aria-label: без этого график для скринридера — пустой
+                     набор прямоугольников, а на планшете hover для <title> недоступен вовсе. --}}
+                <svg viewBox="0 0 {{ $svgW }} {{ $svgH + 28 }}" class="w-full" xmlns="http://www.w3.org/2000/svg"
+                     role="img" aria-label="{{ __('dashboard.chart_aria_label', ['month' => $this->monthString, 'total' => $this->formatSum($this->monthlyTotalRevenue)]) }}">
                     {{-- Horizontal grid lines --}}
                     @foreach ([0.25, 0.5, 0.75, 1.0] as $ratio)
                         <line
@@ -1474,6 +1490,20 @@ class extends Component
                             font-family="sans-serif"
                         >{{ $d['day'] }}</text>
                     @endforeach
+
+                    {{-- Значения по оси: рисуются последними, поверх столбцов, со
+                         "светлым нимбом" через paint-order/stroke — иначе цифра теряется
+                         на пересечении с высоким столбцом. До сих пор сумму можно было
+                         узнать только наведением <title>, а на планшете hover нет вовсе. --}}
+                    @foreach ([0.25, 0.5, 0.75, 1.0] as $ratio)
+                        <text
+                            x="4" y="{{ round($svgH - $ratio * $svgH - 3, 1) }}"
+                            font-size="9" font-weight="700"
+                            fill="var(--content-muted)"
+                            paint-order="stroke" stroke="var(--surface)" stroke-width="3" stroke-linejoin="round"
+                            font-family="sans-serif"
+                        >{{ $this->formatSum((int) round($maxVal * $ratio)) }}</text>
+                    @endforeach
                 </svg>
 
                 <div class="mt-2 text-right text-[10px] text-content-muted">
@@ -1509,7 +1539,7 @@ class extends Component
                     </thead>
                     <tbody class="divide-y divide-content/[0.04]">
                         @forelse ($this->monthlyBarberStats as $stat)
-                            <tr class="group transition-colors hover:bg-content/[0.02]">
+                            <tr wire:key="monthly-barber-stat-{{ $stat->id }}" class="group transition-colors hover:bg-content/[0.02]">
                                 <td class="sticky left-0 z-10 bg-surface-sunken px-6 py-4 transition-colors group-hover:bg-surface">
                                     <div class="flex items-center gap-3">
                                         @if ($stat->photoUrl)

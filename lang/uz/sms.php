@@ -34,6 +34,8 @@ return [
     'errors_label' => 'Xatolar',
     'all_types' => 'Barcha turlar',
     'all_statuses' => 'Barcha holatlar',
+    'group_send_status' => 'Yuborish holati',
+    'group_delivery_status' => 'Yetkazish holati',
     'sent' => 'Yuborilgan',
     'context_reminder' => 'Eslatma',
     'context_retention' => 'Ushlab qolish',
@@ -71,4 +73,5 @@ return [
     'field_retention_hint' => 'Anchadan beri kelmagan mijozga yuboriladi.',
     'field_cancelled_label' => 'Yozuv bekor qilindi',
     'field_cancelled_hint' => 'Telegramsiz mijozga salon yozuvni bekor qilganda yuboriladi.',
+    'chars' => 'belgi',
 ];

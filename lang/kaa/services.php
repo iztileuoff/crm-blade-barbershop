@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'page_title' => 'Xızmetler — Blade Barbershop',
     'subtitle' => 'Xızmetler dizimin basqarıw',
     'add' => 'Xızmet qosıw',
     'edit_title' => 'Xızmetti ózgertiw',
@@ -10,6 +11,12 @@ return [
     'name_uz' => 'Atı (ózbek)',
     'name_kaa' => 'Atı (qaraqalpaq)',
     'icon' => 'Belgi',
+    'icon_scissors' => 'Qayshı',
+    'icon_sparkles' => 'Jaltıraqlar',
+    'icon_paint_brush' => 'Boyaw shotkası',
+    'icon_face_smile' => 'Tabassum',
+    'icon_swatch' => 'Palitra',
+    'icon_beaker' => 'Kolba',
     'duration' => 'Dawamlılıǵı (min)',
     'duration_short' => 'Dawamlılıǵı',
     'active' => 'Aktiv',
