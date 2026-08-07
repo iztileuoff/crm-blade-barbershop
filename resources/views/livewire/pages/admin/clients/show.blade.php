@@ -449,23 +449,31 @@ class extends Component
 
     {{-- History tabs. Вкладки серверные: скрытая история не должна квepиться --}}
     <div class="overflow-hidden rounded-2xl border border-content/[0.06] bg-content/[0.03] shadow-xl backdrop-blur-md">
-        <div class="flex flex-wrap gap-1 border-b border-content/[0.06] bg-content/[0.03] p-2" role="tablist">
+        <x-tab-list :label="__('clients.tabs_label')" class="flex flex-wrap gap-1 border-b border-content/[0.06] bg-content/[0.03] p-2">
             @foreach ([
                 'appointments' => __('clients.tab_appointments').' ('.$this->appointmentsCount.')',
                 'orders' => __('clients.tab_orders').' ('.$this->ordersCount.')',
                 'sms' => __('clients.tab_sms').' ('.$this->smsCount.')',
             ] as $key => $label)
-                <button type="button" wire:click="showTab('{{ $key }}')" wire:key="tab-{{ $key }}"
-                        role="tab" aria-selected="{{ $tab === $key ? 'true' : 'false' }}"
-                        @class([
-                            'rounded-lg px-4 py-2 text-sm font-bold transition focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brass/40',
-                            'bg-brass text-on-brass' => $tab === $key,
-                            'text-content/50 hover:bg-content/[0.06] hover:text-content' => $tab !== $key,
-                        ])>
+                <x-tab-button
+                    :panel="'client-history-'.$key"
+                    :active="$tab === $key"
+                    wire:click="showTab('{{ $key }}')"
+                    wire:key="tab-{{ $key }}"
+                    @class([
+                        'rounded-lg px-4 py-2 text-sm font-bold transition focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brass/40',
+                        'bg-brass text-on-brass' => $tab === $key,
+                        'text-content/50 hover:bg-content/[0.06] hover:text-content' => $tab !== $key,
+                    ])
+                >
                     {{ $label }}
-                </button>
+                </x-tab-button>
             @endforeach
-        </div>
+        </x-tab-list>
+
+        {{-- Панель одна: вкладки серверные, скрытая история не квepится, и в
+             разметке живёт только выбранная. --}}
+        <div id="client-history-{{ $tab }}" role="tabpanel" aria-labelledby="client-history-{{ $tab }}-tab" tabindex="0" class="focus-visible:outline-none">
 
         {{-- Appointments --}}
         @if ($tab === 'appointments')
@@ -576,5 +584,6 @@ class extends Component
                 </button>
             </div>
         @endif
+        </div>
     </div>
 </div>

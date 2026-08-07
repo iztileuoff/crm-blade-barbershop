@@ -35,6 +35,7 @@ return [
     'notes_title' => 'Klient haqqında belgiler',
     'notes_placeholder' => 'Tańlawlar, ózgeshelikler, kelisimler…',
 
+    'tabs_label' => 'Klient tariyxı',
     'tab_appointments' => 'Jazılıwlar',
     'tab_orders' => 'Satıp alıwlar',
     'tab_sms' => 'SMS',

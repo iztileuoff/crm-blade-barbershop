@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'admin_panel' => 'Admin Panel',
+    'admin_panel' => 'Админ-панель',
     'open_menu' => 'Открыть меню',
     'close_menu' => 'Закрыть меню',
 

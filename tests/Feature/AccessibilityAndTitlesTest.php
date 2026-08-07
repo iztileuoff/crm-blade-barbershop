@@ -11,6 +11,7 @@ use App\Models\Service;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
 
@@ -223,4 +224,141 @@ it('gives every icon-only button on the main admin pages an accessible name', fu
     }
 
     expect($offenders)->toBe([], "Icon-only <button> without aria-label/title:\n".implode("\n", $offenders));
+});
+
+/*
+|--------------------------------------------------------------------------
+| Полный ARIA-паттерн табов (#77)
+|--------------------------------------------------------------------------
+*/
+
+/**
+ * Разметка набора вкладок на странице: сам tablist и обе/все его вкладки.
+ */
+function tabMarkupFor(string $html): string
+{
+    preg_match('#<div[^>]*role="tablist".*?</div>#s', $html, $matches);
+
+    expect($matches)->not->toBeEmpty('No role="tablist" found on the page.');
+
+    return $matches[0];
+}
+
+it('gives the dashboard tabs a named tablist, roving tabindex and arrow keys', function () {
+    $admin = User::factory()->create(['role' => Role::ADMIN]);
+
+    $html = $this->actingAs($admin)->get(route('admin.dashboard'))->assertOk()->getContent();
+
+    $tabs = tabMarkupFor($html);
+
+    expect($tabs)
+        ->toContain('aria-label="'.__('dashboard.tabs_label').'"')
+        // Roving tabindex: Tab заводит в набор один раз, дальше — стрелки.
+        ->toContain('tabindex="0"')
+        ->toContain('tabindex="-1"')
+        ->toContain('aria-selected="true"')
+        ->toContain('aria-selected="false"')
+        ->toContain('x-on:keydown.right.prevent')
+        ->toContain('x-on:keydown.left.prevent')
+        ->toContain('x-on:keydown.home.prevent')
+        ->toContain('x-on:keydown.end.prevent');
+});
+
+it('points the active dashboard tab at a panel that actually exists', function () {
+    $admin = User::factory()->create(['role' => Role::ADMIN]);
+
+    $html = $this->actingAs($admin)->get(route('admin.dashboard'))->assertOk()->getContent();
+
+    expect($html)
+        ->toContain('id="dashboard-day-tab"')
+        ->toContain('aria-controls="dashboard-day"')
+        ->toContain('id="dashboard-day" role="tabpanel" aria-labelledby="dashboard-day-tab"')
+        // Неактивная вкладка ни на что не ссылается: панель в разметке одна.
+        ->not->toContain('aria-controls="dashboard-month"');
+});
+
+it('gives the client card tabs the same treatment', function () {
+    $admin = User::factory()->create(['role' => Role::ADMIN]);
+    $client = Client::factory()->create();
+
+    $html = $this->actingAs($admin)->get(route('admin.clients.show', $client))->assertOk()->getContent();
+
+    expect(tabMarkupFor($html))
+        ->toContain('aria-label="'.__('clients.tabs_label').'"')
+        ->toContain('tabindex="0"')
+        ->toContain('tabindex="-1"');
+
+    expect($html)
+        ->toContain('id="client-history-appointments-tab"')
+        ->toContain('aria-controls="client-history-appointments"')
+        ->toContain('id="client-history-appointments" role="tabpanel" aria-labelledby="client-history-appointments-tab"')
+        ->not->toContain('aria-controls="client-history-sms"');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Столбцы графика читаются пальцем (#77)
+|--------------------------------------------------------------------------
+*/
+
+it('lets a tablet read the exact figures for a day off the chart', function () {
+    // <title> внутри <rect> открывается только по hover, а планшет, на котором
+    // и живёт эта страница, hover'а не знает.
+    $html = Livewire::actingAs(User::factory()->create(['role' => Role::ADMIN]))
+        ->test('pages.admin.dashboard')
+        ->set('activeTab', 'month')
+        ->html();
+
+    expect($html)
+        ->toContain(__('dashboard.chart_tap_hint'))
+        ->toContain('x-on:click="pick(0)"')
+        // Зона попадания — вся колонка: палец не целится в четыре пикселя.
+        ->toContain(':fill-opacity="picked === 0 ? 0.07 : 0"');
+});
+
+it('lets the keyboard walk the chart without adding a tab stop per day', function () {
+    $html = Livewire::actingAs(User::factory()->create(['role' => Role::ADMIN]))
+        ->test('pages.admin.dashboard')
+        ->set('activeTab', 'month')
+        ->html();
+
+    expect($html)
+        ->toContain('aria-label="'.__('dashboard.chart_keyboard_label').'"')
+        ->toContain('aria-live="polite"')
+        ->toContain('x-on:keydown.escape="picked = null"');
+
+    // Зона попадания на каждый день месяца — но таб-стоп на график один.
+    expect(substr_count($html, 'x-on:click="pick('))->toBeGreaterThan(20)
+        ->and(substr_count($html, 'aria-label="'.__('dashboard.chart_keyboard_label').'"'))->toBe(1);
+});
+
+/*
+|--------------------------------------------------------------------------
+| Мелочи формы продаж и i18n (#77)
+|--------------------------------------------------------------------------
+*/
+
+it('debounces the split-payment amounts and shows progress while an order is deleted', function () {
+    // Поля нал/карта появляются только при раздельной оплате, и только в
+    // открытой модалке.
+    Order::create(['total_price' => 50000, 'payment_type' => 'cash']);
+
+    $html = Livewire::actingAs(User::factory()->create(['role' => Role::ADMIN]))
+        ->test('pages.admin.orders')
+        ->call('openCreate')
+        ->set('payment_type', 'both')
+        ->html();
+
+    expect($html)
+        ->toContain('wire:model.live.debounce.500ms="cash_amount"')
+        ->toContain('wire:model.live.debounce.500ms="card_amount"')
+        ->toContain('wire:loading.attr="disabled" wire:target="deleteOrder(');
+});
+
+it('translates the admin panel label in every locale', function () {
+    foreach (['ru', 'uz', 'kaa'] as $locale) {
+        app()->setLocale($locale);
+
+        expect(__('nav.admin_panel'))->not->toBe('Admin Panel');
+    }
 });

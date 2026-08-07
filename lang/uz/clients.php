@@ -35,6 +35,7 @@ return [
     'notes_title' => 'Mijoz haqida eslatmalar',
     'notes_placeholder' => 'Afzalliklar, xususiyatlar, kelishuvlar…',
 
+    'tabs_label' => 'Mijoz tarixi',
     'tab_appointments' => 'Yozuvlar',
     'tab_orders' => 'Xaridlar',
     'tab_sms' => 'SMS',

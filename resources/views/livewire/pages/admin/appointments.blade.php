@@ -284,10 +284,29 @@ class extends Component
         return $this->client_id ? Client::find($this->client_id) : null;
     }
 
-    public function selectClient($id, $label)
+    /**
+     * Выбор клиента из выпадашки. Компонент передаёт только id: подпись
+     * строится здесь, из самой записи, — раньше она приезжала с клиента вместе
+     * с id, и текст в поле мог описывать не того, кого выбрали.
+     *
+     * Мастеру справочник клиентов не положен — ему и filteredClients отдаёт
+     * пустую коллекцию; повторяем отсечку здесь, чтобы метод не превратился
+     * в проверку «существует ли такой id».
+     */
+    public function selectClient(int $id): void
     {
-        $this->client_id = $id;
-        $this->clientSearch = $label;
+        if ($this->sessionBarberId() !== null) {
+            return;
+        }
+
+        $client = Client::find($id);
+
+        if ($client === null) {
+            return;
+        }
+
+        $this->client_id = $client->id;
+        $this->clientSearch = $client->phone ? "{$client->name} ({$client->phone})" : $client->name;
     }
 
     /**
@@ -999,17 +1018,19 @@ class extends Component
                     <div class="flex-1 max-h-[70vh] overflow-y-auto px-6 py-6">
                         <div class="grid gap-6 sm:grid-cols-2">
                             <div>
-                                <label class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('common.client') }}</label>
                                 <x-search-select
                                     :options="$this->filteredClients"
                                     searchModel="clientSearch"
+                                    inputId="appointment-client"
                                     onSelect="selectClient"
                                     labelField="name"
                                     subLabelField="phone"
                                     placeholder="{{ __('appointments.search_client') }}"
                                     :selectedLabel="$this->selectedClient?->name"
                                     onClear="clearClient"
-                                />
+                                >
+                                    <x-slot:label>{{ __('common.client') }}</x-slot:label>
+                                </x-search-select>
                                 @error('client_id') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                             </div>
                             <div>

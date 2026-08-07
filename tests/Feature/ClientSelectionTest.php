@@ -24,7 +24,7 @@ it('drops the confirmed client when the search text is edited', function (string
 
     Livewire::actingAs(selectionAdmin())
         ->test($component)
-        ->call('selectClient', $ali->id, 'Али')
+        ->call('selectClient', $ali->id)
         ->assertSet('client_id', $ali->id)
         // Оператор стёр «Али» и набрал «Бек» — привязка к Али должна умереть
         // вместе с текстом, из которого она взялась.
@@ -37,7 +37,7 @@ it('clears the client through the chip', function (string $component) {
 
     Livewire::actingAs(selectionAdmin())
         ->test($component)
-        ->call('selectClient', $ali->id, 'Али')
+        ->call('selectClient', $ali->id)
         ->assertSet('client_id', $ali->id)
         ->call('clearClient')
         ->assertSet('client_id', null)
@@ -53,7 +53,7 @@ it('shows the chip only once a client is really attached', function (string $com
         ->test($component)
         ->call('openCreate')
         ->assertDontSeeHtml('wire:click="clearClient"')
-        ->call('selectClient', $ali->id, 'Али Валиев')
+        ->call('selectClient', $ali->id)
         ->assertSeeHtml('wire:click="clearClient"')
         ->set('clientSearch', 'Бек')
         ->assertDontSeeHtml('wire:click="clearClient"');
@@ -93,3 +93,50 @@ it('never confirms a selection while the list is closed', function () {
 
     expect($markup)->toContain('if (open && highlighted >= 0)');
 });
+
+/*
+|--------------------------------------------------------------------------
+| Контракт onSelect(id) и подпись поля (#77)
+|--------------------------------------------------------------------------
+*/
+
+it('builds the search text from the record, not from what the browser sent', function (string $component) {
+    // Компонент передаёт только id: подпись раньше приезжала с клиента вместе
+    // с ним, и текст в поле мог описывать не того, кого выбрали.
+    $ali = Client::factory()->create(['name' => 'Али Валиев', 'phone' => '998901112233']);
+
+    Livewire::actingAs(selectionAdmin())
+        ->test($component)
+        ->call('selectClient', $ali->id)
+        ->assertSet('client_id', $ali->id)
+        ->assertSet('clientSearch', 'Али Валиев (998901112233)');
+})->with('client pickers');
+
+it('ignores a client id that does not exist', function (string $component) {
+    Livewire::actingAs(selectionAdmin())
+        ->test($component)
+        ->call('selectClient', 999999)
+        ->assertSet('client_id', null)
+        ->assertSet('clientSearch', '');
+})->with('client pickers');
+
+it('passes only the id to the picker, never a label', function () {
+    $markup = file_get_contents(resource_path('views/components/search-select.blade.php'));
+
+    expect($markup)->toContain('wire:click="{{ $onSelect }}({{ $option->id }})"');
+});
+
+it('ties its own label to its own input', function (string $component) {
+    Client::factory()->create();
+
+    $inputId = $component === 'pages.admin.appointments' ? 'appointment-client' : 'order-client';
+
+    Livewire::actingAs(selectionAdmin())
+        ->test($component)
+        ->call('openCreate')
+        ->assertSeeHtml('for="'.$inputId.'"')
+        ->assertSeeHtml('id="'.$inputId.'"')
+        // Видимая подпись есть — aria-label перекрыл бы её и разошёлся с ней.
+        ->assertDontSeeHtml('aria-label="'.__('common.search').'"')
+        ->assertSeeHtml('aria-controls="'.$inputId.'-list"');
+})->with('client pickers');

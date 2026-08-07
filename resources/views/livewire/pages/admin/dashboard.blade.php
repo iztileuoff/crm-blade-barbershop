@@ -751,32 +751,23 @@ class extends Component
 
         <div class="flex flex-wrap items-center gap-3">
             {{-- Tab toggle --}}
-            <div class="flex items-center rounded-xl border border-content/10 bg-content/[0.04] p-1">
-                <button
-                    type="button"
-                    wire:click="switchTab('day')"
-                    role="tab" aria-selected="{{ $activeTab === 'day' ? 'true' : 'false' }}"
-                    @class([
-                        'rounded-lg px-4 py-1.5 text-xs font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass/40',
-                        'bg-brass text-on-brass shadow' => $activeTab === 'day',
-                        'text-content/40 hover:text-content/70' => $activeTab !== 'day',
-                    ])
-                >
-                    {{ __('dashboard.tab_day') }}
-                </button>
-                <button
-                    type="button"
-                    wire:click="switchTab('month')"
-                    role="tab" aria-selected="{{ $activeTab === 'month' ? 'true' : 'false' }}"
-                    @class([
-                        'rounded-lg px-4 py-1.5 text-xs font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass/40',
-                        'bg-brass text-on-brass shadow' => $activeTab === 'month',
-                        'text-content/40 hover:text-content/70' => $activeTab !== 'month',
-                    ])
-                >
-                    {{ __('dashboard.tab_month') }}
-                </button>
-            </div>
+            <x-tab-list :label="__('dashboard.tabs_label')" class="flex items-center rounded-xl border border-content/10 bg-content/[0.04] p-1">
+                @foreach (['day' => __('dashboard.tab_day'), 'month' => __('dashboard.tab_month')] as $key => $label)
+                    <x-tab-button
+                        :panel="'dashboard-'.$key"
+                        :active="$activeTab === $key"
+                        wire:click="switchTab('{{ $key }}')"
+                        wire:key="dashboard-tab-{{ $key }}"
+                        @class([
+                            'rounded-lg px-4 py-1.5 text-xs font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass/40',
+                            'bg-brass text-on-brass shadow' => $activeTab === $key,
+                            'text-content/40 hover:text-content/70' => $activeTab !== $key,
+                        ])
+                    >
+                        {{ $label }}
+                    </x-tab-button>
+                @endforeach
+            </x-tab-list>
 
             {{-- Date / Month picker with step controls, как в ленте записей --}}
             <div class="flex items-center gap-2">
@@ -841,6 +832,10 @@ class extends Component
             </div>
         </div>
     </div>
+
+{{-- Панель одна на обе вкладки: они серверные, в разметке живёт только
+     выбранная — поэтому id и aria-labelledby едут за $activeTab. --}}
+<div id="dashboard-{{ $activeTab }}" role="tabpanel" aria-labelledby="dashboard-{{ $activeTab }}-tab" tabindex="0" class="focus-visible:outline-none">
 
     {{-- ═══════════════════════════════════════════════════════════════════ --}}
     {{-- DAY TAB                                                            --}}
@@ -1444,7 +1439,37 @@ class extends Component
                     $svgW = 700;
                     $xStep = $numDays > 0 ? $svgW / $numDays : $svgW;
                     $barW = max(4, $xStep - 4);
+
+                    /** Готовые подписи для панели под графиком — считать их в Alpine нечем. */
+                    $chartReadout = collect($chartData)->map(fn (array $day) => [
+                        'date' => $day['date'],
+                        'service' => $this->formatSum($day['service']),
+                        'product' => $this->formatSum($day['product']),
+                        'total' => $this->formatSum($day['total']),
+                    ])->values()->all();
                 @endphp
+
+                {{-- Точное значение по тапу: <title> открывается только по hover, а
+                     планшет, на котором и живёт эта страница, hover'а не знает.
+                     Статические подписи на оси дают порядок величины, панель под
+                     графиком — сумму конкретного дня. Клавиатура ходит стрелками:
+                     31 таб-стоп посреди страницы был бы хуже, чем один. --}}
+                <div x-data="{
+                        days: @js($chartReadout),
+                        picked: null,
+                        pick(index) {
+                            if (index < 0 || index >= this.days.length) { return }
+                            this.picked = index
+                        },
+                        step(direction) { this.pick(this.picked === null ? 0 : this.picked + direction) },
+                     }"
+                     tabindex="0"
+                     role="group"
+                     aria-label="{{ __('dashboard.chart_keyboard_label') }}"
+                     x-on:keydown.right.prevent="step(1)"
+                     x-on:keydown.left.prevent="step(-1)"
+                     x-on:keydown.escape="picked = null"
+                     class="rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass/40">
 
                 {{-- role="img" + aria-label: без этого график для скринридера — пустой
                      набор прямоугольников, а на планшете hover для <title> недоступен вовсе. --}}
@@ -1524,7 +1549,34 @@ class extends Component
                             font-family="sans-serif"
                         >{{ $this->formatSum((int) round($maxVal * $ratio)) }}</text>
                     @endforeach
+
+                    {{-- Зоны попадания — последними, поверх всего: палец не целится
+                         в четырёхпиксельный столбец, ему нужна вся колонка. --}}
+                    @foreach ($chartData as $i => $d)
+                        <rect
+                            x="{{ round($i * $xStep, 1) }}" y="0"
+                            width="{{ round($xStep, 1) }}" height="{{ $svgH }}"
+                            fill="var(--content)"
+                            :fill-opacity="picked === {{ $i }} ? 0.07 : 0"
+                            class="cursor-pointer"
+                            x-on:click="pick({{ $i }})"
+                        />
+                    @endforeach
                 </svg>
+
+                {{-- aria-live: стрелками по дням значение должно ещё и озвучиваться. --}}
+                <div class="mt-2 min-h-8" aria-live="polite">
+                    <template x-if="picked !== null">
+                        <div class="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border border-content/[0.06] bg-content/[0.03] px-4 py-2 text-xs">
+                            <span class="font-bold text-content" x-text="days[picked].date"></span>
+                            <span class="text-success/80">{{ __('dashboard.services') }}: <span class="font-bold" x-text="days[picked].service"></span></span>
+                            <span class="text-brass-ink/80">{{ __('dashboard.products') }}: <span class="font-bold" x-text="days[picked].product"></span></span>
+                            <span class="text-content/70">{{ __('common.total') }}: <span class="font-bold" x-text="days[picked].total"></span></span>
+                        </div>
+                    </template>
+                    <p x-show="picked === null" class="text-[11px] text-content-muted">{{ __('dashboard.chart_tap_hint') }}</p>
+                </div>
+                </div>
 
                 <div class="mt-2 text-right text-[10px] text-content-muted">
                     {{ __('dashboard.max_per_day') }}: {{ $this->formatSum((int) collect($this->dailyChartData)->max('total')) }}
@@ -1700,4 +1752,5 @@ class extends Component
         </div>
 
     @endif
+</div>
 </div>

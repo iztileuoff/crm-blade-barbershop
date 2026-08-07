@@ -7,10 +7,25 @@
     'placeholder' => null,
     'selectedLabel' => null,
     'onClear' => null,
+    'inputId' => null,
 ])
 
+@php
+    // Пара label/for живёт внутри: input рисует компонент, наружу его id не
+    // отдавался, и подписи над выпадашками висели ни к чему не привязанные —
+    // клик по слову «Клиент» не попадал в поле, а скринридер называл его
+    // плейсхолдером. Подпись приходит слотом, а не строкой: у продаж в ней
+    // ещё и пометка «обязательно/необязательно».
+    $fieldId = $inputId ?? 'search-select-'.\Illuminate\Support\Str::slug($searchModel);
+    $hasVisibleLabel = isset($label);
+@endphp
+
 <div x-data="{ open: false, highlighted: -1 }" @click.outside="open = false" class="relative">
-    <input type="text" x-on:focus="open = true" wire:model.live.debounce.300ms="{{ $searchModel }}"
+    @isset($label)
+        <label for="{{ $fieldId }}" class="mb-1.5 block text-xs font-semibold text-content/50">{{ $label }}</label>
+    @endisset
+
+    <input type="text" id="{{ $fieldId }}" x-on:focus="open = true" wire:model.live.debounce.300ms="{{ $searchModel }}"
         x-on:input="highlighted = -1"
         x-on:keydown.down.prevent="open = true; highlighted = Math.min(highlighted + 1, $refs.searchSelectList.children.length - 1)"
         {{-- Как и стрелка вниз, сначала открывает список: иначе одно нажатие ↑
@@ -22,15 +37,20 @@
         x-on:keydown.escape="open = false; highlighted = -1"
         x-on:keydown.enter.prevent="if (open && highlighted >= 0) { $refs.searchSelectList.children[highlighted]?.click() }"
         placeholder="{{ $placeholder ?? __('common.search').'...' }}"
-        aria-label="{{ $placeholder ?? __('common.search') }}"
-        role="combobox" :aria-expanded="open" aria-autocomplete="list"
+        {{-- aria-label только без видимой подписи: иначе он перекрыл бы её, и
+             озвученное имя поля разошлось бы с написанным. --}}
+        @unless ($hasVisibleLabel) aria-label="{{ $placeholder ?? __('common.search') }}" @endunless
+        role="combobox" :aria-expanded="open" aria-autocomplete="list" aria-controls="{{ $fieldId }}-list"
         class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] px-4 py-3 text-sm text-content placeholder-content/20 outline-none">
 
-    <div x-show="open" x-transition x-ref="searchSelectList" role="listbox"
+    <div x-show="open" x-transition x-ref="searchSelectList" id="{{ $fieldId }}-list" role="listbox"
         class="absolute z-100 mt-2 w-full rounded-xl border border-content/[0.08] bg-surface-raised shadow-xl max-h-60 overflow-y-auto">
         @forelse($options as $option)
+            {{-- Наружу уходит только id: подпись компонент больше не передаёт.
+                 Раньше она приезжала с клиента вместе с id, и текст в поле мог
+                 не соответствовать тому, кого на самом деле выбрали. --}}
             <button type="button" wire:key="opt-{{ $option->id }}"
-                wire:click="{{ $onSelect }}({{ $option->id }}, @js($option->{$labelField}.($subLabelField && $option->{$subLabelField} ? ' ('.$option->{$subLabelField}.')' : '')))"
+                wire:click="{{ $onSelect }}({{ $option->id }})"
                 @click="open = false; highlighted = -1"
                 x-on:mouseenter="highlighted = {{ $loop->index }}"
                 :class="{ 'bg-content/10': highlighted === {{ $loop->index }} }"

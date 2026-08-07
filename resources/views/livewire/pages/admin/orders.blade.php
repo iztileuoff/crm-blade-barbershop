@@ -133,10 +133,21 @@ class extends Component
         return $this->client_id ? Client::find($this->client_id) : null;
     }
 
-    public function selectClient(int $id, string $label): void
+    /**
+     * Выбор клиента из выпадашки. Компонент передаёт только id: подпись
+     * строится здесь, из самой записи, — раньше она приезжала с клиента вместе
+     * с id, и текст в поле мог описывать не того, кого выбрали.
+     */
+    public function selectClient(int $id): void
     {
-        $this->client_id = $id;
-        $this->clientSearch = $label;
+        $client = Client::find($id);
+
+        if ($client === null) {
+            return;
+        }
+
+        $this->client_id = $client->id;
+        $this->clientSearch = $client->phone ? "{$client->name} ({$client->phone})" : $client->name;
     }
 
     /**
@@ -540,7 +551,10 @@ class extends Component
                                 <div>
                                     <label for="order-cash-amount" class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('enums.payment_type.cash') }} ({{ __('common.currency') }})</label>
                                     <div class="relative">
-                                        <input type="number" id="order-cash-amount" wire:model.live="cash_amount"
+                                        {{-- .debounce: без него сумму «120000» кассир отправляет шестью
+                                             запросами, каждый из которых перевалидирует сплит и на
+                                             планшетном интернете успевает мигнуть ошибкой. --}}
+                                        <input type="number" id="order-cash-amount" wire:model.live.debounce.500ms="cash_amount"
                                                placeholder="0" min="0"
                                                class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] py-3 pl-4 pr-12 text-sm text-content outline-none transition focus:border-success/40 focus:ring-1 focus:ring-success/20">
                                         <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-medium text-content/25">{{ __('common.currency') }}</span>
@@ -549,7 +563,7 @@ class extends Component
                                 <div>
                                     <label for="order-card-amount" class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('enums.payment_type.card') }} ({{ __('common.currency') }})</label>
                                     <div class="relative">
-                                        <input type="number" id="order-card-amount" wire:model.live="card_amount"
+                                        <input type="number" id="order-card-amount" wire:model.live.debounce.500ms="card_amount"
                                                placeholder="0" min="0"
                                                class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] py-3 pl-4 pr-12 text-sm text-content outline-none transition focus:border-info/40 focus:ring-1 focus:ring-info/20">
                                         <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-medium text-content/25">{{ __('common.currency') }}</span>
@@ -565,24 +579,26 @@ class extends Component
 
                     {{-- Client --}}
                     <div class="mb-4">
-                        <label class="mb-1.5 block text-xs font-semibold text-content/50">
-                            {{ __('common.client') }}
-                            @if ($debtEnabled)
-                                <span class="ml-1 text-danger">*</span>
-                            @else
-                                <span class="ml-1 text-content/25">{{ __('common.optional') }}</span>
-                            @endif
-                        </label>
                         <x-search-select
                             :options="$this->filteredClients"
                             searchModel="clientSearch"
+                            inputId="order-client"
                             onSelect="selectClient"
                             labelField="name"
                             subLabelField="phone"
                             placeholder="{{ __('orders.search_client') }}"
                             :selectedLabel="$this->selectedClient?->name"
                             onClear="clearClient"
-                        />
+                        >
+                            <x-slot:label>
+                                {{ __('common.client') }}
+                                @if ($debtEnabled)
+                                    <span class="ml-1 text-danger">*</span>
+                                @else
+                                    <span class="ml-1 text-content/25">{{ __('common.optional') }}</span>
+                                @endif
+                            </x-slot:label>
+                        </x-search-select>
                         @error('client_id') <p class="mt-1.5 text-xs text-danger">{{ $message }}</p> @enderror
                     </div>
 
@@ -732,11 +748,16 @@ class extends Component
                             </td>
                             <td class="px-6 py-4">
                                 <div class="flex items-center justify-end">
+                                    {{-- Удаление продажи возвращает товар на склад и пересчитывает
+                                         кассу — на планшете это заметная пауза, и без индикатора
+                                         кассир жмёт кнопку второй раз. --}}
                                     <button type="button" wire:click="deleteOrder({{ $order->id }})"
                                             wire:confirm="{{ __('orders.delete_confirm') }}"
+                                            wire:loading.attr="disabled" wire:target="deleteOrder({{ $order->id }})"
                                             title="{{ __('common.delete') }}" aria-label="{{ __('common.delete') }}"
-                                            class="flex h-8 w-8 items-center justify-center rounded-lg border border-content/[0.06] text-danger/50 transition hover:border-danger/20 hover:text-danger focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-danger/40">
-                                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" /></svg>
+                                            class="flex h-8 w-8 items-center justify-center rounded-lg border border-content/[0.06] text-danger/50 transition hover:border-danger/20 hover:text-danger focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-danger/40 disabled:cursor-not-allowed disabled:opacity-40">
+                                        <svg wire:loading.remove wire:target="deleteOrder({{ $order->id }})" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" /></svg>
+                                        <svg wire:loading wire:target="deleteOrder({{ $order->id }})" class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
                                     </button>
                                 </div>
                             </td>

@@ -35,6 +35,7 @@ return [
     'notes_title' => 'Заметки о клиенте',
     'notes_placeholder' => 'Предпочтения, особенности, договорённости…',
 
+    'tabs_label' => 'История клиента',
     'tab_appointments' => 'Записи',
     'tab_orders' => 'Покупки',
     'tab_sms' => 'SMS',

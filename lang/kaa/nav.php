@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'admin_panel' => 'Admin Panel',
+    'admin_panel' => 'Basqarıw paneli',
     'open_menu' => 'Menyudı ashıw',
     'close_menu' => 'Menyudı jabıw',
 

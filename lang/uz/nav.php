@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'admin_panel' => 'Admin Panel',
+    'admin_panel' => 'Boshqaruv paneli',
     'open_menu' => 'Menyuni ochish',
     'close_menu' => 'Menyuni yopish',
 
