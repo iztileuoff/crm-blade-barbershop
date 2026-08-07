@@ -313,7 +313,7 @@ class extends Component
     private function workingHours(): array
     {
         $start = $this->settingHour('work_start', self::DEFAULT_WORK_START_HOUR);
-        $end = $this->settingHour('work_end', self::DEFAULT_WORK_END_HOUR);
+        $end = $this->settingHour('work_end', self::DEFAULT_WORK_END_HOUR, midnightIsEndOfDay: true);
 
         if ($end <= $start) {
             return [self::DEFAULT_WORK_START_HOUR, self::DEFAULT_WORK_END_HOUR];
@@ -322,15 +322,24 @@ class extends Component
         return [$start, $end];
     }
 
-    private function settingHour(string $key, int $default): int
+    /**
+     * `<input type="time">` cannot produce 24:00, so a shop that works until
+     * midnight can only say so as 00:00 — and read literally that is hour 0,
+     * which inverts the range and silently throws the salon back onto the
+     * defaults. For a closing time only, midnight therefore means the 24th
+     * hour, and the last slot offered becomes 23:00 (issue #96).
+     */
+    private function settingHour(string $key, int $default, bool $midnightIsEndOfDay = false): int
     {
         $value = (string) Setting::get($key, '');
 
-        if (preg_match('/^(\d{1,2}):\d{2}$/', $value, $matches) && (int) $matches[1] <= 23) {
-            return (int) $matches[1];
+        if (! preg_match('/^(\d{1,2}):\d{2}$/', $value, $matches) || (int) $matches[1] > 23) {
+            return $default;
         }
 
-        return $default;
+        $hour = (int) $matches[1];
+
+        return $midnightIsEndOfDay && $hour === 0 ? 24 : $hour;
     }
 
     /**
@@ -371,7 +380,7 @@ class extends Component
         // the top of that hour) — the same hour-only precision workingHours()
         // already applies to the salon-wide setting.
         $barberStart = $this->hourBoundary($window['start'], roundUp: true);
-        $barberEnd = $this->hourBoundary($window['end'], roundUp: false);
+        $barberEnd = $this->hourBoundary($window['end'], roundUp: false, midnightIsEndOfDay: true);
 
         $start = max($salonStart, $barberStart);
         $end = max($start, min($salonEnd, $barberEnd));
@@ -379,9 +388,18 @@ class extends Component
         return [$start, $end];
     }
 
-    private function hourBoundary(string $time, bool $roundUp): int
+    /**
+     * `$midnightIsEndOfDay` carries the same rule as {@see settingHour()}: a
+     * barber whose day ends at 00:00 works until midnight, not until hour 0 —
+     * read literally that would collapse their whole day to nothing.
+     */
+    private function hourBoundary(string $time, bool $roundUp, bool $midnightIsEndOfDay = false): int
     {
         [$hour, $minute] = array_map('intval', explode(':', $time));
+
+        if ($midnightIsEndOfDay && $hour === 0 && $minute === 0) {
+            return 24;
+        }
 
         return $roundUp && $minute > 0 ? min($hour + 1, 24) : $hour;
     }

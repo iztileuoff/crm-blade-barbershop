@@ -52,8 +52,14 @@ class extends Component
             'telegram.regex' => __('settings.err_telegram_handle'),
         ]);
 
-        // Zero-padded HH:MM compares correctly as a string.
-        if ($this->work_start !== '' && $this->work_end !== '' && $this->work_end <= $this->work_start) {
+        // Zero-padded HH:MM compares correctly as a string — кроме полуночи.
+        // `<input type="time">` не умеет выдать 24:00, поэтому «работаем до
+        // полуночи» приходит как 00:00 и по строке оказывается раньше любого
+        // начала. Сетка записи трактует такой конец как 24-й час (issue #96),
+        // так что здесь его нельзя отбивать как перевёрнутый диапазон.
+        $endsAtMidnight = $this->work_end === '00:00';
+
+        if ($this->work_start !== '' && $this->work_end !== '' && ! $endsAtMidnight && $this->work_end <= $this->work_start) {
             $this->addError('work_end', __('settings.err_work_end_before_start'));
 
             return;

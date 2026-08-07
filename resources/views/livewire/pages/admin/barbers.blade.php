@@ -187,7 +187,26 @@ class extends Component
         foreach (Barber::WEEKDAYS as $day) {
             $rules["schedule.$day.off"] = 'boolean';
             $rules["schedule.$day.start"] = "nullable|required_if:schedule.$day.off,false|date_format:H:i";
-            $rules["schedule.$day.end"] = "nullable|required_if:schedule.$day.off,false|date_format:H:i|after:schedule.$day.start";
+            // `after:` отбивало бы смену до полуночи: 00:00 — единственное, что
+            // `<input type="time">` умеет сказать вместо 24:00, и по календарю
+            // оно раньше любого начала. Порядок проверяем сами, с этой поправкой
+            // (issue #96) — она же живёт в Barber::validTimeWindow().
+            $rules["schedule.$day.end"] = [
+                'nullable',
+                "required_if:schedule.$day.off,false",
+                'date_format:H:i',
+                function (string $attribute, mixed $value, Closure $fail) use ($day): void {
+                    $start = $this->schedule[$day]['start'] ?? null;
+
+                    if (! is_string($start) || ! is_string($value) || $value === '00:00') {
+                        return;
+                    }
+
+                    if ($value <= $start) {
+                        $fail(__('validation.after', ['attribute' => $attribute, 'date' => $start]));
+                    }
+                },
+            ];
         }
 
         return $rules;

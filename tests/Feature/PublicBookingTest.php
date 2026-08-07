@@ -77,6 +77,67 @@ it('offers only the hours inside the configured working day', function () {
     expect(array_column($slots, 'value'))->toBe(['10:00', '11:00', '12:00', '13:00']);
 });
 
+it('runs the grid to 23:00 when the shop closes at midnight', function () {
+    // `<input type="time">` не умеет 24:00, поэтому «до полуночи» админ может
+    // сохранить только как 00:00. Прочитанное буквально это 0-й час — диапазон
+    // переворачивался, и салон молча откатывался на дефолтные 09–20 (issue #96).
+    Setting::set('work_start', '09:00');
+    Setting::set('work_end', '00:00');
+
+    $slots = Volt::test('pages.booking')
+        ->set('date', now()->addDay()->toDateString())
+        ->instance()
+        ->availableSlots;
+
+    expect(array_column($slots, 'value'))->toBe([
+        '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00',
+        '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00', '23:00',
+    ]);
+});
+
+it('keeps midnight meaning hour zero at the opening end', function () {
+    // Полночь как конец дня — это 24-й час, но как начало она обязана остаться
+    // нулевым: круглосуточный салон отдаёт все 24 слота, а не пустую сетку.
+    Setting::set('work_start', '00:00');
+    Setting::set('work_end', '00:00');
+
+    $slots = Volt::test('pages.booking')
+        ->set('date', now()->addDay()->toDateString())
+        ->instance()
+        ->availableSlots;
+
+    expect($slots)->toHaveCount(24)
+        ->and($slots[0]['value'])->toBe('00:00')
+        ->and($slots[23]['value'])->toBe('23:00');
+});
+
+it('lets a barber work to midnight without collapsing their day', function () {
+    // hourBoundary() округляет конец вниз, так что расписание «до 00:00»
+    // давало 0 и вырезало мастеру весь день.
+    Setting::set('work_start', '09:00');
+    Setting::set('work_end', '00:00');
+
+    $barber = Barber::factory()->create([
+        'schedule' => [
+            'mon' => ['start' => '20:00', 'end' => '00:00', 'off' => false],
+            'tue' => ['start' => '20:00', 'end' => '00:00', 'off' => false],
+            'wed' => ['start' => '20:00', 'end' => '00:00', 'off' => false],
+            'thu' => ['start' => '20:00', 'end' => '00:00', 'off' => false],
+            'fri' => ['start' => '20:00', 'end' => '00:00', 'off' => false],
+            'sat' => ['start' => '20:00', 'end' => '00:00', 'off' => false],
+            'sun' => ['start' => '20:00', 'end' => '00:00', 'off' => false],
+        ],
+    ]);
+
+    $slots = Volt::test('pages.booking')
+        ->set('barberId', $barber->id)
+        ->set('date', now()->addDay()->toDateString())
+        ->instance()
+        ->availableSlots;
+
+    expect(array_column($slots, 'value'))->toBe(['20:00', '21:00', '22:00', '23:00']);
+});
+
 it('falls back to the default hours when the settings are broken', function () {
     Setting::set('work_start', '20:00');
     Setting::set('work_end', '08:00');

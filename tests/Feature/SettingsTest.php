@@ -37,6 +37,20 @@ it('refuses a closing time that is not after the opening time', function () {
         ->and(Setting::get('work_end'))->toBeNull();
 });
 
+it('accepts midnight as a closing time', function () {
+    // По строке '00:00' раньше любого начала, но это единственный способ,
+    // которым <input type="time"> может сказать «работаем до полуночи» —
+    // сетка записи читает такой конец как 24-й час (issue #96).
+    Livewire::actingAs(settingsAdmin())
+        ->test('pages.admin.settings')
+        ->set('work_start', '09:00')
+        ->set('work_end', '00:00')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(Setting::get('work_end'))->toBe('00:00');
+});
+
 it('refuses a closing time equal to the opening time', function () {
     Livewire::actingAs(settingsAdmin())
         ->test('pages.admin.settings')

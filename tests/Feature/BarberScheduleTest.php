@@ -102,6 +102,32 @@ it('rejects a day whose end time is not after its start time', function () {
     expect(Barber::where('name', 'Тестовый Мастер')->exists())->toBeFalse();
 });
 
+it('accepts an evening shift that runs to midnight', function () {
+    // 00:00 — единственное, что `<input type="time">` умеет сказать вместо
+    // 24:00. По календарю оно раньше любого начала, поэтому `after:` отбивало
+    // такую смену, а validTimeWindow() выбрасывала её целиком: мастер молча
+    // получал часы салона вместо своей вечерней смены (issue #96).
+    $specialization = Specialization::factory()->create();
+    $schedule = fullWeekSchedule();
+    $schedule['mon']['start'] = '20:00';
+    $schedule['mon']['end'] = '00:00';
+
+    Livewire::actingAs(scheduleAdmin())
+        ->test('pages.admin.barbers')
+        ->call('openCreate')
+        ->set('name', 'Ночной Мастер')
+        ->set('specialization_id', $specialization->id)
+        ->set('schedule', $schedule)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $barber = Barber::where('name', 'Ночной Мастер')->firstOrFail();
+
+    // Сохранить мало — окно должно ещё и читаться, иначе понедельник тихо
+    // отвалится на часы салона.
+    expect($barber->scheduleWindowForDay('mon'))->toBe(['start' => '20:00', 'end' => '00:00']);
+});
+
 it('rejects a malformed time in the schedule grid', function () {
     $specialization = Specialization::factory()->create();
     $schedule = fullWeekSchedule();
