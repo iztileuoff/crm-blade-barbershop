@@ -40,8 +40,6 @@ it('repairs every mixed-split shape exactly as reported in the issue', function 
         'empty split (#67)' => [[100000, null, null, null], [100000, 0]],
         'double split (#673)' => [[60000, 60000, 60000, null], [60000, 0]],
         'short split (#525)' => [[120000, 60000, 40000, null], [60000, 60000]],
-        'zero price (#222)' => [[0, 30000, 20000, null], [0, 0]],
-        'zero price card (#231)' => [[0, null, 120000, null], [0, 0]],
     ];
 
     $ids = [];
@@ -67,6 +65,45 @@ it('repairs every mixed-split shape exactly as reported in the issue', function 
             ->and((int) ($order->card_amount ?? 0))->toBe($expectedCard, $label)
             // и главное: разбивка сходится с полученной суммой
             ->and($order->cashReceived + $order->cardReceived)->toBe($order->receivedAmount, $label);
+    }
+});
+
+/**
+ * Раньше эти две строки чинились «в ноль»: ожидаемый приход при цене 0 равен
+ * нулю, значит и нал с картой обнулялись. На проде это записи #222 и #231 —
+ * завершённые мужские стрижки у мастера с базовой ценой 60 000, где записаны
+ * 50 000 и 120 000. Ошибочна там цена, а не деньги: сумма — единственный след
+ * того, что реально пришло в кассу, и стирать её значит уменьшить май на
+ * 170 000. Строка остаётся кассиру, как и визит без цены вовсе.
+ */
+it('never erases money recorded against a zero price', function () {
+    $cases = [
+        'zero price, split (#222)' => [0, 30000, 20000, null],
+        'zero price, card only (#231)' => [0, null, 120000, null],
+        'everything on credit, money still recorded' => [60000, 40000, null, 60000],
+    ];
+
+    $ids = [];
+
+    foreach ($cases as $label => [$price, $cash, $card, $debt]) {
+        $ids[$label] = DB::table('orders')->insertGetId([
+            'total_price' => $price,
+            'payment_type' => 'both',
+            'cash_amount' => $cash,
+            'card_amount' => $card,
+            'debt_amount' => $debt,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    }
+
+    runRepairMigration();
+
+    foreach ($cases as $label => [$price, $cash, $card, $debt]) {
+        $row = DB::table('orders')->find($ids[$label]);
+
+        expect($row->cash_amount === null ? null : (int) $row->cash_amount)->toBe($cash, $label)
+            ->and($row->card_amount === null ? null : (int) $row->card_amount)->toBe($card, $label);
     }
 });
 
