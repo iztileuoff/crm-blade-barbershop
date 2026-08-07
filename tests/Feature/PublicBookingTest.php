@@ -1,12 +1,16 @@
 <?php
 
 use App\Enums\AppointmentStatus;
+use App\Enums\Role;
 use App\Models\Appointment;
 use App\Models\Barber;
 use App\Models\Client;
 use App\Models\Service;
 use App\Models\Setting;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyException;
+use Livewire\Livewire;
 use Livewire\Volt\Volt;
 
 uses(RefreshDatabase::class);
@@ -236,6 +240,94 @@ it('does not reveal a stored name or birth date when the phone is typed', functi
         ->assertSet('clientFound', true)
         ->assertDontSee('Старый Клиент')
         ->assertDontSee('1990-05-15');
+});
+
+it('fills the card for a signed-in admin instead of making them retype it', function (Role $role) {
+    // Админ и так открывает эту карточку в CRM — заставлять его перенабирать
+    // имя из базы значит напрашиваться на опечатку в чужой записи (issue #97).
+    Client::factory()->create([
+        'name' => 'Старый Клиент',
+        'phone' => '998901112233',
+        'birth_date' => '1990-05-15',
+    ]);
+
+    Livewire::actingAs(User::factory()->create(['role' => $role]))
+        ->test('pages.booking')
+        ->set('phone', '998 90 111 22 33')
+        ->assertSet('clientFound', true)
+        ->assertSet('name', 'Старый Клиент')
+        ->assertSet('birth_date', '1990-05-15');
+})->with([
+    'admin' => Role::ADMIN,
+    'super admin' => Role::SUPER_ADMIN,
+]);
+
+it('does not turn the booking form into a client lookup for a barber', function () {
+    // RestrictBarberAccess не пускает мастера на admin.clients: имя клиента он
+    // видит только в своих записях. Подстановка вернула бы ему ровно тот поиск
+    // «телефон → карточка», который этот middleware и запрещает.
+    Client::factory()->create([
+        'name' => 'Чужой Клиент',
+        'phone' => '998901112233',
+        'birth_date' => '1990-05-15',
+    ]);
+
+    Livewire::actingAs(User::factory()->create(['role' => Role::BARBER]))
+        ->test('pages.booking')
+        ->set('phone', '998901112233')
+        ->assertSet('clientFound', true)
+        ->assertSet('name', '')
+        ->assertSet('birth_date', '')
+        ->assertDontSee('Чужой Клиент')
+        ->assertDontSee('1990-05-15');
+});
+
+it('clears a prefilled card once staff move to a number with no card', function () {
+    // Иначе исправление одной цифры в номере тихо унесло бы имя предыдущего
+    // клиента на карточку нового.
+    Client::factory()->create(['name' => 'Старый Клиент', 'phone' => '998901112233', 'birth_date' => '1990-05-15']);
+
+    Livewire::actingAs(User::factory()->create(['role' => Role::ADMIN]))
+        ->test('pages.booking')
+        ->set('phone', '998901112233')
+        ->assertSet('name', 'Старый Клиент')
+        ->set('phone', '998909998877')
+        ->assertSet('clientFound', false)
+        ->assertSet('name', '')
+        ->assertSet('birth_date', '');
+});
+
+it('does not let an empty field on the card erase what staff already typed', function () {
+    // Карточка без даты рождения должна принять вводимую, а не стереть её.
+    Client::factory()->create(['name' => 'Старый Клиент', 'phone' => '998901112233', 'birth_date' => null]);
+
+    Livewire::actingAs(User::factory()->create(['role' => Role::ADMIN]))
+        ->test('pages.booking')
+        ->set('birth_date', '2000-01-01')
+        ->set('phone', '998901112233')
+        ->assertSet('name', 'Старый Клиент')
+        ->assertSet('birth_date', '2000-01-01');
+});
+
+it('never prefills from a card a guest could not otherwise see', function () {
+    // Тот же путь, что и у персонала, но без сессии: страница публичная, и
+    // подстановка превратила бы её в справочник «телефон → имя + дата рождения»
+    // для любого, кто наберёт чужой номер.
+    Client::factory()->create([
+        'name' => 'Старый Клиент',
+        'phone' => '998901112233',
+        'birth_date' => '1990-05-15',
+    ]);
+
+    $guest = Volt::test('pages.booking')
+        ->set('phone', '998901112233')
+        ->assertSet('clientFound', true)
+        ->assertSet('name', '')
+        ->assertSet('birth_date', '');
+
+    // Флаг под #[Locked] — гость не может выписать себе ветку с карточкой.
+    expect(fn () => $guest->set('prefilledFromCard', true))
+        ->toThrow(CannotUpdateLockedPropertyException::class);
 });
 
 it('drops the found flag when the phone changes to an unknown number', function () {

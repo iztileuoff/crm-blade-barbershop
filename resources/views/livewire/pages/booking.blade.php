@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\Url;
 use Livewire\Volt\Component;
 
@@ -99,6 +100,17 @@ class extends Component
     /** True when the last phone lookup matched an existing client. */
     public bool $clientFound = false;
 
+    /**
+     * True while `name`/`birth_date` hold values pulled off an existing card
+     * rather than typed. Only then may a later lookup clear them — a staff
+     * member correcting a digit must not carry the previous client's name over
+     * onto a different number. `#[Locked]`: writable from the browser it would
+     * let a guest hand himself the clearing branch, and the branch it guards
+     * reads a card the guest never saw.
+     */
+    #[Locked]
+    public bool $prefilledFromCard = false;
+
     public ?int $confirmedAppointmentId = null;
 
     public function mount(): void
@@ -186,13 +198,24 @@ class extends Component
     }
 
     /**
-     * Record whether the phone already belongs to a client — nothing more.
+     * Report whether the phone already belongs to a client, and — for staff
+     * only — fill the form from that client's card.
      *
-     * The stored name and birth date must never reach the browser: this page is
-     * public and unauthenticated, so anyone could type a stranger's number and
-     * read their card. Merging with the saved client happens server-side in
-     * {@see confirm()}. The lookup is throttled per IP so the flag alone cannot
-     * be used to enumerate which numbers are in the base.
+     * For a guest the stored name and birth date must never reach the browser:
+     * this page is public, so anyone could type a stranger's number and read
+     * their card. A guest gets the bare flag, and merging with the saved client
+     * happens server-side in {@see confirm()}. The lookup is throttled per IP so
+     * even that flag cannot be used to enumerate which numbers are in the base.
+     *
+     * A signed-in admin is a different matter: they open the very same card in
+     * the CRM anyway, and making them retype a name the base already holds only
+     * invites typos on somebody else's record. So for them the fields are
+     * prefilled (issue #97).
+     *
+     * A barber is not an admin here. {@see RestrictBarberAccess} keeps them off
+     * `admin.clients` entirely — they see a client's name only on their own
+     * appointments. Prefilling for them would hand back exactly the phone-to-card
+     * lookup that middleware exists to deny, so they stay on the guest path.
      */
     public function updatedPhone(): void
     {
@@ -214,7 +237,48 @@ class extends Component
 
         RateLimiter::hit($throttleKey, 60);
 
-        $this->clientFound = Client::where('phone', $normalized)->exists();
+        $client = Client::where('phone', $normalized)->first();
+
+        $this->clientFound = $client !== null;
+
+        $user = auth()->user();
+
+        if ($user !== null && ! $user->isBarber()) {
+            $this->prefillFromCard($client);
+        }
+    }
+
+    /**
+     * Admin-only, guarded at the single call site above — the role is read from
+     * the session there, never from a property the browser can write.
+     *
+     * An empty stored field never overwrites what the operator has already
+     * typed — a card missing its birth date should take the one being entered,
+     * not erase it. Conversely, once a card *has* filled the fields, moving to
+     * a number with no card clears them: leaving the previous client's name in
+     * place would quietly save it onto the new one.
+     */
+    private function prefillFromCard(?Client $client): void
+    {
+        if ($client === null) {
+            if ($this->prefilledFromCard) {
+                $this->name = '';
+                $this->birth_date = '';
+                $this->prefilledFromCard = false;
+            }
+
+            return;
+        }
+
+        if ((string) $client->name !== '') {
+            $this->name = (string) $client->name;
+            $this->prefilledFromCard = true;
+        }
+
+        if ($client->birth_date !== null) {
+            $this->birth_date = $client->birth_date->format('Y-m-d');
+            $this->prefilledFromCard = true;
+        }
     }
 
     #[Computed]
@@ -637,7 +701,7 @@ class extends Component
 
     public function reset_flow(): void
     {
-        $this->reset(['serviceId', 'barberId', 'time', 'name', 'phone', 'birth_date', 'clientFound', 'confirmedAppointmentId']);
+        $this->reset(['serviceId', 'barberId', 'time', 'name', 'phone', 'birth_date', 'clientFound', 'prefilledFromCard', 'confirmedAppointmentId']);
         $this->step = 1;
     }
 }; ?>
