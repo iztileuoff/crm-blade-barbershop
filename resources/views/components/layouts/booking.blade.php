@@ -23,13 +23,15 @@
 </head>
 
 @auth
-    <body x-data="{ open: false, collapsed: localStorage.getItem('sidebarCollapsed') === '1' }"
-          x-init="$watch('collapsed', value => localStorage.setItem('sidebarCollapsed', value ? '1' : '0'))"
+    {{-- Состояние меню — в $store.sidebar (resources/js/app.js), см. layouts/app.blade.php --}}
+    <body x-data
+          @keydown.escape.window="$store.sidebar.open = false"
+          :class="{ 'overflow-hidden': $store.sidebar.open }"
           class="min-h-full bg-surface font-sans text-content antialiased">
         {{-- Logged-in admins keep the full admin header so navigation never disappears --}}
         <x-admin-header />
 
-        <div class="min-h-screen transition-[padding] duration-300 ease-in-out" :class="collapsed ? 'lg:pl-20' : 'lg:pl-64'">
+        <div class="min-h-screen transition-[padding] duration-300 ease-in-out" :class="$store.sidebar.collapsed ? 'lg:pl-20' : 'lg:pl-64'">
             {{-- Main content (wider for admins) --}}
             <main class="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
                 {{ $slot }}

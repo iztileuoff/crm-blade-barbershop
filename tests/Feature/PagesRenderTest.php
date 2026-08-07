@@ -66,6 +66,25 @@ it('keeps every theme toggle in sync via a shared event', function () {
         ->assertSee("\$dispatch('theme-changed'", escape: false);
 });
 
+it('restores the theme after a wire:navigate wipes it off the html element', function () {
+    // Livewire переписывает атрибуты <html> серверной разметкой (replaceHtmlAttributes),
+    // а сервер про тему не знает — класс `dark` стирается на каждом переходе по меню,
+    // и инлайновый скрипт из <head> его не вернёт: mergeNewHead не перезапускает уже
+    // стоящие теги. Значит, восстановление обязано жить в app.js (issue #95).
+    $appJs = file_get_contents(resource_path('js/app.js'));
+
+    expect($appJs)->toContain("document.addEventListener('livewire:navigated'")
+        ->toContain("document.documentElement.classList.toggle('dark'")
+        // Та же логика выбора, что и у инлайнового скрипта, иначе тема после перехода
+        // разойдётся с темой после F5.
+        ->toContain("localStorage.getItem('theme')")
+        ->toContain("'(prefers-color-scheme: dark)'")
+        // `livewire:navigated` приходит после инициализации Alpine, поэтому свежий
+        // переключатель уже прочитал <html> без класса — его нужно досинхронизировать
+        // тем же событием, что и обычное переключение.
+        ->toContain("new CustomEvent('theme-changed', { detail: { dark } })");
+});
+
 it('renders every admin page for a super admin', function (string $route) {
     $user = User::factory()->create(['role' => Role::SUPER_ADMIN]);
 

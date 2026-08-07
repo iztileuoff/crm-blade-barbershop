@@ -88,7 +88,7 @@
         <div class="flex items-center gap-2">
             <x-language-switcher class="flex h-10 items-center gap-1.5 rounded-xl border border-content/[0.06] px-2.5 text-content/50 transition hover:border-brass/40 hover:text-brass-ink" />
             <x-theme-toggle class="flex h-10 w-10 items-center justify-center rounded-xl border border-content/[0.06] text-content/50 transition hover:border-brass/40 hover:text-brass-ink" />
-            <button type="button" @click="open = true" aria-label="{{ __('nav.open_menu') }}" title="{{ __('nav.open_menu') }}"
+            <button type="button" @click="$store.sidebar.open = true" aria-label="{{ __('nav.open_menu') }}" title="{{ __('nav.open_menu') }}"
                     class="flex h-10 w-10 items-center justify-center rounded-xl border border-content/[0.06] text-content/40 transition hover:border-content/10 hover:text-content focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brass">
                 <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" /></svg>
             </button>
@@ -96,7 +96,7 @@
     </div>
 
     {{-- Mobile overlay --}}
-    <div x-show="open" x-cloak @click="open = false"
+    <div x-show="$store.sidebar.open" x-cloak @click="$store.sidebar.open = false"
          x-transition:enter="transition-opacity ease-out duration-200"
          x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
          x-transition:leave="transition-opacity ease-in duration-150"
@@ -104,23 +104,28 @@
          class="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"></div>
 
     {{-- Sidebar. @persist keeps this the *same* DOM node across wire:navigate transitions
-         instead of destroying/rebuilding it — `open`/`collapsed` already live on <body>'s
-         x-data (never replaced by navigate, only its contents are), so without @persist the
-         freshly-mounted aside would flash at its default width/position for a tick before
-         Alpine's :class bindings caught up. --}}
+         instead of destroying/rebuilding it: without it the freshly-mounted aside would flash
+         at its default width/position for a tick before Alpine's :class bindings caught up.
+
+         Цена этого — состояние меню обязано жить в $store.sidebar (resources/js/app.js).
+         Навигация делает `document.body.replaceWith(newBody)` и `Alpine.destroyTree(oldBody)`,
+         а @persist переносит вот эту самую <aside> в новый документ, НЕ переинициализируя её.
+         Её биндинги остаются живыми, но навсегда привязанными к области видимости старого
+         <body>. Любое `open`/`collapsed` из локального x-data здесь после первого перехода
+         разъезжается с тем, что читает и пишет шапка (issue #94). --}}
     @persist('sidebar')
-    <aside :class="{ 'translate-x-0!': open, 'lg:w-20': collapsed }"
+    <aside :class="{ 'translate-x-0!': $store.sidebar.open, 'lg:w-20': $store.sidebar.collapsed }"
            class="fixed inset-y-0 left-0 z-50 flex w-64 -translate-x-full flex-col border-r border-content/[0.06] bg-surface-raised transition-all duration-300 ease-in-out lg:translate-x-0">
         {{-- Logo --}}
-        <div class="flex items-center justify-between px-5 py-5" :class="{ 'lg:justify-center lg:px-3': collapsed }">
+        <div class="flex items-center justify-between px-5 py-5" :class="{ 'lg:justify-center lg:px-3': $store.sidebar.collapsed }">
             <a href="{{ auth()->user()?->isBarber() ? route('admin.appointments') : route('booking') }}" wire:navigate class="flex items-center gap-2.5 group">
                 <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brass-bright to-brass text-sm font-extrabold text-on-brass transition-transform group-hover:scale-105">B</div>
-                <div class="leading-none" :class="{ 'lg:hidden': collapsed }">
+                <div class="leading-none" :class="{ 'lg:hidden': $store.sidebar.collapsed }">
                     <div class="font-display text-base font-semibold uppercase tracking-[0.18em] text-content">Blade</div>
                     <div class="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-brass-ink/70">{{ __('nav.admin_panel') }}</div>
                 </div>
             </a>
-            <button type="button" @click="open = false" aria-label="{{ __('nav.close_menu') }}" title="{{ __('nav.close_menu') }}"
+            <button type="button" @click="$store.sidebar.open = false" aria-label="{{ __('nav.close_menu') }}" title="{{ __('nav.close_menu') }}"
                     class="flex h-8 w-8 items-center justify-center rounded-lg text-content/40 transition hover:text-content focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brass lg:hidden">
                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
             </button>
@@ -133,7 +138,7 @@
                 @foreach($sections as $section)
                     @continue(empty($section['links']))
                     <div>
-                        <p class="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-content-muted" :class="{ 'lg:hidden': collapsed }">
+                        <p class="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-content-muted" :class="{ 'lg:hidden': $store.sidebar.collapsed }">
                             {{ $section['heading'] }}
                         </p>
                         <div class="space-y-1">
@@ -159,26 +164,26 @@
                                          x-on:livewire:navigated.window="syncActive()">
                                         <button type="button" @click="expanded = !expanded" title="{{ $link['label'] }}"
                                                 :class="{
-                                                    'lg:justify-center': collapsed,
+                                                    'lg:justify-center': $store.sidebar.collapsed,
                                                     'bg-brass/10 text-brass-ink': groupActive,
                                                     'text-content-muted hover:bg-content/[0.04] hover:text-content': !groupActive,
                                                 }"
                                                 class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors">
                                             <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">{!! $link['icon'] !!}</svg>
-                                            <span class="flex-1 text-left" :class="{ 'lg:hidden': collapsed }">{{ $link['label'] }}</span>
-                                            <svg class="h-4 w-4 shrink-0 transition-transform duration-200" :class="{ 'rotate-180': expanded, 'lg:hidden': collapsed }" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
+                                            <span class="flex-1 text-left" :class="{ 'lg:hidden': $store.sidebar.collapsed }">{{ $link['label'] }}</span>
+                                            <svg class="h-4 w-4 shrink-0 transition-transform duration-200" :class="{ 'rotate-180': expanded, 'lg:hidden': $store.sidebar.collapsed }" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
                                         </button>
                                         <div x-show="expanded" x-cloak
                                              x-transition:enter="transition ease-out duration-150"
                                              x-transition:enter-start="opacity-0 -translate-y-1"
                                              x-transition:enter-end="opacity-100 translate-y-0"
-                                             class="mt-1 space-y-1 border-l border-content/[0.06] pl-3" :class="{ 'lg:border-l-0 lg:pl-0': collapsed }">
+                                             class="mt-1 space-y-1 border-l border-content/[0.06] pl-3" :class="{ 'lg:border-l-0 lg:pl-0': $store.sidebar.collapsed }">
                                             @foreach($link['children'] as $child)
-                                                <a href="{{ route($child['route']) }}" wire:navigate wire:current.exact="bg-brass/10! text-brass-ink!" @click="open = false" title="{{ $child['label'] }}"
-                                                   :class="{ 'lg:justify-center': collapsed }"
+                                                <a href="{{ route($child['route']) }}" wire:navigate wire:current.exact="bg-brass/10! text-brass-ink!" @click="$store.sidebar.open = false" title="{{ $child['label'] }}"
+                                                   :class="{ 'lg:justify-center': $store.sidebar.collapsed }"
                                                    class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-content-muted transition-colors hover:bg-content/[0.04] hover:text-content">
                                                     <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">{!! $child['icon'] !!}</svg>
-                                                    <span :class="{ 'lg:hidden': collapsed }">{{ $child['label'] }}</span>
+                                                    <span :class="{ 'lg:hidden': $store.sidebar.collapsed }">{{ $child['label'] }}</span>
                                                 </a>
                                             @endforeach
                                         </div>
@@ -186,11 +191,11 @@
                                 @else
                                     {{-- wire:current re-evaluates client-side on every wire:navigate, unlike a
                                          server-rendered @class — required once this link lives inside @persist. --}}
-                                    <a href="{{ route($link['route']) }}" wire:navigate wire:current.exact="bg-brass/10! text-brass-ink!" @click="open = false" title="{{ $link['label'] }}"
-                                       :class="{ 'lg:justify-center': collapsed }"
+                                    <a href="{{ route($link['route']) }}" wire:navigate wire:current.exact="bg-brass/10! text-brass-ink!" @click="$store.sidebar.open = false" title="{{ $link['label'] }}"
+                                       :class="{ 'lg:justify-center': $store.sidebar.collapsed }"
                                        class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-content-muted transition-colors hover:bg-content/[0.04] hover:text-content">
                                         <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">{!! $link['icon'] !!}</svg>
-                                        <span :class="{ 'lg:hidden': collapsed }">{{ $link['label'] }}</span>
+                                        <span :class="{ 'lg:hidden': $store.sidebar.collapsed }">{{ $link['label'] }}</span>
                                     </a>
                                 @endif
                             @endforeach
@@ -202,7 +207,7 @@
 
         {{-- Who's logged in (mobile drawer only — desktop shows this in the top header) --}}
         @auth
-            <div class="flex items-center gap-2.5 border-t border-content/[0.06] px-4 py-3 lg:hidden" :class="{ 'lg:justify-center': collapsed }">
+            <div class="flex items-center gap-2.5 border-t border-content/[0.06] px-4 py-3 lg:hidden" :class="{ 'lg:justify-center': $store.sidebar.collapsed }">
                 <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brass/15 text-xs font-bold text-brass-ink ring-1 ring-content/10">{{ mb_substr(auth()->user()->name, 0, 1) }}</div>
                 <div class="min-w-0 leading-tight">
                     <div class="truncate text-sm font-semibold text-content">{{ auth()->user()->name }}</div>
@@ -217,10 +222,10 @@
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
                     <button type="submit" title="{{ __('common.logout') }}"
-                            :class="{ 'lg:justify-center': collapsed }"
+                            :class="{ 'lg:justify-center': $store.sidebar.collapsed }"
                             class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-danger/60 transition hover:bg-danger/10 hover:text-danger">
                         <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 9V5.25A2.25 2.25 0 0 1 10.5 3h6a2.25 2.25 0 0 1 2.25 2.25v13.5A2.25 2.25 0 0 1 16.5 21h-6a2.25 2.25 0 0 1-2.25-2.25V15M12 9l3 3m0 0-3 3m3-3H2.25" /></svg>
-                        <span :class="{ 'lg:hidden': collapsed }">{{ __('common.logout') }}</span>
+                        <span :class="{ 'lg:hidden': $store.sidebar.collapsed }">{{ __('common.logout') }}</span>
                     </button>
                 </form>
             </div>
