@@ -267,6 +267,25 @@ it('saves a new appointment without the admin ever touching the end time', funct
         ->and($appointment->ends_at->format('H:i'))->toBe('12:00');
 });
 
+it('refuses an appointment without a client as a field error, not a database failure', function () {
+    // `appointments.client_id` объявлен NOT NULL с первой миграции, а правило
+    // называло клиента необязательным вне долга — штатный путь формы упирался
+    // в 500 вместо подписи под полем.
+    $barber = Barber::factory()->create();
+    $service = Service::factory()->create(['duration_minutes' => 60]);
+
+    Livewire::actingAs(navAdmin())
+        ->test('pages.admin.appointments')
+        ->call('openCreate')
+        ->set('barber_id', $barber->id)
+        ->call('addService')
+        ->set('selectedServices.0.service_id', $service->id)
+        ->call('save')
+        ->assertHasErrors(['client_id' => 'required']);
+
+    expect(Appointment::count())->toBe(0);
+});
+
 it('does not overwrite an end time the admin set by hand when a later service changes', function () {
     $first = Service::factory()->create(['duration_minutes' => 30]);
     $second = Service::factory()->create(['duration_minutes' => 30]);

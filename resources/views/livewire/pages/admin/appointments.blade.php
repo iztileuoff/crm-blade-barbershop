@@ -656,21 +656,38 @@ class extends Component
     }
 
     /**
-     * Клиент обязателен, только если операция уходит в долг. Метод объявлен
-     * отдельно, чтобы validate() без аргументов не терял правила #[Validate].
+     * Метод объявлен отдельно, чтобы validate() без аргументов не терял
+     * правила #[Validate].
+     *
+     * Клиент обязателен всегда, а не только под долг: `appointments.client_id`
+     * объявлен NOT NULL с самой первой миграции, и «необязательный» клиент
+     * доводил форму не до ошибки поля, а до падения вставки. К клиенту, кроме
+     * того, привязано всё, что происходит после визита, — карточка, долг,
+     * уведомление об отмене, SMS-удержание.
      *
      * @return array<string, string>
      */
     public function rules(): array
     {
         return [
-            'client_id' => ($this->debt_amount ?? 0) > 0
-                ? 'required|exists:clients,id'
-                : 'nullable|exists:clients,id',
+            'client_id' => 'required|exists:clients,id',
             // Суммы услуг складываются в price — отрицательная строка иначе
             // молча уменьшала бы цену визита.
             'selectedServices.*.service_id' => 'nullable|integer|exists:services,id',
             'selectedServices.*.amount' => 'nullable|integer|min:0',
+        ];
+    }
+
+    /**
+     * Под полем клиента должно стоять человеческое предложение, а не
+     * «поле client id обязательно».
+     *
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'client_id.required' => __('appointments.err_client_required'),
         ];
     }
 

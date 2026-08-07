@@ -56,6 +56,7 @@ return [
 
     // Validation
     'err_end_after_start' => 'Tugash vaqti boshlanish vaqtidan keyin boʻlishi kerak.',
+    'err_client_required' => 'Mijozni tanlang — usiz yozuv saqlanmaydi.',
     'err_add_service' => 'Kamida bitta xizmat qoʻshing.',
     'err_delete_has_payments' => 'Bu yozuv boʻyicha qarz toʻlovlari bor — oʻchirish boshqa kunlar kassasini siljitadi. Avval toʻlovlarni oʻchiring.',
     'debt_already_paid' => 'Bu qarz boʻyicha allaqachon :amount soʻm qabul qilingan.',
