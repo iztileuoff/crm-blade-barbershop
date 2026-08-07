@@ -1120,8 +1120,15 @@ class extends Component
                                     <div class="grid grid-cols-2 gap-4 rounded-xl border border-royal/20 bg-royal/5 p-4">
                                         <div>
                                             <label for="appointment-cash_amount" class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('enums.payment_type.cash') }} ({{ __('common.currency') }})</label>
+                                            {{--
+                                                .number обязателен на каждом денежном поле с .live: без него
+                                                браузер шлёт строку «12», свойство типизировано как ?int, и
+                                                ответ приходит числом 12. Livewire видит смену типа как
+                                                изменение значения на сервере и перетирает то, что админ успел
+                                                набрать за время запроса, — набранное «120» откатывалось в «12».
+                                            --}}
                                             <div class="relative">
-                                                <input id="appointment-cash_amount" type="number" wire:model.live="cash_amount"
+                                                <input id="appointment-cash_amount" type="number" wire:model.number.live="cash_amount"
                                                        placeholder="0" min="0"
                                                        class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] py-3 pl-4 pr-12 text-sm text-content outline-none transition focus:border-success/40 focus:ring-1 focus:ring-success/20">
                                                 <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-medium text-content/25">{{ __('common.currency') }}</span>
@@ -1131,7 +1138,7 @@ class extends Component
                                         <div>
                                             <label for="appointment-card_amount" class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('enums.payment_type.card') }} ({{ __('common.currency') }})</label>
                                             <div class="relative">
-                                                <input id="appointment-card_amount" type="number" wire:model.live="card_amount"
+                                                <input id="appointment-card_amount" type="number" wire:model.number.live="card_amount"
                                                        placeholder="0" min="0"
                                                        class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] py-3 pl-4 pr-12 text-sm text-content outline-none transition focus:border-info/40 focus:ring-1 focus:ring-info/20">
                                                 <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-medium text-content/25">{{ __('common.currency') }}</span>
@@ -1175,7 +1182,7 @@ class extends Component
                                     </div>
                                     @if ($debtEnabled)
                                         <div class="relative mt-3">
-                                            <input type="number" wire:model.live="debt_amount" aria-label="{{ __('appointments.on_debt') }}"
+                                            <input type="number" wire:model.number.live="debt_amount" aria-label="{{ __('appointments.on_debt') }}"
                                                    placeholder="0" min="0"
                                                    class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] py-3 pl-4 pr-12 text-sm text-content outline-none transition focus:border-danger/40 focus:ring-1 focus:ring-danger/20">
                                             <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-medium text-content/25">{{ __('common.currency') }}</span>
@@ -1254,7 +1261,7 @@ class extends Component
                                                 <span class="shrink-0 text-[10px] font-bold text-danger">{{ __('appointments.duplicate') }}</span>
                                             @endif
                                             <div class="relative w-36 shrink-0">
-                                                <input type="number" wire:model.live="selectedServices.{{ $i }}.amount" aria-label="{{ __('common.amount') }}"
+                                                <input type="number" wire:model.number.live="selectedServices.{{ $i }}.amount" aria-label="{{ __('common.amount') }}"
                                                        placeholder="0" min="0"
                                                        class="block w-full rounded-lg border border-content/[0.08] bg-transparent py-2 pl-3 pr-10 text-sm text-content outline-none transition focus:border-brass/40 focus:ring-1 focus:ring-brass/20">
                                                 <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-medium text-content/25">{{ __('common.currency') }}</span>

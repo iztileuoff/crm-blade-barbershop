@@ -350,8 +350,8 @@ it('debounces the split-payment amounts and shows progress while an order is del
         ->html();
 
     expect($html)
-        ->toContain('wire:model.live.debounce.500ms="cash_amount"')
-        ->toContain('wire:model.live.debounce.500ms="card_amount"')
+        ->toContain('wire:model.number.live.debounce.500ms="cash_amount"')
+        ->toContain('wire:model.number.live.debounce.500ms="card_amount"')
         ->toContain('wire:loading.attr="disabled" wire:target="deleteOrder(');
 });
 

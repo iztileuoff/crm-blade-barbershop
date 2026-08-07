@@ -553,8 +553,12 @@ class extends Component
                                     <div class="relative">
                                         {{-- .debounce: без него сумму «120000» кассир отправляет шестью
                                              запросами, каждый из которых перевалидирует сплит и на
-                                             планшетном интернете успевает мигнуть ошибкой. --}}
-                                        <input type="number" id="order-cash-amount" wire:model.live.debounce.500ms="cash_amount"
+                                             планшетном интернете успевает мигнуть ошибкой.
+                                             .number: свойство типизировано как ?int, и без него ответ
+                                             приходит числом на отправленную строку. Livewire считает это
+                                             правкой значения на сервере и перетирает цифры, набранные за
+                                             время запроса, — «120» откатывалось в «12». --}}
+                                        <input type="number" id="order-cash-amount" wire:model.number.live.debounce.500ms="cash_amount"
                                                placeholder="0" min="0"
                                                class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] py-3 pl-4 pr-12 text-sm text-content outline-none transition focus:border-success/40 focus:ring-1 focus:ring-success/20">
                                         <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-medium text-content/25">{{ __('common.currency') }}</span>
@@ -563,7 +567,7 @@ class extends Component
                                 <div>
                                     <label for="order-card-amount" class="mb-1.5 block text-xs font-semibold text-content/50">{{ __('enums.payment_type.card') }} ({{ __('common.currency') }})</label>
                                     <div class="relative">
-                                        <input type="number" id="order-card-amount" wire:model.live.debounce.500ms="card_amount"
+                                        <input type="number" id="order-card-amount" wire:model.number.live.debounce.500ms="card_amount"
                                                placeholder="0" min="0"
                                                class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] py-3 pl-4 pr-12 text-sm text-content outline-none transition focus:border-info/40 focus:ring-1 focus:ring-info/20">
                                         <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-medium text-content/25">{{ __('common.currency') }}</span>
@@ -635,7 +639,7 @@ class extends Component
                             </div>
                             @if ($debtEnabled)
                                 <div class="relative mt-3">
-                                    <input type="number" id="order-debt-amount" wire:model.live="debt_amount"
+                                    <input type="number" id="order-debt-amount" wire:model.number.live="debt_amount"
                                            aria-label="{{ __('orders.on_debt') }}"
                                            placeholder="0" min="0"
                                            class="block w-full rounded-xl border border-content/[0.08] bg-content/[0.04] py-3 pl-4 pr-12 text-sm text-content outline-none transition focus:border-danger/40 focus:ring-1 focus:ring-danger/20">
