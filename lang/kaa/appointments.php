@@ -55,7 +55,7 @@ return [
     'discard_confirm' => 'Saqlamay jabılsınba?',
 
     // Validation
-    'err_end_after_start' => 'Tamamlanıw waqtı baslanıw waqtınan keyin bolıwı kerek.',
+    'err_overnight_too_long' => 'Tamamlanıw baslanıwdan burın. Tún ortasınan ótkende kelis :hours saattan uzın bola almaydı.',
     'err_client_required' => 'Klientti saylań — onsız jazılıw saqlanbaydı.',
     'err_add_service' => 'Keminde bir xızmet qosıń.',
     'err_delete_has_payments' => 'Bul jazıw boyınsha qarız tólewleri bar — óshiriw basqa kúnler kassasın jıljıtadı. Aldın tólewlerdi óshiriń.',

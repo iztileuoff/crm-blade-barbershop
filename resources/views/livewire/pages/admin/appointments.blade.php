@@ -26,6 +26,19 @@ class extends Component
 
     public string $sortDirection = 'asc';
 
+    /**
+     * Потолок для визита, переходящего через полночь.
+     *
+     * Конец, который по часам не позже начала, читается как следующий день —
+     * 23:00→00:00 это час, а не «минус 23 часа» (issue #99). Но то же правило
+     * превращает опечатку 23:00→22:00 в 23-часовой визит, который вычеркнет
+     * мастеру весь следующий день, поэтому переход ограничен. Самая долгая
+     * услуга в каталоге — 3 часа, так что шесть не мешают ни одной реальной
+     * записи. Дневной визит эта граница не трогает: он и так не переходит
+     * через полночь.
+     */
+    private const MAX_OVERNIGHT_HOURS = 6;
+
     public ?int $editingId = null;
 
     public ?int $client_id = null;
@@ -665,13 +678,40 @@ class extends Component
         }
 
         $startsAt = Carbon::createFromFormat('H:i', $this->form_start_time);
-        $endsAt = Carbon::createFromFormat('H:i', $value);
 
-        if ($endsAt->lte($startsAt)) {
-            $this->addError('form_end_time', __('appointments.err_end_after_start'));
+        if ($this->resolveEndsAt($startsAt, $value) === null) {
+            $this->addError('form_end_time', __('appointments.err_overnight_too_long', ['hours' => self::MAX_OVERNIGHT_HOURS]));
         } else {
             $this->resetErrorBag('form_end_time');
         }
+    }
+
+    /**
+     * Конец визита датой и временем — единственное место, где решается, на какой
+     * день он попадает.
+     *
+     * Конец, который по часам не позже начала, означает переход через полночь:
+     * стрижка в 23:00 заканчивается в 00:00 следующего дня, а не «раньше, чем
+     * началась» (issue #99). Такой переход и раньше был возможен — deriveEndTime()
+     * сама выводила 00:00 для часовой услуги в 23:00, — но save() его отбивал, и
+     * админ упирался в ошибку на поле, которое форма заполнила за него.
+     *
+     * `null` означает, что переход длиннее {@see MAX_OVERNIGHT_HOURS}: это уже не
+     * ночной визит, а опечатка во времени.
+     */
+    private function resolveEndsAt(Carbon $startsAt, string $endTime): ?Carbon
+    {
+        $endsAt = $startsAt->copy()->setTimeFromTimeString($endTime);
+
+        if ($endsAt->gt($startsAt)) {
+            return $endsAt;
+        }
+
+        $endsAt->addDay();
+
+        return $startsAt->diffInMinutes($endsAt, absolute: true) <= self::MAX_OVERNIGHT_HOURS * 60
+            ? $endsAt
+            : null;
     }
 
     /**
@@ -734,10 +774,10 @@ class extends Component
         }
 
         $startsAt = Carbon::parse($this->form_date.' '.$this->form_start_time);
-        $endsAt = Carbon::parse($this->form_date.' '.$this->form_end_time);
+        $endsAt = $this->resolveEndsAt($startsAt, $this->form_end_time);
 
-        if ($endsAt->lte($startsAt)) {
-            $this->addError('form_end_time', __('appointments.err_end_after_start'));
+        if ($endsAt === null) {
+            $this->addError('form_end_time', __('appointments.err_overnight_too_long', ['hours' => self::MAX_OVERNIGHT_HOURS]));
 
             return;
         }

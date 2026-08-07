@@ -55,7 +55,7 @@ return [
     'discard_confirm' => 'Saqlamasdan yopilsinmi?',
 
     // Validation
-    'err_end_after_start' => 'Tugash vaqti boshlanish vaqtidan keyin boʻlishi kerak.',
+    'err_overnight_too_long' => 'Tugash vaqti boshlanishdan oldin. Yarim tundan oʻtganda tashrif :hours soatdan uzun boʻlolmaydi.',
     'err_client_required' => 'Mijozni tanlang — usiz yozuv saqlanmaydi.',
     'err_add_service' => 'Kamida bitta xizmat qoʻshing.',
     'err_delete_has_payments' => 'Bu yozuv boʻyicha qarz toʻlovlari bor — oʻchirish boshqa kunlar kassasini siljitadi. Avval toʻlovlarni oʻchiring.',

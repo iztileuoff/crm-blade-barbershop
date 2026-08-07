@@ -401,3 +401,99 @@ it('forbids a barber with no linked profile from changing any appointment status
 
     expect($appointment->fresh()->status)->toBe(AppointmentStatus::Confirmed);
 });
+
+/*
+|--------------------------------------------------------------------------
+| Issue #99 — визит через полночь
+|--------------------------------------------------------------------------
+|
+| Конец, который по часам не позже начала, означает следующий день. Правило
+| стало достижимым, когда сетка записи дошла до 23:00 (#96): deriveEndTime()
+| сама выводит 00:00 для часовой услуги в 23:00, а save() это же значение
+| отбивал — админ упирался в ошибку на поле, которое форма заполнила за него.
+*/
+
+it('saves a visit that starts before midnight and ends after it', function (string $endTime, int $expectedMinutes) {
+    $barber = Barber::factory()->create();
+    $client = Client::factory()->create();
+    $service = Service::factory()->create(['duration_minutes' => 60]);
+
+    Livewire::actingAs(navAdmin())
+        ->test('pages.admin.appointments')
+        ->call('openCreate')
+        ->set('barber_id', $barber->id)
+        ->set('client_id', $client->id)
+        ->set('form_date', '2026-08-10')
+        ->set('form_start_time', '23:00')
+        ->set('form_end_time', $endTime)
+        ->set('selectedServices', [['service_id' => $service->id, 'amount' => 60000]])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $appointment = Appointment::firstOrFail();
+
+    // Начало остаётся на своём дне, конец переезжает на следующий — иначе визит
+    // «заканчивался» за 23 часа до собственного начала.
+    expect($appointment->starts_at->format('Y-m-d H:i'))->toBe('2026-08-10 23:00')
+        ->and($appointment->ends_at->format('Y-m-d H:i'))->toBe('2026-08-11 '.$endTime)
+        ->and((int) $appointment->starts_at->diffInMinutes($appointment->ends_at))->toBe($expectedMinutes);
+})->with([
+    'ends at midnight' => ['00:00', 60],
+    'ends after midnight' => ['01:00', 120],
+]);
+
+it('clears the live error as soon as the end time crosses midnight legally', function () {
+    Livewire::actingAs(navAdmin())
+        ->test('pages.admin.appointments')
+        ->call('openCreate')
+        ->set('form_start_time', '23:00')
+        ->set('form_end_time', '22:00')
+        ->assertHasErrors('form_end_time')
+        ->set('form_end_time', '00:00')
+        ->assertHasNoErrors('form_end_time');
+});
+
+it('still refuses an end time that is a typo rather than a night shift', function () {
+    // 23:00 → 22:00 прочиталось бы как 23-часовой визит и вычеркнуло бы мастеру
+    // весь следующий день. Потолок перехода — 6 часов.
+    $barber = Barber::factory()->create();
+    $client = Client::factory()->create();
+    $service = Service::factory()->create(['duration_minutes' => 60]);
+
+    Livewire::actingAs(navAdmin())
+        ->test('pages.admin.appointments')
+        ->call('openCreate')
+        ->set('barber_id', $barber->id)
+        ->set('client_id', $client->id)
+        ->set('form_date', '2026-08-10')
+        ->set('form_start_time', '23:00')
+        ->set('form_end_time', '22:00')
+        ->set('selectedServices', [['service_id' => $service->id, 'amount' => 60000]])
+        ->call('save')
+        ->assertHasErrors('form_end_time')
+        ->assertNotDispatched('saved');
+
+    expect(Appointment::count())->toBe(0);
+});
+
+it('leaves a plain daytime visit on the day it started', function () {
+    // Потолок в 6 часов не должен трогать дневной визит: он и так не переходит
+    // через полночь, и длинный день у мастера остаётся законным.
+    $barber = Barber::factory()->create();
+    $client = Client::factory()->create();
+    $service = Service::factory()->create(['duration_minutes' => 60]);
+
+    Livewire::actingAs(navAdmin())
+        ->test('pages.admin.appointments')
+        ->call('openCreate')
+        ->set('barber_id', $barber->id)
+        ->set('client_id', $client->id)
+        ->set('form_date', '2026-08-10')
+        ->set('form_start_time', '09:00')
+        ->set('form_end_time', '18:00')
+        ->set('selectedServices', [['service_id' => $service->id, 'amount' => 60000]])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(Appointment::firstOrFail()->ends_at->format('Y-m-d H:i'))->toBe('2026-08-10 18:00');
+});
