@@ -99,6 +99,15 @@ class AppointmentObserver
         }
 
         if ($appointment->status === AppointmentStatus::Confirmed) {
+            // Возврат из «завершена» — это исправление статуса задним числом, а
+            // не подтверждение записи: клиент о завершении и не знал. Без этой
+            // проверки два клика «завершить» ↔ «вернуть» шлют ему «запись
+            // подтверждена» столько раз, сколько их сделали. Из «отменена»
+            // уведомляем: клиенту про отмену уже сообщили, и возврат — новость.
+            if ($appointment->getRawOriginal('status') === AppointmentStatus::Completed->value) {
+                return;
+            }
+
             $clientChatId = $appointment->client?->telegram_chat_id;
 
             if ($clientChatId !== null) {

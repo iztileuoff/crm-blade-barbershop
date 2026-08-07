@@ -36,6 +36,8 @@
             </main>
         </div>
 
+        <x-transport-status />
+
         @livewireScripts
     </body>
 @else
@@ -80,6 +82,11 @@
         <main class="mx-auto max-w-lg px-4 pb-12 pt-6">
             {{ $slot }}
         </main>
+
+        {{-- app.js гасит собственную реакцию Livewire на упавший запрос, так что
+             без этого компонента гость не увидит ни истёкшей сессии, ни обрыва
+             связи — кнопка просто выглядела бы мёртвой. --}}
+        <x-transport-status guest />
 
         @livewireScripts
     </body>

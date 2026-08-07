@@ -537,6 +537,13 @@ class extends Component
         if (str_ends_with((string) $key, 'service_id')) {
             $index = (int) explode('.', (string) $key)[0];
             $this->fillServiceAmount($index);
+
+            // Только по первой услуге (от неё считается конец) и только пока
+            // конец не заполнен вручную — иначе правка второй услуги затирала
+            // бы уже выставленное админом время.
+            if ($index === 0 || trim((string) $this->form_end_time) === '') {
+                $this->deriveEndTime();
+            }
         }
 
         $this->recalculateTotal();
@@ -593,7 +600,22 @@ class extends Component
 
     public function updatedFormStartTime($value): void
     {
-        if (! preg_match('/^\d{2}:\d{2}$/', $value)) {
+        $this->deriveEndTime();
+    }
+
+    /**
+     * Конец визита = начало + длительность первой услуги.
+     *
+     * Считается и на смену времени, и на смену первой услуги. Второе
+     * обязательно: openCreate() подставляет начало присваиванием, а от
+     * присваивания хук не срабатывает, — значит выбор услуги остаётся
+     * единственным моментом, когда конец ещё можно вывести. Без этого форма
+     * доходила до save() с пустым концом и падала на «конец должен быть позже
+     * начала» — на поле, к которому админ не прикасался.
+     */
+    private function deriveEndTime(): void
+    {
+        if (! preg_match('/^\d{2}:\d{2}$/', (string) $this->form_start_time)) {
             return;
         }
 
@@ -606,7 +628,7 @@ class extends Component
         $service = Service::find($firstServiceId);
 
         if ($service) {
-            $this->form_end_time = Carbon::createFromFormat('H:i', $value)
+            $this->form_end_time = Carbon::createFromFormat('H:i', $this->form_start_time)
                 ->addMinutes((int) $service->duration_minutes)
                 ->format('H:i');
         }
@@ -1393,6 +1415,7 @@ class extends Component
                                         </button>
                                     @else
                                         <button type="button" wire:click="markConfirmed({{ $appointment->id }})"
+                                                wire:confirm="{{ __('appointments.return_to_confirmed_confirm') }}"
                                                 title="{{ __('appointments.return_to_confirmed') }}" aria-label="{{ __('appointments.return_to_confirmed') }}"
                                                 class="flex h-8 w-8 items-center justify-center rounded-lg bg-content/[0.04] text-content/40 transition hover:bg-brass/10 hover:text-brass-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass/40">
                                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" /></svg>

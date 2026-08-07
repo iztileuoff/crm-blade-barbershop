@@ -51,6 +51,7 @@ return [
     'cancel_confirm' => 'Jazılıw biykarlansınba?',
     'complete_confirm' => 'Jazılıw juwmaqlansınba?',
     'return_to_confirmed' => 'Tastıyıqlanǵanǵa qaytarıw',
+    'return_to_confirmed_confirm' => 'Jazılıw tastıyıqlanǵanǵa qaytarılsınba?',
     'discard_confirm' => 'Saqlamay jabılsınba?',
 
     // Validation

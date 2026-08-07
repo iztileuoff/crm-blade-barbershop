@@ -11,7 +11,12 @@
                                   же запроса сессию не оживит, нужен новый вход.
     Оба кастомных события шлёт resources/js/app.js — весь переведённый текст
     здесь, в JS нет ни одной русской строки.
+
+    `guest` — публичная бронь: входить гостю некуда, 419 у него означает
+    протухший CSRF-токен страницы, и лечится он обновлением, а не логином.
 --}}
+@props(['guest' => false])
+
 <div x-data="{ showError: false, showExpired: false, offline: ! navigator.onLine }"
      x-on:transport-error.window="showError = true; clearTimeout($el._transportErrTimer); $el._transportErrTimer = setTimeout(() => showError = false, 10000)"
      x-on:transport-session-expired.window="showExpired = true"
@@ -70,18 +75,30 @@
                 <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" /></svg>
             </div>
             <h3 class="mb-1.5 text-sm font-bold text-content">{{ __('errors.session_expired_title') }}</h3>
-            <p class="mb-5 text-sm text-content/60">{{ __('errors.session_expired_body') }}</p>
+            <p class="mb-5 text-sm text-content/60">{{ $guest ? __('errors.session_expired_body_guest') : __('errors.session_expired_body') }}</p>
             <div class="flex flex-col gap-2.5">
-                {{-- _blank — планшет открывает вход в новой вкладке, эта не перезагружается --}}
-                <a href="{{ route('login') }}" target="_blank" rel="noopener"
-                   @click="showExpired = false"
-                   class="inline-flex items-center justify-center gap-2 rounded-xl bg-brass px-6 py-2.5 text-sm font-bold text-black transition-all hover:bg-brass-bright active:scale-[0.98]">
-                    {{ __('errors.login_again') }}
-                </a>
-                <button type="button" @click="showExpired = false; $dispatch('transport-retry')"
-                        class="inline-flex items-center justify-center gap-2 rounded-xl border border-content/[0.1] px-6 py-2.5 text-sm font-bold text-content/70 transition hover:border-content/20 hover:text-content">
-                    {{ __('errors.retry') }}
-                </button>
+                @if ($guest)
+                    <button type="button" @click="window.location.reload()"
+                            class="inline-flex items-center justify-center gap-2 rounded-xl bg-brass px-6 py-2.5 text-sm font-bold text-black transition-all hover:bg-brass-bright active:scale-[0.98]">
+                        {{ __('errors.page_reload') }}
+                    </button>
+                @else
+                    {{-- _blank — планшет открывает вход в новой вкладке, эта не перезагружается --}}
+                    <a href="{{ route('login') }}" target="_blank" rel="noopener"
+                       @click="showExpired = false"
+                       class="inline-flex items-center justify-center gap-2 rounded-xl bg-brass px-6 py-2.5 text-sm font-bold text-black transition-all hover:bg-brass-bright active:scale-[0.98]">
+                        {{ __('errors.login_again') }}
+                    </a>
+                @endif
+                {{-- Повтор помогает, только если сессию оживили входом в соседней
+                     вкладке; у гостя такого пути нет — там повтор дал бы тот же
+                     419 и превратился бы в тупиковую кнопку. --}}
+                @unless ($guest)
+                    <button type="button" @click="showExpired = false; $dispatch('transport-retry')"
+                            class="inline-flex items-center justify-center gap-2 rounded-xl border border-content/[0.1] px-6 py-2.5 text-sm font-bold text-content/70 transition hover:border-content/20 hover:text-content">
+                        {{ __('errors.retry') }}
+                    </button>
+                @endunless
             </div>
         </div>
     </div>

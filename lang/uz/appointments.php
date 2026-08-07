@@ -51,6 +51,7 @@ return [
     'cancel_confirm' => 'Yozuv bekor qilinsinmi?',
     'complete_confirm' => 'Yozuv yakunlansinmi?',
     'return_to_confirmed' => 'Tasdiqlanganga qaytarish',
+    'return_to_confirmed_confirm' => 'Yozuv tasdiqlanganga qaytarilsinmi?',
     'discard_confirm' => 'Saqlamasdan yopilsinmi?',
 
     // Validation

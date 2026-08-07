@@ -5,6 +5,7 @@ namespace App\Telegram\Handlers;
 use App\Enums\AppointmentStatus;
 use App\Models\Appointment;
 use App\Models\Client;
+use App\Models\Order;
 use App\Telegram\AppointmentFormatter;
 use App\Telegram\Keyboards;
 use App\Telegram\TelegramLinker;
@@ -83,6 +84,12 @@ class ClientMenuHandler
         $bot->sendMessage(__('telegram.history_title')."\n\n".$lines->implode("\n"), parse_mode: 'HTML');
     }
 
+    /**
+     * Долг клиента — непогашенный остаток, а не выданная сумма: `debt_amount`
+     * при погашении не обнуляется, погашения лежат в `debt_payments`. Считаем
+     * теми же скоупами, что и страница долгов, и по обеим кассовым операциям —
+     * иначе бот требует уже принесённые деньги и не видит долг за товар.
+     */
     public function debt(Nutgram $bot): void
     {
         $client = $this->client($bot);
@@ -91,10 +98,14 @@ class ClientMenuHandler
             return;
         }
 
-        $total = (int) Appointment::query()
+        $total = Appointment::query()
             ->where('client_id', $client->id)
-            ->where('debt_amount', '>', 0)
-            ->sum('debt_amount');
+            ->withOutstandingDebt()
+            ->sumOutstandingDebt()
+            + Order::query()
+                ->where('client_id', $client->id)
+                ->withOutstandingDebt()
+                ->sumOutstandingDebt();
 
         if ($total === 0) {
             $bot->sendMessage(__('telegram.no_debt'));

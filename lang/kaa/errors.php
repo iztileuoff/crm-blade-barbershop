@@ -17,6 +17,10 @@ return [
     'session_expired_body' => 'Sessiya waqtı tamamlandı. Jańa vkladkada qayta kiriń — bul forma joǵalmaydı.',
     'login_again' => 'Qayta kiriw',
 
+    // Ashıq bronda mıymandaǵı sol 419: onıń «qayta kiretuǵın» sessiyası joq —
+    // bettiń CSRF-tokeni tamamlanǵan, jańalaw menen sheshiledi.
+    'session_expired_body_guest' => 'Bet júdá uzaq ashıq turdı. Onı jańalap, jazılıwdı qayta jiberiń.',
+
     // Tolıq betli errors/419|500|503.blade.php — sessiyasız hám bazasız
     // render etiledi, sonlıqtan matın usı jerde qatań, dinamikasız.
     'page_419_title' => 'Sessiya tamamlandı',

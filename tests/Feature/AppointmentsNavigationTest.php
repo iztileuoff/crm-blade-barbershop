@@ -229,6 +229,60 @@ it('seeds nothing for the barber when no filter is active', function () {
     expect($component->get('barber_id'))->toBeNull();
 });
 
+it('derives the end time when the service is picked, not only when the start is typed', function () {
+    // openCreate() подставляет начало присваиванием, а от присваивания
+    // updated-хук не срабатывает: если конец не вывести на выборе услуги, он
+    // так и останется пустым до самого save().
+    $service = Service::factory()->create(['duration_minutes' => 45]);
+    Carbon::setTestNow(Carbon::parse('2026-08-07 10:15:00', 'Asia/Tashkent'));
+
+    $component = Livewire::actingAs(navAdmin())
+        ->test('pages.admin.appointments')
+        ->call('openCreate')
+        ->call('addService')
+        ->set('selectedServices.0.service_id', $service->id);
+
+    expect($component->get('form_start_time'))->toBe('11:00')
+        ->and($component->get('form_end_time'))->toBe('11:45');
+});
+
+it('saves a new appointment without the admin ever touching the end time', function () {
+    $barber = Barber::factory()->create();
+    $service = Service::factory()->create(['duration_minutes' => 60]);
+    Carbon::setTestNow(Carbon::parse('2026-08-07 10:15:00', 'Asia/Tashkent'));
+
+    Livewire::actingAs(navAdmin())
+        ->test('pages.admin.appointments')
+        ->call('openCreate')
+        ->set('barber_id', $barber->id)
+        ->set('client_id', Client::factory()->create()->id)
+        ->call('addService')
+        ->set('selectedServices.0.service_id', $service->id)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $appointment = Appointment::firstOrFail();
+
+    expect($appointment->starts_at->format('H:i'))->toBe('11:00')
+        ->and($appointment->ends_at->format('H:i'))->toBe('12:00');
+});
+
+it('does not overwrite an end time the admin set by hand when a later service changes', function () {
+    $first = Service::factory()->create(['duration_minutes' => 30]);
+    $second = Service::factory()->create(['duration_minutes' => 30]);
+
+    $component = Livewire::actingAs(navAdmin())
+        ->test('pages.admin.appointments')
+        ->call('openCreate')
+        ->call('addService')
+        ->set('selectedServices.0.service_id', $first->id)
+        ->set('form_end_time', '13:30')
+        ->call('addService')
+        ->set('selectedServices.1.service_id', $second->id);
+
+    expect($component->get('form_end_time'))->toBe('13:30');
+});
+
 it('suggests the first slot of the day for a new appointment on a future day', function () {
     Barber::factory()->create();
 

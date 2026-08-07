@@ -17,6 +17,10 @@ return [
     'session_expired_body' => 'Sessiya vaqti tugadi. Yangi vkladkada qayta kiring — bu forma yo\'qolmaydi.',
     'login_again' => 'Qayta kirish',
 
+    // Ochiq bronda mehmondagi o'sha 419: uning "qayta kiradigan" sessiyasi yo'q —
+    // sahifaning CSRF-tokeni tugagan, yangilash bilan hal bo'ladi.
+    'session_expired_body_guest' => 'Sahifa juda uzoq ochiq turdi. Uni yangilab, yozuvni qayta yuboring.',
+
     // To'liq sahifali errors/419|500|503.blade.php — sessiyasiz va bazasiz
     // renderlanadi, shuning uchun matn shu yerda qat'iy, dinamikasiz.
     'page_419_title' => 'Sessiya tugadi',

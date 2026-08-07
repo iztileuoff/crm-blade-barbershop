@@ -51,6 +51,7 @@ return [
     'cancel_confirm' => 'Отменить запись?',
     'complete_confirm' => 'Завершить запись?',
     'return_to_confirmed' => 'Вернуть в подтверждённые',
+    'return_to_confirmed_confirm' => 'Вернуть запись в подтверждённые?',
     'discard_confirm' => 'Закрыть без сохранения?',
 
     // Validation

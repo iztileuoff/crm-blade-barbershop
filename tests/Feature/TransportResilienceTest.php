@@ -25,6 +25,51 @@ it('renders the offline strip, the transport-error banner and the session-expire
         ->assertSee(route('login'), escape: false);
 });
 
+it('shows a guest on the public booking page the same transport feedback', function () {
+    // app.js гасит собственную реакцию Livewire на упавший запрос на каждой
+    // странице, где он подключён. Без этого компонента гость не увидел бы ни
+    // обрыва связи, ни истёкшей сессии — кнопка просто выглядела бы мёртвой.
+    auth()->logout();
+
+    $this->get(route('booking'))
+        ->assertOk()
+        ->assertSee('transport-error.window', escape: false)
+        ->assertSee('transport-session-expired.window', escape: false)
+        ->assertSee(__('errors.connection_lost_title'))
+        // Гостю предлагаем обновить страницу: сессии, в которую можно «войти
+        // заново», у него нет, а 419 там — протухший CSRF-токен.
+        ->assertSee(__('errors.session_expired_body_guest'))
+        ->assertDontSee(__('errors.login_again'));
+});
+
+it('shows the same transport feedback on the login page', function () {
+    auth()->logout();
+
+    $this->get(route('login'))
+        ->assertOk()
+        ->assertSee('transport-error.window', escape: false)
+        ->assertSee('transport-session-expired.window', escape: false)
+        ->assertSee(__('errors.connection_lost_title'));
+});
+
+it('never loads app.js in a layout that cannot report the failure it swallows', function () {
+    // Связка «app.js + x-transport-status» разъезжалась молча: подключение
+    // JS есть, слушателя нет — и обратная связь пропадает целиком.
+    $layouts = glob(resource_path('views/components/layouts/*.blade.php'));
+
+    expect($layouts)->not->toBeEmpty();
+
+    foreach ($layouts as $layout) {
+        $markup = file_get_contents($layout);
+
+        if (! str_contains($markup, 'resources/js/app.js')) {
+            continue;
+        }
+
+        expect($markup)->toContain('<x-transport-status');
+    }
+});
+
 it('keeps app.js free of hardcoded Russian text — every user-facing string must come from lang files', function () {
     // WHY-comments in app.js are (rightly) in Russian, but no *code* line
     // may carry a Cyrillic string literal: user-facing text belongs in

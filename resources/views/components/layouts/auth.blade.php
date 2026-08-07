@@ -22,6 +22,11 @@
 </head>
 <body class="min-h-full bg-surface font-sans text-content antialiased">
     {{ $slot }}
+
+    {{-- См. layouts/booking: app.js подавляет реакцию Livewire, обратная связь
+         об истёкшей сессии и обрыве связи живёт только здесь. --}}
+    <x-transport-status />
+
     @livewireScripts
 </body>
 </html>

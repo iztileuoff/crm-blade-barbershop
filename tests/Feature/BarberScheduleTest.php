@@ -135,14 +135,80 @@ it('does not require start or end times for a day marked off', function () {
     expect($barber->scheduleWindowForDay('sun'))->toBe('off');
 });
 
-it('clears a day\'s stale times the moment it is toggled off', function () {
-    $component = Livewire::actingAs(scheduleAdmin())
+it('keeps a day\'s times on screen when it is toggled off, but stores it without them', function () {
+    // Выходной должен читаться выходным и в данных — «off, но всё ещё
+    // 09:00–20:00» вводит в заблуждение любого, кто заглянет в колонку. Но
+    // чистит времена сохранение, а не форма: админ может передумать в том же
+    // диалоге, и пустая пара полей сделала бы день несохраняемым.
+    $specialization = Specialization::factory()->create();
+
+    Livewire::actingAs(scheduleAdmin())
         ->test('pages.admin.barbers')
         ->call('openCreate')
-        ->set('schedule.mon.off', true);
+        ->set('name', 'Тестовый Мастер')
+        ->set('specialization_id', $specialization->id)
+        ->set('schedule', fullWeekSchedule())
+        ->set('schedule.mon.off', true)
+        ->assertSet('schedule.mon.start', '09:00')
+        ->assertSet('schedule.mon.end', '20:00')
+        ->call('save')
+        ->assertHasNoErrors();
 
-    $component->assertSet('schedule.mon.start', null)
-        ->assertSet('schedule.mon.end', null);
+    $barber = Barber::where('name', 'Тестовый Мастер')->firstOrFail();
+
+    expect($barber->schedule['mon'])->toBe(['start' => null, 'end' => null, 'off' => true])
+        ->and($barber->scheduleWindowForDay('mon'))->toBe('off');
+});
+
+it('can still save a day that was toggled off and then back on', function () {
+    $specialization = Specialization::factory()->create();
+
+    Livewire::actingAs(scheduleAdmin())
+        ->test('pages.admin.barbers')
+        ->call('openCreate')
+        ->set('name', 'Тестовый Мастер')
+        ->set('specialization_id', $specialization->id)
+        ->set('schedule', fullWeekSchedule())
+        ->set('schedule.mon.off', true)
+        ->set('schedule.mon.off', false)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $barber = Barber::where('name', 'Тестовый Мастер')->firstOrFail();
+
+    expect($barber->scheduleWindowForDay('mon'))->toBe(['start' => '09:00', 'end' => '20:00']);
+});
+
+it('restores the day\'s default times when it comes back into service without any', function () {
+    Livewire::actingAs(scheduleAdmin())
+        ->test('pages.admin.barbers')
+        ->call('openCreate')
+        ->set('schedule.sat.start', null)
+        ->set('schedule.sat.end', null)
+        ->set('schedule.sat.off', false)
+        ->assertSet('schedule.sat.start', '10:00')
+        ->assertSet('schedule.sat.end', '18:00');
+});
+
+it('never lets a key that is not a weekday reach the schedule column', function () {
+    // $schedule — публичное свойство Livewire, то есть пишется с клиента, а
+    // валидация лишние ключи не вырезает.
+    $specialization = Specialization::factory()->create();
+    $schedule = fullWeekSchedule();
+    $schedule['junk'] = ['start' => '00:00', 'end' => '23:00', 'off' => false];
+
+    Livewire::actingAs(scheduleAdmin())
+        ->test('pages.admin.barbers')
+        ->call('openCreate')
+        ->set('name', 'Тестовый Мастер')
+        ->set('specialization_id', $specialization->id)
+        ->set('schedule', $schedule)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $barber = Barber::where('name', 'Тестовый Мастер')->firstOrFail();
+
+    expect(array_keys($barber->schedule))->toBe(Barber::WEEKDAYS);
 });
 
 it('hydrates a legacy positional schedule into the new field shape when editing', function () {

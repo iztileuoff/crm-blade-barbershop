@@ -150,19 +150,29 @@ class extends Component
     }
 
     /**
-     * Toggling a day off clears its stale times rather than leaving them to
-     * linger unseen behind the disabled inputs — a day off should read as
-     * off in the stored data too, not as "off, but still 09:00–20:00".
+     * Выходной хранится без времён — но обнуляет их {@see scheduleForStorage()}
+     * на сохранении, а не форма. В форме времена остаются на месте: админ
+     * может передумать в том же диалоге, и после возврата дня в работу пустая
+     * пара полей упиралась бы в `required_if` — день становился несохраняемым,
+     * пока оба времени не наберут заново.
+     *
+     * Здесь остаётся обратный случай: день вернули в работу, а времён нет
+     * (легаси-строка, ручной сброс) — подставляем дефолты этого дня.
      */
     public function updatedSchedule($value, $key): void
     {
-        if (! str_ends_with($key, '.off') || ! $value) {
+        if (! str_ends_with($key, '.off') || $value) {
             return;
         }
 
         $day = explode('.', $key)[0];
-        $this->schedule[$day]['start'] = null;
-        $this->schedule[$day]['end'] = null;
+        $defaults = $this->defaultSchedule();
+
+        foreach (['start', 'end'] as $bound) {
+            if (trim((string) ($this->schedule[$day][$bound] ?? '')) === '') {
+                $this->schedule[$day][$bound] = $defaults[$day][$bound];
+            }
+        }
     }
 
     /**
@@ -183,6 +193,34 @@ class extends Component
         return $rules;
     }
 
+    /**
+     * Расписание в том виде, в каком оно уходит в JSON-колонку.
+     *
+     * Собирается по Barber::WEEKDAYS, а не берётся из свойства как есть:
+     * `$schedule` — публичное свойство Livewire, то есть пишется с клиента, а
+     * валидация лишние ключи не вырезает. Выходной день хранится без времён —
+     * «off, но всё ещё 09:00–20:00» читалось бы как работающий день у любого,
+     * кто заглянет в данные.
+     *
+     * @return array<string, array{start: ?string, end: ?string, off: bool}>
+     */
+    private function scheduleForStorage(): array
+    {
+        $stored = [];
+
+        foreach (Barber::WEEKDAYS as $day) {
+            $off = (bool) ($this->schedule[$day]['off'] ?? false);
+
+            $stored[$day] = [
+                'start' => $off ? null : ($this->schedule[$day]['start'] ?? null),
+                'end' => $off ? null : ($this->schedule[$day]['end'] ?? null),
+                'off' => $off,
+            ];
+        }
+
+        return $stored;
+    }
+
     public function save(): void
     {
         $this->validate();
@@ -193,7 +231,7 @@ class extends Component
             'price' => $this->price,
             'salary_percent' => $this->salary_percent,
             'is_active' => $this->is_active,
-            'schedule' => $this->schedule,
+            'schedule' => $this->scheduleForStorage(),
         ];
 
         if ($this->editingId) {

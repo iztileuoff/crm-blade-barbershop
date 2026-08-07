@@ -18,6 +18,10 @@
         </include>
     </source>
     <php>
+        <!-- Вся сюита идёт одним процессом, и на 533 тестах она перестала
+             помещаться в дефолтные 128M: прогон падал не на ассерте, а
+             Fatal error в var-dumper'е. -->
+        <ini name="memory_limit" value="512M"/>
         <env name="APP_ENV" value="testing"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>

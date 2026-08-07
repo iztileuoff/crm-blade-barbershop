@@ -233,6 +233,55 @@ it('falls back to the global sms_locale for the cancellation sms when the client
     $appointment->update(['status' => AppointmentStatus::Cancelled]);
 });
 
+it('does not tell the client the appointment is confirmed when the status is walked back from completed', function () {
+    // Возврат из «завершена» — исправление статуса задним числом: клиент о
+    // завершении и не знал. Уведомлять его тут не о чем.
+    Queue::fake();
+    $barber = linkedBarber(123);
+    $client = Client::factory()->create(['telegram_chat_id' => 456]);
+    $appointment = makeAppointment($barber, $client, AppointmentStatus::Completed);
+
+    $appointment->update(['status' => AppointmentStatus::Confirmed]);
+
+    Queue::assertNotPushed(
+        SendAppointmentNotification::class,
+        fn (SendAppointmentNotification $job) => (fn () => $this->notice)->call($job) === AppointmentNotice::ConfirmedForClient,
+    );
+});
+
+it('cannot be made to spam the client by flipping completed and confirmed back and forth', function () {
+    $barber = linkedBarber(123);
+    $client = Client::factory()->create(['telegram_chat_id' => 456]);
+    $appointment = makeAppointment($barber, $client, AppointmentStatus::Confirmed);
+
+    Queue::fake();
+
+    foreach (range(1, 3) as $ignored) {
+        $appointment->update(['status' => AppointmentStatus::Completed]);
+        $appointment->update(['status' => AppointmentStatus::Confirmed]);
+    }
+
+    expect(Queue::pushed(
+        SendAppointmentNotification::class,
+        fn (SendAppointmentNotification $job) => (fn () => $this->notice)->call($job) === AppointmentNotice::ConfirmedForClient,
+    ))->toHaveCount(0);
+});
+
+it('still tells the client when a cancelled appointment is brought back to confirmed', function () {
+    // Про отмену клиенту сообщили — возврат для него настоящая новость.
+    $barber = linkedBarber(123);
+    $client = Client::factory()->create(['telegram_chat_id' => 456]);
+    $appointment = makeAppointment($barber, $client, AppointmentStatus::Cancelled);
+
+    Queue::fake();
+    $appointment->update(['status' => AppointmentStatus::Confirmed]);
+
+    Queue::assertPushed(
+        SendAppointmentNotification::class,
+        fn (SendAppointmentNotification $job) => (fn () => $this->notice)->call($job) === AppointmentNotice::ConfirmedForClient,
+    );
+});
+
 it('does not re-notify on unrelated updates', function () {
     $barber = linkedBarber(123);
     $appointment = makeAppointment($barber, Client::factory()->create());
