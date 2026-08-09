@@ -37,6 +37,9 @@ return [
         'taken' => 'Bu vaqtga allaqachon yozuv bor',
         'taken_bookable' => 'Bu vaqtga allaqachon yozuv bor — ustiga yozish mumkin',
         'taken_short' => 'band',
+        'past' => 'Bu vaqt allaqachon oʻtib ketdi',
+        'past_bookable' => 'Bu vaqt allaqachon oʻtib ketdi — baribir yozish mumkin',
+        'past_short' => 'oʻtdi',
     ],
 
     'confirm' => [

@@ -157,24 +157,146 @@ it('falls back to the default hours when the settings are broken', function () {
     ]);
 });
 
-it('drops hours that have already started today', function () {
+it('keeps the hours that have already started today in the grid', function () {
+    // Раньше прошедшие часы вырезались из сетки, и в 12:30 день выглядел
+    // начинающимся с 13:00 — как будто салон в это время и открывается.
     $this->travelTo(now()->startOfDay()->addHours(12)->addMinutes(30));
 
     $slots = Volt::test('pages.booking')->instance()->availableSlots;
     $values = array_column($slots, 'value');
 
-    expect($values)->not->toContain('12:00')
-        ->and($values[0])->toBe('13:00');
+    expect($values[0])->toBe('09:00')
+        ->and($values)->toContain('12:00');
+});
+
+it('marks the hours already gone by today as past', function () {
+    $this->travelTo(now()->startOfDay()->addHours(12)->addMinutes(30));
+
+    // Начавшийся час уже прошёл: в 12:30 на 12:00 записываться нечего.
+    expect(Volt::test('pages.booking')->instance()->pastSlots)
+        ->toBe(['09:00', '10:00', '11:00', '12:00']);
+});
+
+it('marks nothing as past on a future day', function () {
+    expect(Volt::test('pages.booking')
+        ->set('date', now()->addDay()->toDateString())
+        ->instance()
+        ->pastSlots)->toBe([]);
 });
 
 it('falls back to today when the client sends a malformed date', function () {
-    $slots = Volt::test('pages.booking')
+    $component = Volt::test('pages.booking')
         ->set('date', 'not-a-date')
-        ->instance()
-        ->availableSlots;
+        ->instance();
 
-    // The clock is frozen at 10:00, so today's first bookable hour is 11:00.
-    expect(array_column($slots, 'value')[0])->toBe('11:00');
+    // Сетка теперь одинакова для любого дня, так что «сегодня» видно по
+    // прошедшим часам: время заморожено на 10:00, значит 09:00 и 10:00 позади.
+    expect($component->pastSlots)->toBe(['09:00', '10:00']);
+});
+
+it('shows the whole round-the-clock day even when it is already midday', function () {
+    // Ради этого сетка и перестала резать прошедшее: салон, работающий сутки,
+    // должен показывать все 24 часа, а не остаток текущего дня (#101).
+    Setting::set('work_start', '00:00');
+    Setting::set('work_end', '00:00');
+
+    $this->travelTo(now()->startOfDay()->addHours(15)->addMinutes(15));
+
+    $slots = Volt::test('pages.booking')->instance()->availableSlots;
+
+    expect($slots)->toHaveCount(24)
+        ->and($slots[0]['value'])->toBe('00:00')
+        ->and($slots[23]['value'])->toBe('23:00');
+});
+
+it('refuses to select an hour that has already passed for a guest', function () {
+    $service = Service::factory()->create(['duration_minutes' => 60]);
+    $barber = Barber::factory()->create();
+
+    Volt::test('pages.booking')
+        ->call('selectService', $service->id)
+        ->call('selectBarber', $barber->id)
+        ->set('date', now()->toDateString())
+        ->call('selectTime', '09:00')
+        ->assertSet('step', 3)
+        ->assertSet('time', null);
+
+    expect(Appointment::count())->toBe(0);
+});
+
+it('refuses a past hour for a guest who backdates the day past the horizon', function () {
+    // `$date` — клиентское свойство, и на горизонт его проверяет только mount():
+    // `$set('date', …)` в живом компоненте до сих пор доезжает сюда, а вчерашняя
+    // сетка не должна становиться доступной просто потому, что это не сегодня.
+    $service = Service::factory()->create(['duration_minutes' => 60]);
+    $barber = Barber::factory()->create();
+
+    Volt::test('pages.booking')
+        ->call('selectService', $service->id)
+        ->call('selectBarber', $barber->id)
+        ->set('date', now()->subDay()->toDateString())
+        ->call('selectTime', '12:00')
+        ->assertSet('step', 3)
+        ->assertSet('time', null);
+
+    expect(Appointment::count())->toBe(0);
+});
+
+it('lets an admin book an hour that has already passed', function () {
+    // Клиент, пришедший в 15:15 и просящий записать его на пропущенные 14:00, —
+    // работа админа, та же логика, что и с занятым часом (issue #98).
+    $service = Service::factory()->create(['duration_minutes' => 60]);
+    $barber = Barber::factory()->create();
+    $date = now()->toDateString();
+
+    Livewire::actingAs(User::factory()->create(['role' => Role::ADMIN]))
+        ->test('pages.booking')
+        ->call('selectService', $service->id)
+        ->call('selectBarber', $barber->id)
+        ->set('date', $date)
+        ->call('selectTime', '09:00')
+        ->assertSet('step', 4)
+        ->assertSet('time', '09:00')
+        ->set('name', 'Опоздавший Клиент')
+        ->set('phone', '998901112233')
+        ->call('confirm')
+        ->assertHasNoErrors()
+        ->assertSet('step', 5);
+
+    expect(Appointment::where('starts_at', $date.' 09:00:00')->count())->toBe(1);
+});
+
+it('labels a past hour as closed for a guest and as bookable for an admin', function () {
+    $service = Service::factory()->create();
+    $barber = Barber::factory()->create();
+    $date = now()->toDateString();
+
+    // Время заморожено на 10:00, так что 09:00 в сетке уже прошло.
+    Volt::test('pages.booking')
+        ->call('selectService', $service->id)
+        ->call('selectBarber', $barber->id)
+        ->set('date', $date)
+        ->assertSee(__('booking.datetime.past_short'))
+        ->assertSee(__('booking.datetime.past'))
+        ->assertDontSee(__('booking.datetime.past_bookable'));
+
+    Livewire::actingAs(User::factory()->create(['role' => Role::ADMIN]))
+        ->test('pages.booking')
+        ->call('selectService', $service->id)
+        ->call('selectBarber', $barber->id)
+        ->set('date', $date)
+        ->assertSee(__('booking.datetime.past_bookable'));
+});
+
+it('tells a guest there are no slots left once the whole day has gone by', function () {
+    // Иначе гость получал сетку из одних мёртвых кнопок вместо объяснения.
+    $this->travelTo(now()->startOfDay()->addHours(23)->addMinutes(30));
+
+    Volt::test('pages.booking')
+        ->call('selectService', Service::factory()->create()->id)
+        ->call('selectBarber', Barber::factory()->create()->id)
+        ->set('date', now()->toDateString())
+        ->assertSee(__('booking.datetime.no_slots'));
 });
 
 it('refuses to select a slot that is already taken', function () {

@@ -355,9 +355,12 @@ class extends Component
     }
 
     /**
-     * Hourly slots inside the shop's working hours. For today every hour that
-     * has already started is dropped — the grid must never offer a time that
-     * has gone by.
+     * Hourly slots inside the shop's working hours — the whole working day,
+     * including hours already gone by. An hour that has passed is not dropped
+     * from the grid but marked through {@see pastSlots()}: the shop asked to
+     * see the day whole, because a grid that starts at the next hour reads as
+     * a shop that opens then. Which of those hours may still be picked is
+     * {@see isSelectableSlot()}'s business, not this list's.
      *
      * @return array<int, array{value: string, label: string}>
      */
@@ -366,20 +369,50 @@ class extends Component
     {
         [$startHour, $endHour] = $this->effectiveWorkingHours();
 
-        $now = Carbon::now();
-        $isToday = $this->selectedDate->isSameDay($now);
-
         $slots = [];
         for ($h = $startHour; $h < $endHour; $h++) {
-            if ($isToday && $h <= $now->hour) {
-                continue;
-            }
-
             $time = sprintf('%02d:00', $h);
             $slots[] = ['value' => $time, 'label' => $time];
         }
 
         return $slots;
+    }
+
+    /**
+     * Slot values ('HH:00') on the selected date whose hour has already begun.
+     *
+     * Closed to a guest and open to an admin, on the same reasoning as a taken
+     * hour {@see isSelectableSlot()}: the client who walks in at 15:15 asking
+     * to be written down for the 14:00 he missed is the admin's problem to
+     * record, while a guest booking himself into this morning is a mistake.
+     *
+     * A date before today counts as past in full. `$date` is client-writable
+     * and only {@see mount()} holds it to the horizon, so a crafted mid-session
+     * `$set('date', …)` reaches here — and yesterday's grid must not be
+     * bookable just because it is not today.
+     *
+     * @return array<int, string>
+     */
+    #[Computed]
+    public function pastSlots(): array
+    {
+        $now = Carbon::now();
+        $selected = $this->selectedDate;
+
+        if ($selected->gt($now->copy()->startOfDay())) {
+            return [];
+        }
+
+        $isToday = $selected->isSameDay($now);
+
+        $past = [];
+        foreach ($this->availableSlots as $slot) {
+            if (! $isToday || (int) substr($slot['value'], 0, 2) <= $now->hour) {
+                $past[] = $slot['value'];
+            }
+        }
+
+        return $past;
     }
 
     /**
@@ -545,13 +578,14 @@ class extends Component
 
     /**
      * A slot may be picked only while it is still offered — inside the working
-     * hours and in the future.
+     * hours, not already booked and not already gone by.
      *
-     * Being already booked stops a guest but not an admin (issue #98). The shop
-     * routinely takes a second client into the same hour and shuffles the two
-     * afterwards on the appointments page; refusing the booking outright only
-     * meant the admin recorded it nowhere. The slot stays red either way — for
-     * the admin that is a warning, not a locked door.
+     * Neither of the latter two stops an admin (issue #98). The shop routinely
+     * takes a second client into the same hour and shuffles the two afterwards
+     * on the appointments page, and it writes down the walk-in who came at
+     * 14:00 while it is already 15:00; refusing outright only meant the admin
+     * recorded it nowhere. Such an hour stays marked either way — for the admin
+     * that is a warning, not a locked door.
      */
     private function isSelectableSlot(?string $time): bool
     {
@@ -563,7 +597,12 @@ class extends Component
             return false;
         }
 
-        return $this->actingAsAdmin || ! in_array($time, $this->takenSlots, true);
+        if ($this->actingAsAdmin) {
+            return true;
+        }
+
+        return ! in_array($time, $this->takenSlots, true)
+            && ! in_array($time, $this->pastSlots, true);
     }
 
     public function back(): void
@@ -690,7 +729,7 @@ class extends Component
         $this->step = 3;
         $this->addError('time', __('booking.validation.slot_taken'));
 
-        unset($this->availableSlots, $this->takenSlots);
+        unset($this->availableSlots, $this->takenSlots, $this->pastSlots);
     }
 
     /**
@@ -887,12 +926,19 @@ class extends Component
 
             {{-- Time slots --}}
             @php($takenSlots = $this->takenSlots)
-            @php($freeSlots = array_diff(array_column($this->availableSlots, 'value'), $takenSlots))
-            {{-- Админу занятый час не запрет, а предупреждение (issue #98): день,
-                 расписанный целиком, он всё равно должен видеть сеткой, а не
-                 заглушкой «нет свободных окон», под которой ничего не нажать. --}}
-            @php($mayBookOverTaken = $this->actingAsAdmin)
-            @php($selectableCount = $mayBookOverTaken ? count($this->availableSlots) : count($freeSlots))
+            {{-- Прошедший час остаётся в сетке серым, а не вырезается из неё:
+                 день должен читаться целиком, иначе сетка, начинающаяся со
+                 следующего часа, выглядит как салон, который в этот час
+                 открывается. --}}
+            @php($pastSlots = $this->pastSlots)
+            {{-- Админу занятый и прошедший час не запрет, а предупреждение
+                 (issue #98): день, расписанный целиком, он всё равно должен
+                 видеть сеткой, а не заглушкой «нет свободных окон», под которой
+                 ничего не нажать. --}}
+            @php($mayBookAnyway = $this->actingAsAdmin)
+            @php($selectableCount = $mayBookAnyway
+                ? count($this->availableSlots)
+                : count(array_diff(array_column($this->availableSlots, 'value'), $takenSlots, $pastSlots)))
             @if ($selectableCount === 0)
                 <div class="rounded-2xl border border-brass/10 bg-brass/5 p-5 text-center text-sm text-brass-ink/60">
                     {{ __('booking.datetime.no_slots') }}
@@ -901,26 +947,38 @@ class extends Component
                 <div class="grid grid-cols-3 gap-2 sm:grid-cols-4" wire:loading.class="pointer-events-none animate-pulse" wire:target="date">
                     @foreach ($this->availableSlots as $slot)
                         @php($isTaken = in_array($slot['value'], $takenSlots, true))
+                        {{-- Занятость важнее прошедшего времени: час, который и
+                             прошёл, и занят, остаётся красным — это более сильное
+                             предупреждение из двух. --}}
+                        @php($isPast = ! $isTaken && in_array($slot['value'], $pastSlots, true))
+                        @php($hint = match (true) {
+                            $isTaken => $mayBookAnyway ? __('booking.datetime.taken_bookable') : __('booking.datetime.taken'),
+                            $isPast => $mayBookAnyway ? __('booking.datetime.past_bookable') : __('booking.datetime.past'),
+                            default => null,
+                        })
                         <button type="button" wire:key="bk-slot-{{ $slot['value'] }}"
                                 wire:click="selectTime('{{ $slot['value'] }}')"
-                                @disabled($isTaken && ! $mayBookOverTaken)
-                                @if ($isTaken)
-                                    @php($takenHint = $mayBookOverTaken ? __('booking.datetime.taken_bookable') : __('booking.datetime.taken'))
-                                    title="{{ $takenHint }}"
-                                    aria-label="{{ $slot['label'] }} — {{ $takenHint }}"
+                                @disabled(($isTaken || $isPast) && ! $mayBookAnyway)
+                                @if ($hint !== null)
+                                    title="{{ $hint }}"
+                                    aria-label="{{ $slot['label'] }} — {{ $hint }}"
                                 @endif
                                 @class([
                                     'flex flex-col items-center rounded-xl border px-3 py-2.5 text-sm font-semibold transition-all duration-200',
                                     // Красным занятый час остаётся для всех — меняется только то,
                                     // нажимается он или нет.
                                     'border-danger/30 bg-danger/10 text-danger/60 line-through' => $isTaken,
-                                    'cursor-not-allowed' => $isTaken && ! $mayBookOverTaken,
-                                    'hover:border-danger/60 hover:bg-danger/20 hover:text-danger active:scale-95' => $isTaken && $mayBookOverTaken,
-                                    'border-content/[0.06] bg-content/[0.03] hover:border-brass/40 hover:bg-brass/10 hover:text-brass-ink active:scale-95' => ! $isTaken,
+                                    'border-content/[0.04] bg-content/[0.02] text-content/25 line-through' => $isPast,
+                                    'cursor-not-allowed' => ($isTaken || $isPast) && ! $mayBookAnyway,
+                                    'hover:border-danger/60 hover:bg-danger/20 hover:text-danger active:scale-95' => $isTaken && $mayBookAnyway,
+                                    'hover:border-brass/40 hover:bg-brass/10 hover:text-brass-ink active:scale-95' => $isPast && $mayBookAnyway,
+                                    'border-content/[0.06] bg-content/[0.03] hover:border-brass/40 hover:bg-brass/10 hover:text-brass-ink active:scale-95' => ! $isTaken && ! $isPast,
                                 ])>
                             {{ $slot['label'] }}
                             @if ($isTaken)
                                 <span class="text-[9px] font-medium uppercase tracking-wide no-underline">{{ __('booking.datetime.taken_short') }}</span>
+                            @elseif ($isPast)
+                                <span class="text-[9px] font-medium uppercase tracking-wide no-underline">{{ __('booking.datetime.past_short') }}</span>
                             @endif
                         </button>
                     @endforeach

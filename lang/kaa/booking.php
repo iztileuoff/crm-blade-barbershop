@@ -37,6 +37,9 @@ return [
         'taken' => 'Bul waqıtqa álleqashan jazılıw bar',
         'taken_bookable' => 'Bul waqıtqa álleqashan jazılıw bar — üstine jazıw múmkin',
         'taken_short' => 'band',
+        'past' => 'Bul waqıt ótip ketti',
+        'past_bookable' => 'Bul waqıt ótip ketti — sonda da jazıw múmkin',
+        'past_short' => 'ótti',
     ],
 
     'confirm' => [
