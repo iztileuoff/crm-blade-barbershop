@@ -34,10 +34,8 @@ return [
         'today' => 'Búgin',
         'horizon' => 'Kelesi 14 kúnge jazılıw múmkin',
         'no_slots' => 'Bul kúni bos waqıt joq. Basqa sánani saylań.',
-        'taken' => 'Bul waqıtqa álleqashan jazılıw bar',
         'taken_bookable' => 'Bul waqıtqa álleqashan jazılıw bar — üstine jazıw múmkin',
         'taken_short' => 'band',
-        'past' => 'Bul waqıt ótip ketti',
         'past_bookable' => 'Bul waqıt ótip ketti — sonda da jazıw múmkin',
         'past_short' => 'ótti',
     ],
@@ -77,6 +75,6 @@ return [
         'invalid_phone' => 'Durıs nomer kiritiń: 998XXXXXXXXX',
         'reselect' => 'Xızmet hám ustanı qaytadan saylań.',
         'too_many' => 'Júdá kóp arza. Bir minuttan keyin qaytadan urınıp kóriń.',
-        'slot_taken' => 'Bul waqıt bánt bolıp qaldı. Basqa waqıttı saylań.',
+        'slot_unavailable' => 'Bul waqıtqa jazılıw múmkin emes. Basqa waqıttı saylań.',
     ],
 ];

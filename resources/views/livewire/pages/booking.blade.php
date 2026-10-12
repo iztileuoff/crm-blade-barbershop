@@ -283,8 +283,8 @@ class extends Component
      * True for a signed-in admin, false for a guest and for a barber.
      *
      * This public page grants an admin two things it grants nobody else —
-     * prefilling a client's card {@see prefillFromCard()} and booking over a
-     * taken slot {@see isSelectableSlot()}. Both hang off this one predicate so
+     * prefilling a client's card {@see prefillFromCard()} and booking into a
+     * day already gone by {@see dayIsShut()}. Both hang off this one predicate so
      * they cannot drift apart, and it reads the session rather than any property
      * the browser can write. A barber is excluded on purpose: {@see App\Http\Middleware\RestrictBarberAccess}
      * keeps them out of the CRM beyond their own appointments.
@@ -381,15 +381,8 @@ class extends Component
     /**
      * Slot values ('HH:00') on the selected date whose hour has already begun.
      *
-     * Closed to a guest and open to an admin, on the same reasoning as a taken
-     * hour {@see isSelectableSlot()}: the client who walks in at 15:15 asking
-     * to be written down for the 14:00 he missed is the admin's problem to
-     * record, while a guest booking himself into this morning is a mistake.
-     *
-     * A date before today counts as past in full. `$date` is client-writable
-     * and only {@see mount()} holds it to the horizon, so a crafted mid-session
-     * `$set('date', …)` reaches here — and yesterday's grid must not be
-     * bookable just because it is not today.
+     * Only marks the hour grey; it is still selectable {@see isSelectableSlot()}.
+     * A date before today counts as past in full.
      *
      * @return array<int, string>
      */
@@ -577,15 +570,14 @@ class extends Component
     }
 
     /**
-     * A slot may be picked only while it is still offered — inside the working
-     * hours, not already booked and not already gone by.
+     * A slot may be picked whenever it is inside the working hours of a day
+     * that is not shut {@see dayIsShut()}.
      *
-     * Neither of the latter two stops an admin (issue #98). The shop routinely
-     * takes a second client into the same hour and shuffles the two afterwards
-     * on the appointments page, and it writes down the walk-in who came at
-     * 14:00 while it is already 15:00; refusing outright only meant the admin
-     * recorded it nowhere. Such an hour stays marked either way — for the admin
-     * that is a warning, not a locked door.
+     * Neither a taken nor a passed hour stops anyone (issue #98). The shop
+     * routinely takes a second client into the same hour, or writes down the
+     * walk-in who came at 14:00 while it is already 15:00, and sorts it all out
+     * afterwards on the appointments page. Such an hour stays marked — a
+     * warning, not a locked door.
      */
     private function isSelectableSlot(?string $time): bool
     {
@@ -597,12 +589,23 @@ class extends Component
             return false;
         }
 
-        if ($this->actingAsAdmin) {
-            return true;
-        }
+        return ! $this->dayIsShut;
+    }
 
-        return ! in_array($time, $this->takenSlots, true)
-            && ! in_array($time, $this->pastSlots, true);
+    /**
+     * True when a guest or a barber has steered the date outside the horizon —
+     * a day before today, one too far ahead, or a string that is not a plain
+     * `Y-m-d` (a `'2026-10-11 -20:00'` offset would otherwise carry yesterday
+     * past a today-check).
+     *
+     * The grid never offers such a day, but `$date` is client-writable and only
+     * {@see mount()} holds it to the horizon, so a crafted mid-session
+     * `$set('date', …)` reaches here. An admin may still back-fill a visit.
+     */
+    #[Computed]
+    public function dayIsShut(): bool
+    {
+        return ! $this->actingAsAdmin && $this->validDateWithinHorizon($this->date) === null;
     }
 
     public function back(): void
@@ -614,6 +617,15 @@ class extends Component
 
     public function confirm(): void
     {
+        // Второй тап двойного нажатия приходит со снимком, где запись уже создана
+        // и открыт экран успеха. Раньше его отсекала проверка занятости, но
+        // занятый час теперь открыт (issue #98). Смотрим именно на шаг, а не на
+        // confirmedAppointmentId: после «Назад» в браузере шаг снова 4, и
+        // следующая запись должна пройти, а не молча пропасть.
+        if ($this->step === 5) {
+            return;
+        }
+
         $throttleKey = 'booking:'.request()->ip();
 
         if (RateLimiter::tooManyAttempts($throttleKey, self::MAX_BOOKINGS_PER_MINUTE)) {
@@ -628,7 +640,7 @@ class extends Component
             'birth_date' => ['nullable', 'date'],
             'serviceId' => ['required', 'exists:services,id'],
             'barberId' => ['required', 'exists:barbers,id'],
-            'date' => ['required', 'date'],
+            'date' => ['required', 'date_format:Y-m-d'],
             'time' => ['required', 'regex:/^\d{2}:\d{2}$/'],
         ], attributes: [
             'name' => __('booking.validation.name'),
@@ -665,25 +677,9 @@ class extends Component
 
         $servicePrice = $barber->priceForService($service->id) ?? $barber->price ?? 0;
 
-        // Гонка за слотом решается под блокировкой: между выбором времени и этим
-        // запросом его мог занять кто-то другой. Админ пишет поверх намеренно
-        // (issue #98), поэтому для него проверка не нужна — и лишний
-        // lockForUpdate на каждую его запись тоже.
-        $mustBeFree = ! $this->actingAsAdmin;
-
-        $appointment = DB::transaction(function () use ($barber, $service, $servicePrice, $normalized, $startsAt, $endsAt, $mustBeFree): ?Appointment {
-            $isTaken = $mustBeFree && Appointment::query()
-                ->where('barber_id', $barber->id)
-                ->active()
-                ->where('starts_at', '<', $endsAt)
-                ->where('ends_at', '>', $startsAt)
-                ->lockForUpdate()
-                ->exists();
-
-            if ($isTaken) {
-                return null;
-            }
-
+        // Занятость здесь не проверяется: второй клиент в тот же час — обычное
+        // дело, салон разводит их потом на странице записей (issue #98).
+        $appointment = DB::transaction(function () use ($barber, $service, $servicePrice, $normalized, $startsAt, $endsAt): Appointment {
             $client = Client::firstOrCreate(
                 ['phone' => $normalized],
                 ['name' => $this->name, 'birth_date' => $this->birth_date ?: null],
@@ -707,12 +703,6 @@ class extends Component
             return $appointment;
         });
 
-        if ($appointment === null) {
-            $this->rejectSlot();
-
-            return;
-        }
-
         RateLimiter::hit($throttleKey, 60);
 
         $this->confirmedAppointmentId = $appointment->id;
@@ -720,16 +710,17 @@ class extends Component
     }
 
     /**
-     * Send the guest back to the time grid: the slot was booked, closed or ran
-     * out from under them between picking it and confirming.
+     * Send the guest back to the time grid: the hour fell outside the working
+     * day, or the day outside the horizon {@see dayIsShut()}, between picking
+     * it and confirming.
      */
     private function rejectSlot(): void
     {
         $this->time = null;
         $this->step = 3;
-        $this->addError('time', __('booking.validation.slot_taken'));
+        $this->addError('time', __('booking.validation.slot_unavailable'));
 
-        unset($this->availableSlots, $this->takenSlots, $this->pastSlots);
+        unset($this->availableSlots, $this->pastSlots);
     }
 
     /**
@@ -931,15 +922,11 @@ class extends Component
                  следующего часа, выглядит как салон, который в этот час
                  открывается. --}}
             @php($pastSlots = $this->pastSlots)
-            {{-- Админу занятый и прошедший час не запрет, а предупреждение
-                 (issue #98): день, расписанный целиком, он всё равно должен
-                 видеть сеткой, а не заглушкой «нет свободных окон», под которой
-                 ничего не нажать. --}}
-            @php($mayBookAnyway = $this->actingAsAdmin)
-            @php($selectableCount = $mayBookAnyway
-                ? count($this->availableSlots)
-                : count(array_diff(array_column($this->availableSlots, 'value'), $takenSlots, $pastSlots)))
-            @if ($selectableCount === 0)
+            {{-- Занятый и прошедший час — предупреждение, а не запрет, для всех
+                 (issue #98): день, расписанный или прошедший целиком, читается
+                 сеткой, а не заглушкой «нет свободных окон». Заглушка остаётся
+                 только для закрытого дня и для гостя, подсунувшего вчерашнюю дату. --}}
+            @if ($this->dayIsShut || $this->availableSlots === [])
                 <div class="rounded-2xl border border-brass/10 bg-brass/5 p-5 text-center text-sm text-brass-ink/60">
                     {{ __('booking.datetime.no_slots') }}
                 </div>
@@ -952,26 +939,22 @@ class extends Component
                              предупреждение из двух. --}}
                         @php($isPast = ! $isTaken && in_array($slot['value'], $pastSlots, true))
                         @php($hint = match (true) {
-                            $isTaken => $mayBookAnyway ? __('booking.datetime.taken_bookable') : __('booking.datetime.taken'),
-                            $isPast => $mayBookAnyway ? __('booking.datetime.past_bookable') : __('booking.datetime.past'),
+                            $isTaken => __('booking.datetime.taken_bookable'),
+                            $isPast => __('booking.datetime.past_bookable'),
                             default => null,
                         })
                         <button type="button" wire:key="bk-slot-{{ $slot['value'] }}"
                                 wire:click="selectTime('{{ $slot['value'] }}')"
-                                @disabled(($isTaken || $isPast) && ! $mayBookAnyway)
                                 @if ($hint !== null)
                                     title="{{ $hint }}"
                                     aria-label="{{ $slot['label'] }} — {{ $hint }}"
                                 @endif
                                 @class([
                                     'flex flex-col items-center rounded-xl border px-3 py-2.5 text-sm font-semibold transition-all duration-200',
-                                    // Красным занятый час остаётся для всех — меняется только то,
-                                    // нажимается он или нет.
-                                    'border-danger/30 bg-danger/10 text-danger/60 line-through' => $isTaken,
-                                    'border-content/[0.04] bg-content/[0.02] text-content/25 line-through' => $isPast,
-                                    'cursor-not-allowed' => ($isTaken || $isPast) && ! $mayBookAnyway,
-                                    'hover:border-danger/60 hover:bg-danger/20 hover:text-danger active:scale-95' => $isTaken && $mayBookAnyway,
-                                    'hover:border-brass/40 hover:bg-brass/10 hover:text-brass-ink active:scale-95' => $isPast && $mayBookAnyway,
+                                    // Занятый и прошедший час помечены, но нажимаются —
+                                    // это предупреждение, а не запрет.
+                                    'border-danger/30 bg-danger/10 text-danger/60 line-through hover:border-danger/60 hover:bg-danger/20 hover:text-danger active:scale-95' => $isTaken,
+                                    'border-content/[0.04] bg-content/[0.02] text-content/25 line-through hover:border-brass/40 hover:bg-brass/10 hover:text-brass-ink active:scale-95' => $isPast,
                                     'border-content/[0.06] bg-content/[0.03] hover:border-brass/40 hover:bg-brass/10 hover:text-brass-ink active:scale-95' => ! $isTaken && ! $isPast,
                                 ])>
                             {{ $slot['label'] }}

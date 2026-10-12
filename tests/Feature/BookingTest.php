@@ -10,8 +10,8 @@ use Livewire\Volt\Volt;
 
 uses(RefreshDatabase::class);
 
-it('refuses to book a time slot that already has an appointment', function () {
-    // Утро: слот 10:00 сегодня ещё впереди, отказ будет именно из-за занятости.
+it('books a second appointment into a time slot that already has one', function () {
+    // Салон сам разводит двух клиентов одного часа на странице записей (issue #98).
     $this->travelTo(now()->startOfDay()->addHours(8));
 
     $service = Service::factory()->create(['duration_minutes' => 60]);
@@ -27,20 +27,18 @@ it('refuses to book a time slot that already has an appointment', function () {
         'status' => AppointmentStatus::Pending,
     ]);
 
-    // Время выставляется напрямую — так же, как его подсунул бы клиент в обход
-    // сетки слотов. Защита обязана держаться на сервере.
     Volt::test('pages.booking')
         ->call('selectService', $service->id)
         ->call('selectBarber', $barber->id)
         ->set('date', $date)
-        ->set('time', '10:00')
+        ->call('selectTime', '10:00')
         ->set('name', 'Тест Клиент')
         ->set('phone', '998901234567')
         ->call('confirm')
-        ->assertHasErrors('time')
-        ->assertSet('step', 3);
+        ->assertHasNoErrors()
+        ->assertSet('step', 5);
 
-    expect(Appointment::where('barber_id', $barber->id)->count())->toBe(1);
+    expect(Appointment::where('barber_id', $barber->id)->count())->toBe(2);
 });
 
 it('books a free slot next to a taken one', function () {
@@ -73,8 +71,8 @@ it('books a free slot next to a taken one', function () {
 });
 
 // Issue #77: a taken slot must not rely on colour alone to say so — it needs a
-// real @disabled attribute (keyboard/AT users can't click it) plus a text cue.
-it('marks a taken booking slot disabled with a text cue, not colour alone', function () {
+// text cue. Issue #98: it stays clickable, the mark is a warning, not a lock.
+it('marks a taken booking slot with a text cue, not colour alone, and keeps it clickable', function () {
     $this->travelTo(now()->startOfDay()->addHours(8));
 
     $service = Service::factory()->create(['duration_minutes' => 60]);
@@ -95,19 +93,19 @@ it('marks a taken booking slot disabled with a text cue, not colour alone', func
         ->set('date', $date)
         ->html();
 
-    // The taken 10:00 button: disabled attribute + an aria-label/title carrying
-    // the "taken" copy, plus a visible text label under the time — not just a
-    // colour class a colour-blind or screen-reader user could never perceive.
+    // The taken 10:00 button: an aria-label/title carrying the "taken" copy,
+    // plus a visible text label under the time — not just a colour class a
+    // colour-blind or screen-reader user could never perceive.
     expect($html)
         ->toContain('wire:click="selectTime(\'10:00\')"')
-        ->toContain(__('booking.datetime.taken'))
+        ->toContain(__('booking.datetime.taken_bookable'))
         ->toContain(__('booking.datetime.taken_short'));
 
     preg_match('/<button[^>]*wire:click="selectTime\(\'10:00\'\)"[^>]*>/s', $html, $matches);
     expect($matches)->not->toBeEmpty('Could not find the 10:00 slot button in the rendered markup.');
 
     $button = $matches[0];
-    expect($button)->toContain('disabled')
+    expect($button)->not->toContain('disabled')
         ->and($button)->toContain('aria-label="')
-        ->and($button)->toContain(__('booking.datetime.taken'));
+        ->and($button)->toContain(__('booking.datetime.taken_bookable'));
 });

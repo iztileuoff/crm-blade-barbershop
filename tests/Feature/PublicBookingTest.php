@@ -209,37 +209,78 @@ it('shows the whole round-the-clock day even when it is already midday', functio
         ->and($slots[23]['value'])->toBe('23:00');
 });
 
-it('refuses to select an hour that has already passed for a guest', function () {
+it('lets a guest book an hour that has already passed', function () {
+    // Прошедший час — предупреждение, а не запрет, и для гостя тоже: разбирается
+    // с такой записью салон на странице записей (issue #98).
     $service = Service::factory()->create(['duration_minutes' => 60]);
     $barber = Barber::factory()->create();
+    $date = now()->toDateString();
 
     Volt::test('pages.booking')
         ->call('selectService', $service->id)
         ->call('selectBarber', $barber->id)
-        ->set('date', now()->toDateString())
+        ->set('date', $date)
         ->call('selectTime', '09:00')
-        ->assertSet('step', 3)
-        ->assertSet('time', null);
+        ->assertSet('step', 4)
+        ->assertSet('time', '09:00')
+        ->set('name', 'Гость Клиент')
+        ->set('phone', '998901112233')
+        ->call('confirm')
+        ->assertHasNoErrors()
+        ->assertSet('step', 5);
 
-    expect(Appointment::count())->toBe(0);
+    expect(Appointment::where('starts_at', $date.' 09:00:00')->count())->toBe(1);
 });
 
-it('refuses a past hour for a guest who backdates the day past the horizon', function () {
+it('refuses a guest or a barber who steers the day outside the horizon', function (?Role $role, Closure $date) {
     // `$date` — клиентское свойство, и на горизонт его проверяет только mount():
-    // `$set('date', …)` в живом компоненте до сих пор доезжает сюда, а вчерашняя
-    // сетка не должна становиться доступной просто потому, что это не сегодня.
+    // `$set('date', …)` в живом компоненте до сих пор доезжает сюда. Занятый и
+    // прошедший час теперь открыт, так что горизонт — последнее, что держит дату.
     $service = Service::factory()->create(['duration_minutes' => 60]);
     $barber = Barber::factory()->create();
 
-    Volt::test('pages.booking')
+    $component = $role === null
+        ? Volt::test('pages.booking')
+        : Livewire::actingAs(User::factory()->create(['role' => $role]))->test('pages.booking');
+
+    $component
         ->call('selectService', $service->id)
         ->call('selectBarber', $barber->id)
-        ->set('date', now()->subDay()->toDateString())
+        ->set('date', $date())
+        ->assertSee(__('booking.datetime.no_slots'))
         ->call('selectTime', '12:00')
         ->assertSet('step', 3)
         ->assertSet('time', null);
 
     expect(Appointment::count())->toBe(0);
+})->with([
+    'guest' => null,
+    'barber' => Role::BARBER,
+])->with([
+    'yesterday' => fn () => now()->subDay()->toDateString(),
+    // Смещение тащит вчерашний день мимо проверки «не раньше сегодня».
+    'yesterday with a timezone offset' => fn () => now()->subDay()->toDateString().' -20:00',
+    'beyond the horizon' => fn () => now()->addYear()->toDateString(),
+]);
+
+it('lets an admin back-fill a visit on a day already gone by', function () {
+    $service = Service::factory()->create(['duration_minutes' => 60]);
+    $barber = Barber::factory()->create();
+    $yesterday = now()->subDay()->toDateString();
+
+    Livewire::actingAs(User::factory()->create(['role' => Role::ADMIN]))
+        ->test('pages.booking')
+        ->call('selectService', $service->id)
+        ->call('selectBarber', $barber->id)
+        ->set('date', $yesterday)
+        ->call('selectTime', '12:00')
+        ->set('name', 'Вчерашний Клиент')
+        ->set('phone', '998901112233')
+        ->call('confirm')
+        ->assertHasNoErrors()
+        ->assertSet('step', 5);
+
+    expect(Appointment::where('starts_at', $yesterday.' 12:00:00')->count())->toBe(1);
 });
 
 it('lets an admin book an hour that has already passed', function () {
@@ -266,40 +307,39 @@ it('lets an admin book an hour that has already passed', function () {
     expect(Appointment::where('starts_at', $date.' 09:00:00')->count())->toBe(1);
 });
 
-it('labels a past hour as closed for a guest and as bookable for an admin', function () {
+it('labels a past hour as gone by yet still bookable', function () {
     $service = Service::factory()->create();
     $barber = Barber::factory()->create();
-    $date = now()->toDateString();
 
     // Время заморожено на 10:00, так что 09:00 в сетке уже прошло.
-    Volt::test('pages.booking')
+    $html = Volt::test('pages.booking')
         ->call('selectService', $service->id)
         ->call('selectBarber', $barber->id)
-        ->set('date', $date)
+        ->set('date', now()->toDateString())
         ->assertSee(__('booking.datetime.past_short'))
-        ->assertSee(__('booking.datetime.past'))
-        ->assertDontSee(__('booking.datetime.past_bookable'));
+        ->assertSee(__('booking.datetime.past_bookable'))
+        ->html();
 
-    Livewire::actingAs(User::factory()->create(['role' => Role::ADMIN]))
-        ->test('pages.booking')
-        ->call('selectService', $service->id)
-        ->call('selectBarber', $barber->id)
-        ->set('date', $date)
-        ->assertSee(__('booking.datetime.past_bookable'));
+    preg_match('/<button[^>]*wire:click="selectTime\(\'09:00\'\)"[^>]*>/s', $html, $matches);
+    expect($matches)->not->toBeEmpty()
+        ->and($matches[0])->not->toContain('disabled');
 });
 
-it('tells a guest there are no slots left once the whole day has gone by', function () {
-    // Иначе гость получал сетку из одних мёртвых кнопок вместо объяснения.
+it('still shows a guest the grid once the whole day has gone by', function () {
+    // Заглушка «нет свободных окон» прятала бы сетку, а прошедший час теперь
+    // нажимается — значит, нажать есть что.
     $this->travelTo(now()->startOfDay()->addHours(23)->addMinutes(30));
 
     Volt::test('pages.booking')
         ->call('selectService', Service::factory()->create()->id)
         ->call('selectBarber', Barber::factory()->create()->id)
         ->set('date', now()->toDateString())
-        ->assertSee(__('booking.datetime.no_slots'));
+        ->assertDontSee(__('booking.datetime.no_slots'))
+        ->call('selectTime', '12:00')
+        ->assertSet('step', 4);
 });
 
-it('refuses to select a slot that is already taken', function () {
+it('lets a guest select a slot that is already taken', function () {
     $service = Service::factory()->create(['duration_minutes' => 60]);
     $barber = Barber::factory()->create();
     $date = now()->toDateString();
@@ -315,9 +355,10 @@ it('refuses to select a slot that is already taken', function () {
         ->call('selectService', $service->id)
         ->call('selectBarber', $barber->id)
         ->set('date', $date)
+        ->assertSee(__('booking.datetime.taken_bookable'))
         ->call('selectTime', '12:00')
-        ->assertSet('step', 3)
-        ->assertSet('time', null);
+        ->assertSet('step', 4)
+        ->assertSet('time', '12:00');
 });
 
 it('lets an admin book over a taken slot and records the second appointment', function () {
@@ -382,7 +423,9 @@ it('still shows the grid to an admin on a day where every hour is taken', functi
         ->assertSet('step', 4);
 });
 
-it('keeps a taken slot shut for a guest and for a barber', function (?Role $role) {
+it('lets a guest and a barber book over a taken slot too', function (?Role $role) {
+    // Салон сам разводит двух клиентов одного часа на странице записей — и
+    // записанных через публичную страницу тоже (issue #98).
     $service = Service::factory()->create(['duration_minutes' => 60]);
     $barber = Barber::factory()->create();
     $date = now()->toDateString();
@@ -403,16 +446,20 @@ it('keeps a taken slot shut for a guest and for a barber', function (?Role $role
         ->call('selectBarber', $barber->id)
         ->set('date', $date)
         ->call('selectTime', '12:00')
-        ->assertSet('step', 3)
-        ->assertSet('time', null);
+        ->assertSet('step', 4)
+        ->set('name', 'Второй Клиент')
+        ->set('phone', '998901112233')
+        ->call('confirm')
+        ->assertHasNoErrors()
+        ->assertSet('step', 5);
 
-    expect(Appointment::where('barber_id', $barber->id)->count())->toBe(1);
+    expect(Appointment::where('barber_id', $barber->id)->where('starts_at', $date.' 12:00:00')->count())->toBe(2);
 })->with([
     'guest' => null,
     'barber' => Role::BARBER,
 ]);
 
-it('rejects a booking whose slot was taken while the guest filled the form', function () {
+it('still books the guest when the slot was taken while they filled the form', function () {
     $service = Service::factory()->create(['duration_minutes' => 60]);
     $barber = Barber::factory()->create();
     $date = now()->toDateString();
@@ -433,11 +480,11 @@ it('rejects a booking whose slot was taken while the guest filled the form', fun
     ]);
 
     $component->call('confirm')
-        ->assertHasErrors('time')
-        ->assertSet('step', 3);
+        ->assertHasNoErrors()
+        ->assertSet('step', 5);
 
-    expect(Appointment::count())->toBe(1)
-        ->and(Client::where('phone', '998901112233')->exists())->toBeFalse();
+    expect(Appointment::count())->toBe(2)
+        ->and(Client::where('phone', '998901112233')->exists())->toBeTrue();
 });
 
 it('does not reveal a stored name or birth date when the phone is typed', function () {
@@ -629,8 +676,8 @@ it('throttles a flood of bookings from the same client', function () {
     $barber = Barber::factory()->create();
     $date = now()->toDateString();
 
-    // Each attempt takes a different hour: the slot guard would reject repeats
-    // of the same time long before the rate limiter got a chance to speak.
+    // A taken hour no longer refuses anyone (issue #98), so the rate limiter is
+    // what stops the flood — whichever hours it aims at.
     $book = fn (int $hour) => Volt::test('pages.booking')
         ->call('selectService', $service->id)
         ->call('selectBarber', $barber->id)
@@ -665,12 +712,39 @@ it('refuses to create a second appointment from a rapid double submit', function
     $component->call('confirm')->assertHasNoErrors()->assertSet('step', 5);
 
     // The second tap of a double-tap reaches the server after the first one
-    // already booked the slot — it must be rejected, not double-booked.
+    // already booked — a taken hour no longer refuses it, so the component
+    // itself must, or the guest is booked twice.
     $component->call('confirm')
-        ->assertHasErrors('time')
-        ->assertSet('step', 3);
+        ->assertHasNoErrors()
+        ->assertSet('step', 5);
 
     expect(Appointment::count())->toBe(1);
+});
+
+it('books again after the browser back button leaves the success screen', function () {
+    // `step` живёт в URL, и «Назад» в браузере возвращает форму с уже
+    // созданной записью в состоянии. Новая запись должна пройти, а не молча
+    // пропасть в защите от двойного нажатия.
+    $service = Service::factory()->create(['duration_minutes' => 60]);
+    $barber = Barber::factory()->create();
+
+    $component = Volt::test('pages.booking')
+        ->call('selectService', $service->id)
+        ->call('selectBarber', $barber->id)
+        ->set('date', now()->toDateString())
+        ->call('selectTime', '12:00')
+        ->set('name', 'Гость Клиент')
+        ->set('phone', '998901112233')
+        ->call('confirm')
+        ->assertSet('step', 5);
+
+    $component->set('step', 3)
+        ->call('selectTime', '14:00')
+        ->call('confirm')
+        ->assertHasNoErrors()
+        ->assertSet('step', 5);
+
+    expect(Appointment::count())->toBe(2);
 });
 
 it('drops a service id from the url that does not exist', function () {
@@ -726,7 +800,7 @@ it('drops a malformed date from the url instead of crashing', function () {
         ->assertSet('date', now()->toDateString());
 });
 
-it('drops a time from the url that is already taken for that barber', function () {
+it('keeps a time from the url even when it is already taken for that barber', function () {
     $service = Service::factory()->create(['duration_minutes' => 60]);
     $barber = Barber::factory()->create();
     $date = now()->toDateString();
@@ -744,8 +818,8 @@ it('drops a time from the url that is already taken for that barber', function (
         'date' => $date,
         'time' => '12:00',
     ])->test('pages.booking')
-        ->assertSet('time', null)
-        ->assertSet('step', 3);
+        ->assertSet('time', '12:00')
+        ->assertSet('step', 4);
 });
 
 it('restores a full valid selection from the url and lands on the matching step', function () {
@@ -981,27 +1055,20 @@ it('hides the contacts card entirely when no salon contacts are configured', fun
         ->assertDontSee(__('booking.success.contacts_title'));
 });
 
-it('cannot confirm an appointment for a taken slot by setting time directly after loading a deep link', function () {
+it('cannot confirm an appointment for a past day by setting the date directly after loading a deep link', function () {
     $service = Service::factory()->create(['duration_minutes' => 60]);
     $barber = Barber::factory()->create();
-    $date = now()->addDay()->toDateString();
-
-    Appointment::factory()->create([
-        'barber_id' => $barber->id,
-        'starts_at' => $date.' 12:00:00',
-        'ends_at' => $date.' 13:00:00',
-        'status' => AppointmentStatus::Pending,
-    ]);
 
     // The component is hydrated from a deep link (not from ->set() calls), then
-    // the attacker writes straight to the public $time property — bypassing
-    // both selectTime()'s guard and mount()'s url sanitizing. confirm() must
-    // still refuse it server-side.
+    // the attacker writes straight to the public $date and $time properties —
+    // bypassing both selectTime()'s guard and mount()'s url sanitizing.
+    // confirm() must still refuse a day gone by server-side.
     Livewire::withQueryParams([
         'serviceId' => $service->id,
         'barberId' => $barber->id,
-        'date' => $date,
+        'date' => now()->addDay()->toDateString(),
     ])->test('pages.booking')
+        ->set('date', now()->subDay()->toDateString())
         ->set('time', '12:00')
         ->set('name', 'Гость Клиент')
         ->set('phone', '998901112233')
@@ -1009,6 +1076,6 @@ it('cannot confirm an appointment for a taken slot by setting time directly afte
         ->assertHasErrors('time')
         ->assertSet('step', 3);
 
-    expect(Appointment::where('barber_id', $barber->id)->count())->toBe(1)
+    expect(Appointment::count())->toBe(0)
         ->and(Client::where('phone', '998901112233')->exists())->toBeFalse();
 });

@@ -34,10 +34,8 @@ return [
         'today' => 'Bugun',
         'horizon' => 'Keyingi 14 kun uchun band qilish mumkin',
         'no_slots' => 'Bu kuni boʻsh vaqt yoʻq. Boshqa sanani tanlang.',
-        'taken' => 'Bu vaqtga allaqachon yozuv bor',
         'taken_bookable' => 'Bu vaqtga allaqachon yozuv bor — ustiga yozish mumkin',
         'taken_short' => 'band',
-        'past' => 'Bu vaqt allaqachon oʻtib ketdi',
         'past_bookable' => 'Bu vaqt allaqachon oʻtib ketdi — baribir yozish mumkin',
         'past_short' => 'oʻtdi',
     ],
@@ -77,6 +75,6 @@ return [
         'invalid_phone' => 'Toʻgʻri raqam kiriting: 998XXXXXXXXX',
         'reselect' => 'Xizmat va ustani qaytadan tanlang.',
         'too_many' => 'Juda koʻp soʻrov. Bir daqiqadan soʻng urinib koʻring.',
-        'slot_taken' => 'Bu vaqt band boʻlib qoldi. Boshqa vaqtni tanlang.',
+        'slot_unavailable' => 'Bu vaqtga yozilib boʻlmaydi. Boshqa vaqtni tanlang.',
     ],
 ];
